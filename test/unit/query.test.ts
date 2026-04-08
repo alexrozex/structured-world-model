@@ -196,7 +196,14 @@ async function run() {
   // Empty question
   {
     const r = await queryWorldModel(model, "");
-    assert(r.answer === "No question provided.", "empty question: handled");
+    assert(
+      r.answer.startsWith("No question provided."),
+      "empty question: handled",
+    );
+    assert(
+      r.answer.includes("what depends on"),
+      "empty question: shows available patterns",
+    );
   }
 
   // Entity not found for "what is" — pattern matches but handler returns null, falls to inference

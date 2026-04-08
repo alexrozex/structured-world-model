@@ -455,7 +455,18 @@ export async function queryWorldModel(
 ): Promise<QueryResult> {
   if (!question || !question.trim()) {
     return {
-      answer: "No question provided.",
+      answer: `No question provided. Try one of these patterns:
+
+- what depends on <entity>?
+- what does <entity> depend on?
+- how is <entity> connected to <entity>?
+- what constraints apply to <entity>?
+- what is <entity>?
+- what processes involve <entity>?
+- what breaks if I remove <entity>?
+- list all <type> (actor, system, object, concept, ...)
+- stats / how many entities?
+- Or ask any question — falls back to LLM inference.`,
       method: "graph",
       entities_referenced: [],
       confidence: 1,
