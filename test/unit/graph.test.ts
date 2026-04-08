@@ -10,6 +10,7 @@ import {
   toDot,
   getStats,
   summarize,
+  subgraph,
 } from "../../src/utils/graph.js";
 import type { WorldModelType } from "../../src/schema/index.js";
 
@@ -234,6 +235,79 @@ function run() {
     assert(s.includes("Request"), "summarize: includes process name");
     assert(s.includes("2 constraints"), "summarize: includes constraint count");
     assert(s.includes("90%"), "summarize: includes confidence percentage");
+  }
+
+  // ─── subgraph ────────────────────────────────────────
+
+  // 1 hop from API: should get User (incoming), Database, Cache (outgoing)
+  {
+    const sub = subgraph(model, "ent_2", 1);
+    assert(
+      sub.entities.length === 4,
+      "subgraph 1-hop: 4 entities (API + 3 neighbors)",
+    );
+    assert(
+      sub.relations.length === 4,
+      "subgraph 1-hop: 4 relations (all endpoints within subgraph)",
+    );
+    assert(
+      sub.entities.some((e) => e.name === "User"),
+      "subgraph 1-hop: includes User",
+    );
+    assert(
+      sub.entities.some((e) => e.name === "Database"),
+      "subgraph 1-hop: includes Database",
+    );
+    assert(
+      sub.entities.some((e) => e.name === "Cache"),
+      "subgraph 1-hop: includes Cache",
+    );
+  }
+
+  // 0 hops: just the center entity, no relations
+  {
+    const sub = subgraph(model, "ent_2", 0);
+    assert(sub.entities.length === 1, "subgraph 0-hop: just center entity");
+    assert(sub.entities[0].name === "API", "subgraph 0-hop: correct entity");
+    assert(
+      sub.relations.length === 0,
+      "subgraph 0-hop: no relations (both endpoints must be in set)",
+    );
+  }
+
+  // Leaf entity: Database has incoming but no outgoing
+  {
+    const sub = subgraph(model, "ent_3", 1);
+    assert(
+      sub.entities.some((e) => e.name === "Database"),
+      "subgraph leaf: includes center",
+    );
+    assert(
+      sub.entities.some((e) => e.name === "API"),
+      "subgraph leaf: includes API (incoming)",
+    );
+    assert(
+      sub.entities.some((e) => e.name === "Cache"),
+      "subgraph leaf: includes Cache (incoming)",
+    );
+  }
+
+  // Subgraph includes relevant processes
+  {
+    const sub = subgraph(model, "ent_2", 1);
+    assert(
+      sub.processes.length >= 1,
+      "subgraph: includes processes with participants in subgraph",
+    );
+  }
+
+  // Subgraph includes relevant constraints
+  {
+    const sub = subgraph(model, "ent_2", 1);
+    assert(
+      sub.constraints.length >= 1,
+      "subgraph: includes constraints scoped to subgraph entities",
+    );
   }
 
   console.log(`\n═══ ${passed}/${passed + failed} passed ═══\n`);

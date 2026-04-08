@@ -255,6 +255,68 @@ export function getStats(model: WorldModelType) {
 }
 
 /**
+ * Extract a subgraph centered on an entity, including all entities within N hops.
+ * Returns a new WorldModel containing only the reachable entities and their relations.
+ */
+export function subgraph(
+  model: WorldModelType,
+  centerId: string,
+  maxHops = 2,
+): WorldModelType {
+  // BFS to find all reachable entity IDs within maxHops
+  const reachable = new Set<string>([centerId]);
+  let frontier = new Set<string>([centerId]);
+
+  for (let hop = 0; hop < maxHops && frontier.size > 0; hop++) {
+    const nextFrontier = new Set<string>();
+    for (const id of frontier) {
+      for (const rel of model.relations) {
+        if (rel.source === id && !reachable.has(rel.target)) {
+          reachable.add(rel.target);
+          nextFrontier.add(rel.target);
+        }
+        if (rel.target === id && !reachable.has(rel.source)) {
+          reachable.add(rel.source);
+          nextFrontier.add(rel.source);
+        }
+      }
+    }
+    frontier = nextFrontier;
+  }
+
+  const entities = model.entities.filter((e) => reachable.has(e.id));
+  const relations = model.relations.filter(
+    (r) => reachable.has(r.source) && reachable.has(r.target),
+  );
+  const processes = model.processes.filter((p) =>
+    p.participants.some((pid) => reachable.has(pid)),
+  );
+  const constraints = model.constraints.filter((c) =>
+    c.scope.some((sid) => reachable.has(sid)),
+  );
+
+  const centerName =
+    model.entities.find((e) => e.id === centerId)?.name ?? centerId;
+
+  return {
+    id: model.id,
+    name: `${model.name} — ${centerName} subgraph`,
+    description: `Subgraph of ${model.name} centered on ${centerName} (${maxHops} hops)`,
+    version: model.version,
+    created_at: new Date().toISOString(),
+    entities,
+    relations,
+    processes,
+    constraints,
+    metadata: {
+      source_type: "mixed",
+      source_summary: `Subgraph: ${entities.length} entities within ${maxHops} hops of ${centerName}`,
+      confidence: model.metadata?.confidence ?? 0.5,
+    },
+  };
+}
+
+/**
  * Generate a natural-language summary of a world model. No LLM — pure graph analysis.
  */
 export function summarize(model: WorldModelType): string {

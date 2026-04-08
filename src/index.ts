@@ -18,6 +18,7 @@ export {
   toDot,
   getStats,
   summarize,
+  subgraph,
 } from "./utils/graph.js";
 
 // Merge & diff

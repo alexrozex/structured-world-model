@@ -16,6 +16,7 @@ import {
   toDot,
   getStats,
   summarize,
+  subgraph,
 } from "./utils/graph.js";
 import { queryWorldModel } from "./agents/query.js";
 import { intersection, difference, overlay } from "./utils/algebra.js";
@@ -1190,5 +1191,57 @@ program
       process.exit(1);
     }
   });
+
+// ─── subgraph ─────────────────────────────────────────────────
+program
+  .command("subgraph")
+  .description("Extract a subgraph centered on an entity (zoom in)")
+  .argument("<model>", "Path to world model JSON")
+  .argument("<entity>", "Entity name to center on")
+  .option("-n, --hops <n>", "Max hops from center entity", "2")
+  .option("-o, --output <path>", "Write subgraph to file")
+  .option(
+    "--format <format>",
+    "Output format: json, yaml, mermaid, dot",
+    "json",
+  )
+  .action(
+    (
+      modelPath: string,
+      entityName: string,
+      opts: Record<string, string | undefined>,
+    ) => {
+      try {
+        const model = readModel(modelPath);
+        const entity = findEntity(model, entityName);
+        if (!entity) {
+          console.error(chalk.red(`Entity "${entityName}" not found.`));
+          process.exit(1);
+        }
+        const hops = parseInt(opts.hops ?? "2", 10) || 2;
+        const sub = subgraph(model, entity.id, hops);
+        const output = formatOutput(sub, opts.format ?? "json", true);
+
+        if (opts.output) {
+          writeFileSync(resolve(opts.output), output, "utf-8");
+          console.error(chalk.green(`✓ Subgraph written to ${opts.output}`));
+        } else {
+          console.log(output);
+        }
+        console.error(
+          chalk.gray(
+            `  ${sub.entities.length} entities, ${sub.relations.length} relations within ${hops} hops of "${entity.name}"`,
+          ),
+        );
+      } catch (err) {
+        console.error(
+          chalk.red(
+            `Error: ${err instanceof Error ? err.message : String(err)}`,
+          ),
+        );
+        process.exit(1);
+      }
+    },
+  );
 
 program.parse();
