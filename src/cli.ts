@@ -59,6 +59,19 @@ function readInput(inputArg?: string, filePath?: string): string {
   );
 }
 
+async function readStdin(): Promise<string> {
+  if (process.stdin.isTTY) {
+    throw new Error(
+      "No input provided. Pass text, a file path, a URL, or pipe via stdin.",
+    );
+  }
+  const chunks: Buffer[] = [];
+  for await (const chunk of process.stdin) {
+    chunks.push(chunk as Buffer);
+  }
+  return Buffer.concat(chunks).toString("utf-8");
+}
+
 async function readInputAsync(
   inputArg?: string,
   filePath?: string,
@@ -70,7 +83,12 @@ async function readInputAsync(
     const { text } = await fetchUrl(candidate);
     return { raw: text, detectedUrl: candidate };
   }
-  return { raw: readInput(inputArg, filePath) };
+  // Try file/arg, fall back to stdin
+  try {
+    return { raw: readInput(inputArg, filePath) };
+  } catch {
+    return { raw: await readStdin() };
+  }
 }
 
 function readModel(path: string): WorldModelType {
