@@ -213,14 +213,14 @@ The second pass finds infrastructure (auth, logging, error handling), process in
 
 ## Validation & Quality Score
 
-16 validation checks: dangling references, orphan entities, circular dependencies, duplicate names, weak descriptions, low type diversity, step ordering, empty processes, completeness.
+21 validation checks: dangling references, orphan entities, circular dependencies, duplicate names, weak descriptions, low type diversity, step ordering, empty processes, completeness, low confidence, missing metadata, disconnected subgraphs, deep dependency chains, missing triggers.
 
 Quality score (0-100) computed from issue count, completeness, relation density, type diversity, and confidence. Use `--min-score` as a CI gate.
 
 ## Tests
 
 ```bash
-pnpm test          # 433 unit tests (no LLM calls)
+pnpm test          # 506 unit tests (no LLM calls)
 pnpm test:e2e      # 15 end-to-end proofs (requires API key)
 pnpm typecheck     # TypeScript strict mode
 ```

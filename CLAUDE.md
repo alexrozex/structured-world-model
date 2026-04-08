@@ -6,7 +6,7 @@ Agentic software that turns any input into structured, validated, queryable worl
 
 ```bash
 pnpm dev <command>     # Run CLI in dev mode
-pnpm test              # 478 unit tests (no LLM, no API key)
+pnpm test              # 506 unit tests (no LLM, no API key)
 pnpm test:e2e          # 15 E2E proofs (requires ANTHROPIC_API_KEY)
 pnpm typecheck         # TypeScript strict mode
 pnpm build             # Compile to dist/
@@ -27,7 +27,7 @@ src/
   index.ts        # Public API exports
 
 test/
-  unit/           # 478 tests across 16 suites (no LLM calls)
+  unit/           # 506 tests across 17 suites (no LLM calls)
   proof.ts        # 15 E2E proofs (requires API key)
   run-unit.ts     # Test runner
 ```
@@ -39,8 +39,8 @@ test/
 - All new code must pass `pnpm test && pnpm typecheck`
 - Entity IDs use prefixed hex: `ent_`, `rel_`, `proc_`, `cstr_`, `wm_`
 - Entity name matching is case-insensitive and trimmed
-- Validation agent has 20 issue codes — check before adding duplicates
-- Fix command has 12 rules — runs entity dedup and placeholder removal first
+- Validation agent has 21 issue codes — check before adding duplicates
+- Fix command has 13 rules — runs entity dedup and placeholder removal first
 - Query engine has 10 deterministic graph patterns — LLM fallback is last resort
 - All CLI commands accept `-` for stdin JSON input
 
