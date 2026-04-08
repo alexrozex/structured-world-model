@@ -314,6 +314,7 @@ program
     "-n, --name <name>",
     "Set the world model name (overrides LLM-generated name)",
   )
+  .option("-d, --description <desc>", "Set the world model description")
   .action(
     async (
       inputArg: string | undefined,
@@ -365,6 +366,12 @@ program
         let finalModel = result.worldModel;
         if (opts.name) {
           finalModel = { ...finalModel, name: opts.name as string };
+        }
+        if (opts.description) {
+          finalModel = {
+            ...finalModel,
+            description: opts.description as string,
+          };
         }
         if (opts.fix) {
           const { fixWorldModel } = await import("./utils/fix.js");
