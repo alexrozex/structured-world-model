@@ -46,6 +46,14 @@ function detectSourceType(raw: string, filePath?: string): string {
       /* */
     }
   }
+  const yamlLines = raw.split("\n").filter((l) => /^\w[\w\s]*:\s/.test(l));
+  if (yamlLines.length >= 3 && !raw.includes("function ")) return "document";
+  if (
+    trimmed.startsWith("<?xml") ||
+    trimmed.startsWith("<root") ||
+    trimmed.startsWith("<!DOCTYPE")
+  )
+    return "document";
   const codeSignals = [
     /\bfunction\s+\w+\s*\(/.test(raw),
     /\bclass\s+\w+/.test(raw),
@@ -155,6 +163,24 @@ function run() {
   assert(
     detectSourceType('{"key": "value"}', "data.ts") === "code",
     "ext override: .ts beats JSON content",
+  );
+
+  // YAML content detection
+  assert(
+    detectSourceType(
+      "name: MyApp\nversion: 1.0\nport: 3000\nhost: localhost",
+    ) === "document",
+    "yaml: key-value content → document",
+  );
+  assert(
+    detectSourceType("just a line\nand another") === "text",
+    "yaml: plain lines → text (not yaml)",
+  );
+
+  // XML detection
+  assert(
+    detectSourceType("<?xml version='1.0'?><root></root>") === "document",
+    "xml: xml declaration → document",
   );
 
   console.log(`\n═══ ${passed}/${passed + failed} passed ═══\n`);

@@ -87,6 +87,18 @@ function detectSourceType(
     }
   }
 
+  // YAML (multiple key: value lines, not code)
+  const yamlLines = raw.split("\n").filter((l) => /^\w[\w\s]*:\s/.test(l));
+  if (yamlLines.length >= 3 && !raw.includes("function ")) return "document";
+
+  // XML/HTML-like structured data
+  if (
+    trimmed.startsWith("<?xml") ||
+    trimmed.startsWith("<root") ||
+    trimmed.startsWith("<!DOCTYPE")
+  )
+    return "document";
+
   // Code heuristics (multiple signals needed to avoid false positives)
   const codeSignals = [
     /\bfunction\s+\w+\s*\(/.test(raw),
