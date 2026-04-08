@@ -174,9 +174,16 @@ export function toMermaid(model: WorldModelType): string {
  * Export world model as DOT (Graphviz) format.
  */
 export function toDot(model: WorldModelType): string {
+  const dotEscape = (s: string) =>
+    s.replace(/\\/g, "\\\\").replace(/"/g, '\\"').replace(/\n/g, " ");
+
   const lines: string[] = [
     "digraph WorldModel {",
     "  rankdir=LR;",
+    `  label="${dotEscape(model.name)}";`,
+    "  labelloc=t;",
+    '  fontname="Helvetica";',
+    "  fontsize=16;",
     '  node [shape=box, style="rounded,filled", fillcolor="#f0f0f0", fontname="Helvetica"];',
     '  edge [fontname="Helvetica", fontsize=10];',
     "",
@@ -192,9 +199,6 @@ export function toDot(model: WorldModelType): string {
     group: "#d1ecf1",
     resource: "#ffeeba",
   };
-
-  const dotEscape = (s: string) =>
-    s.replace(/\\/g, "\\\\").replace(/"/g, '\\"').replace(/\n/g, " ");
 
   for (const e of model.entities) {
     const color = typeColors[e.type] ?? "#f0f0f0";
