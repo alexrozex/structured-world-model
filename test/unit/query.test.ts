@@ -227,6 +227,29 @@ async function run() {
     assert(r.answer.includes("User"), "show actors: includes User");
   }
 
+  // "what processes involve API Server"
+  {
+    const r = await queryWorldModel(
+      model,
+      "what processes involve API Server?",
+    );
+    assert(r.method === "graph", "processes involve: uses graph method");
+    assert(
+      r.answer.includes("Request"),
+      "processes involve: finds Request Flow",
+    );
+  }
+
+  // "processes for User"
+  {
+    const r = await queryWorldModel(model, "processes for User?");
+    assert(r.method === "graph", "processes for: uses graph method");
+    assert(
+      r.answer.includes("participates"),
+      "processes for: mentions participation",
+    );
+  }
+
   console.log(`\n═══ ${passed}/${passed + failed} passed ═══\n`);
   if (failed > 0) process.exit(1);
 }

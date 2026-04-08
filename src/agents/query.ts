@@ -158,6 +158,48 @@ const GRAPH_PATTERNS: Array<{
     },
   },
   {
+    // "what processes involve X" / "where does X participate" / "processes for X"
+    pattern:
+      /(?:what\s+processes?\s+(?:involve|include|use|have)|(?:where|which\s+processes?)\s+does\s+.+?\s+participate|processes?\s+(?:for|with|involving))\s+(?:the\s+)?(.+?)(?:\?|$)/i,
+    handler: (model, match) => {
+      const entity = findEntity(model, match[1].trim());
+      if (!entity) return null;
+
+      const involved = model.processes.filter(
+        (p) =>
+          p.participants.includes(entity.id) ||
+          p.steps.some((s) => s.actor === entity.id),
+      );
+
+      if (involved.length === 0) {
+        return {
+          answer: `${entity.name} does not participate in any processes.`,
+          method: "graph" as const,
+          entities_referenced: [entity.name],
+          confidence: 1,
+        };
+      }
+
+      const lines = involved.map((p) => {
+        const steps = p.steps
+          .filter((s) => s.actor === entity.id)
+          .map((s) => `  ${s.order}. ${s.action}`);
+        const role =
+          steps.length > 0
+            ? `\n  Steps as ${entity.name}:\n${steps.join("\n")}`
+            : "\n  (participant, no direct steps)";
+        return `- **${p.name}**: ${p.description}${role}`;
+      });
+
+      return {
+        answer: `${entity.name} participates in ${involved.length} process${involved.length > 1 ? "es" : ""}:\n${lines.join("\n")}`,
+        method: "graph" as const,
+        entities_referenced: [entity.name, ...involved.map((p) => p.name)],
+        confidence: 1,
+      };
+    },
+  },
+  {
     // "list all actors" / "show all systems" / "show actors" / "what actors are there"
     pattern: /(?:list|show|what)\s+(?:all\s+)?(\w+?)s?(?:\s|$|\?)/i,
     handler: (model, match) => {
