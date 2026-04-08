@@ -32,6 +32,10 @@ export { intersection, difference, overlay } from "./utils/algebra.js";
 export { coverage } from "./utils/coverage.js";
 export type { CoverageResult } from "./utils/coverage.js";
 
+// Fix
+export { fixWorldModel } from "./utils/fix.js";
+export type { FixResult } from "./utils/fix.js";
+
 // Export formats
 export { toClaudeMd } from "./export/claude-md.js";
 export { toSystemPrompt } from "./export/system-prompt.js";

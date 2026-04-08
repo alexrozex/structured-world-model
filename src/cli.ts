@@ -1244,4 +1244,68 @@ program
     },
   );
 
+// ─── fix ──────────────────────────────────────────────────────
+program
+  .command("fix")
+  .description(
+    "Auto-fix validation issues (remove orphans, dangling refs, duplicates)",
+  )
+  .argument("<model>", "Path to world model JSON")
+  .option(
+    "-o, --output <path>",
+    "Write fixed model to file (default: overwrite input)",
+  )
+  .option("--dry-run", "Show what would be fixed without writing")
+  .action(
+    async (
+      modelPath: string,
+      opts: Record<string, string | boolean | undefined>,
+    ) => {
+      try {
+        const model = readModel(modelPath);
+        const { fixWorldModel } = await import("./utils/fix.js");
+        const { model: fixed, fixes } = fixWorldModel(model);
+
+        if (fixes.length === 0) {
+          console.log(chalk.green("  No issues to fix."));
+          return;
+        }
+
+        console.log(chalk.blue("■ Fixes applied:\n"));
+        for (const fix of fixes) console.log(chalk.yellow(`  ✓ ${fix}`));
+
+        console.log(
+          chalk.gray(
+            `\n  Before: ${model.entities.length} entities, ${model.relations.length} relations`,
+          ),
+        );
+        console.log(
+          chalk.gray(
+            `  After:  ${fixed.entities.length} entities, ${fixed.relations.length} relations`,
+          ),
+        );
+
+        if (opts.dryRun) {
+          console.log(chalk.gray("\n  (dry run — no files written)"));
+          return;
+        }
+
+        const outPath = (opts.output as string) ?? modelPath;
+        writeFileSync(
+          resolve(outPath),
+          JSON.stringify(fixed, null, 2),
+          "utf-8",
+        );
+        console.log(chalk.green(`\n  ✓ Written to ${outPath}`));
+      } catch (err) {
+        console.error(
+          chalk.red(
+            `Error: ${err instanceof Error ? err.message : String(err)}`,
+          ),
+        );
+        process.exit(1);
+      }
+    },
+  );
+
 program.parse();
