@@ -305,6 +305,41 @@ function run() {
     assert(s.includes("90%"), "summarize: includes confidence percentage");
   }
 
+  // summarize edge cases
+  {
+    const empty: WorldModelType = {
+      id: "wm_e",
+      name: "Empty",
+      description: "empty model",
+      version: "0.1.0",
+      created_at: "",
+      entities: [],
+      relations: [],
+      processes: [],
+      constraints: [],
+    };
+    const es = summarize(empty);
+    assert(es.includes("0 entities"), "summarize empty: includes 0 entities");
+    assert(!es.includes("undefined"), "summarize empty: no undefined");
+  }
+
+  {
+    const noProcs: WorldModelType = {
+      ...model,
+      processes: [],
+      constraints: [],
+    };
+    const nps = summarize(noProcs);
+    assert(
+      !nps.includes("process"),
+      "summarize no procs: omits processes when 0",
+    );
+    assert(
+      !nps.includes("constraint"),
+      "summarize no cstrs: omits constraints when 0",
+    );
+  }
+
   // ─── subgraph ────────────────────────────────────────
 
   // 1 hop from API: should get User (incoming), Database, Cache (outgoing)
