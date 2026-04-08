@@ -266,6 +266,41 @@ export function validationAgent(stageInput: {
     });
   }
 
+  // Check for deep dependency chains (> 3 hops)
+  {
+    const depTypes = new Set(["depends_on", "part_of"]);
+    const depEdges = worldModel.relations.filter((r) => depTypes.has(r.type));
+    const adj = new Map<string, string[]>();
+    for (const r of depEdges) {
+      const arr = adj.get(r.source) ?? [];
+      arr.push(r.target);
+      adj.set(r.source, arr);
+    }
+
+    function longestChainFrom(id: string, visited: Set<string>): number {
+      if (visited.has(id)) return 0;
+      visited.add(id);
+      let max = 0;
+      for (const next of adj.get(id) ?? []) {
+        max = Math.max(max, 1 + longestChainFrom(next, visited));
+      }
+      visited.delete(id);
+      return max;
+    }
+
+    for (const entity of worldModel.entities) {
+      const depth = longestChainFrom(entity.id, new Set());
+      if (depth > 3) {
+        issues.push({
+          type: "warning",
+          code: "DEEP_DEPENDENCY_CHAIN",
+          message: `Entity "${entity.name}" starts a dependency chain ${depth} levels deep — may indicate fragile architecture`,
+          path: `entities.${entity.id}`,
+        });
+      }
+    }
+  }
+
   const hasErrors = issues.some((i) => i.type === "error");
 
   // Compute quality score (0-100)

@@ -642,6 +642,74 @@ async function run() {
     );
   }
 
+  // Test 30: Deep dependency chain
+  {
+    const model = makeModel({
+      entities: [
+        { id: "e1", name: "A", type: "object", description: "A" },
+        { id: "e2", name: "B", type: "object", description: "B" },
+        { id: "e3", name: "C", type: "object", description: "C" },
+        { id: "e4", name: "D", type: "object", description: "D" },
+        { id: "e5", name: "E", type: "object", description: "E" },
+      ],
+      relations: [
+        {
+          id: "r1",
+          type: "depends_on",
+          source: "e1",
+          target: "e2",
+          label: "x",
+        },
+        {
+          id: "r2",
+          type: "depends_on",
+          source: "e2",
+          target: "e3",
+          label: "x",
+        },
+        {
+          id: "r3",
+          type: "depends_on",
+          source: "e3",
+          target: "e4",
+          label: "x",
+        },
+        {
+          id: "r4",
+          type: "depends_on",
+          source: "e4",
+          target: "e5",
+          label: "x",
+        },
+      ],
+    });
+    const { validation } = await validationAgent({ input, worldModel: model });
+    assert(
+      hasIssue(validation.issues, "DEEP_DEPENDENCY_CHAIN"),
+      "Detects deep dependency chain (4 levels)",
+    );
+  }
+
+  // Test 31: Shallow chain — no false positive
+  {
+    const model = makeModel({
+      relations: [
+        {
+          id: "r1",
+          type: "depends_on",
+          source: "ent_1",
+          target: "ent_2",
+          label: "x",
+        },
+      ],
+    });
+    const { validation } = await validationAgent({ input, worldModel: model });
+    assert(
+      !hasIssue(validation.issues, "DEEP_DEPENDENCY_CHAIN"),
+      "No false positive on shallow chain",
+    );
+  }
+
   console.log(`\n═══ ${passed}/${passed + failed} passed ═══\n`);
   if (failed > 0) process.exit(1);
 }
