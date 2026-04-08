@@ -1,9 +1,9 @@
-# SWM System Architecture
+# SWM v1.0.0
 
-A comprehensive TypeScript system for extracting, structuring, analyzing, and serving world models from diverse inputs using LLM agents and graph analysis
+Structured World Model system — the universal lens
 
-> World model v0.1.0 — 27 entities, 31 relations, 4 processes, 8 constraints
-> Confidence: 0.9
+> World model v0.1.0 — 26 entities, 26 relations, 5 processes, 10 constraints
+> Confidence: 0.95
 
 ## Domain Entities
 
@@ -11,86 +11,83 @@ The system you are working with has these components:
 
 ### Systems
 
-- **CLI Interface**: Command-line interface providing 20+ commands for building, inspecting, merging, and transforming world models
-  - commands: 20
-- **Pipeline System**: Orchestrates the multi-stage world model extraction process with callbacks and progress tracking
-- **Chunker Module**: Splits large inputs into token-sized chunks with paragraph-boundary awareness and overlap
-  - max_tokens: 80000
+- **SWM System**: Main structured world model extraction system that converts any input into a complete architectural model
+- **Pipeline System**: Configurable pipeline that orchestrates the multi-stage world model extraction process with callbacks and error handling
+- **Chunking System**: Text chunking system that splits large inputs into LLM-compatible chunks with overlap preservation and paragraph boundaries
   - overlap_chars: 500
-- **LLM Client**: Anthropic Claude API client with retry logic, timeout handling, and token estimation
-  - default_model: "claude-sonnet-4-20250514"
-- **Graph Analysis Module**: Provides pathfinding, dependency analysis, impact analysis, clustering, and subgraph extraction
-- **MCP Server**: Model Context Protocol server exposing world model as 9 live queryable tools for AI agents
+- **Graph Operations**: Graph analysis utilities providing dependency tracking, path finding, subgraph extraction, cluster detection, and impact analysis
+- **Merge System**: World model composition system that merges, diffs, and applies algebraic operations (intersection, difference, overlay)
+- **Export System**: Multi-format export system supporting Claude Markdown, system prompts, MCP schemas, and Mermaid diagrams
+  - formats: 4
+- **MCP Server**: Model Context Protocol server that exposes world model as live queryable tools for AI agents
   - tools: 9
-- **Export System**: Converts world models to Claude MD, system prompts, MCP schemas, Mermaid diagrams, and DOT graphs
-- **Timeline System**: Tracks world model evolution over time with snapshots and automatic diffing
-- **Merge System**: Combines multiple world models with entity deduplication and ID remapping
-- **Fix System**: Auto-repairs world model validation issues like orphan entities and dangling references
+- **Anthropic Claude**: External LLM service used for all extraction, validation, and inference operations with retry logic and timeout handling
+  - default_model: "claude-sonnet-4-20250514"
+- **Timeline System**: Version tracking system that captures model evolution over time with automatic diff computation
+- **Fix System**: Auto-repair system that resolves validation issues like orphan entities, dangling references, and duplicates
+- **Coverage System**: Model comparison system that measures how much of a reference model is covered by another model
+- **Source Type Detector**: Heuristic system that analyzes input content to classify as text, code, document, URL, conversation, or mixed
+  - types: 6
+- **JSON Schema Generator**: System that converts Zod schemas to JSON Schema for validation and code generation
 
 ### Actors
 
-- **Extraction Agent**: LLM-powered agent that analyzes raw input and extracts entities, relations, processes, and constraints
-- **Structuring Agent**: Agent that converts raw LLM extractions into properly structured world models with normalized types and IDs
-- **Validation Agent**: Agent that performs integrity checks on world models, detecting orphans, dangling references, and circular dependencies
-- **Second Pass Agent**: Agent that finds implicit entities and relations missed in the first extraction pass
-- **Query Agent**: Agent that answers natural language questions about world models using graph patterns and LLM inference
-- **Refinement Agent**: Agent that incrementally updates existing world models with new input
-- **Transform Agent**: Agent that applies natural language transformations to modify world models
+- **CLI Interface**: Command-line interface that provides 30+ commands for building, inspecting, querying, and manipulating world models
+  - commands: 30
+- **Extraction Agent**: LLM-powered agent that analyzes raw input and extracts entities, relations, processes, and constraints using source-specific prompts
+  - chunk_size: 80000
+- **Structuring Agent**: Agent that converts raw extraction output into valid WorldModel schema, handling ID generation and entity deduplication
+- **Validation Agent**: Comprehensive validation system that checks model integrity, detects orphans, cycles, and computes quality scores 0-100
+  - max_score: 100
+- **Second Pass Agent**: Completeness agent that finds implicit entities and relations missed by the first extraction pass
+- **Refinement Agent**: Incremental extraction agent that updates existing models with new input while preserving existing knowledge
+- **Query Agent**: Natural language query system with 10 graph patterns for deterministic queries plus LLM fallback for open-ended questions
+  - patterns: 10
+- **Transform Agent**: Agent that applies natural language transformations to world models, adding/removing/modifying elements
 
 ### Concepts
 
-- **World Model Schema**: Zod-based schema defining entities, relations, processes, constraints with validation
-- **Entity**: Core domain object representing actors, systems, concepts, locations, events, groups, objects, or resources
-- **Relation**: Directed connection between entities with semantic types like depends_on, uses, contains
-- **Process**: Dynamic sequence of ordered steps with actors, triggers, and outcomes
-- **Constraint**: Invariant rule that must hold true, with hard or soft severity
-
-### Resources
-
-- **Prompt Templates**: Specialized extraction prompts for different source types (text, code, conversation, document, URL)
-- **File Input**: Text files, code files, JSON, YAML, CSV, and other document formats
-- **URL Input**: Web pages fetched and stripped of HTML for content extraction
-
-### Objects
-
-- **Validation Result**: Comprehensive validation report with issues, stats, and quality scores
-- **Query Result**: Answer to natural language questions with method, confidence, and referenced entities
+- **WorldModel Schema**: Zod-based schema defining entities, relations, processes, constraints with 8 entity types and 17 relation types
+  - entity_types: 8
+  - relation_types: 17
+- **Entity**: Core model element representing actors, objects, systems, concepts, locations, events, groups, or resources
+  - types: 8
+- **Relation**: Directed edge between entities with semantic types like depends_on, uses, produces, controls
+  - types: 17
+- **Process**: Dynamic sequence with ordered steps, participants, triggers, and outcomes representing workflows
+- **Constraint**: Invariant or rule with hard/soft severity that must hold true for specific entities
+  - severities: 2
 
 ## Relationships
 
 These are the dependencies and connections between components:
 
-- **CLI Interface** uses **Pipeline System**: orchestrates extraction via
-- **Pipeline System** contains **Extraction Agent**: first stage runs
-- **Pipeline System** contains **Structuring Agent**: second stage runs
-- **Pipeline System** contains **Validation Agent**: final stage runs
-- **Extraction Agent** uses **LLM Client**: calls Claude API via
-- **Extraction Agent** uses **Chunker Module**: splits large input with
-- **Extraction Agent** uses **Prompt Templates**: selects specialized prompts from
-- **Structuring Agent** uses **World Model Schema**: validates against
-- **Validation Agent** uses **Graph Analysis Module**: detects issues via
-- **Second Pass Agent** uses **LLM Client**: finds implicit elements via
-- **Query Agent** uses **Graph Analysis Module**: answers structural questions via
-- **Query Agent** uses **LLM Client**: handles open-ended questions via
-- **Refinement Agent** uses **Merge System**: combines models via
-- **Transform Agent** uses **LLM Client**: applies transformations via
-- **MCP Server** uses **Graph Analysis Module**: exposes tools backed by
-- **MCP Server** uses **Query Agent**: provides query tool via
-- **Export System** uses **Graph Analysis Module**: generates diagrams via
-- **Timeline System** uses **Merge System**: computes diffs via
-- **Fix System** uses **Validation Agent**: repairs issues identified by
-- **CLI Interface** consumes **File Input**: reads various formats from
-- **CLI Interface** consumes **URL Input**: fetches and processes
-- **World Model Schema** contains **Entity**: defines structure of
-- **World Model Schema** contains **Relation**: defines structure of
-- **World Model Schema** contains **Process**: defines structure of
-- **World Model Schema** contains **Constraint**: defines structure of
-- **Validation Agent** produces **Validation Result**: generates detailed
-- **Query Agent** produces **Query Result**: returns structured
-- **Entity** flows to **Relation**: connected by
-- **Process** uses **Entity**: involves multiple
-- **Constraint** controls **Entity**: applies rules to
-- **Chunker Module** depends on **LLM Client**: uses token limits from
+- **CLI Interface** controls **SWM System**: provides command-line access to all system functionality
+- **Pipeline System** uses **Extraction Agent**: orchestrates extraction stage
+- **Pipeline System** uses **Structuring Agent**: orchestrates structuring stage
+- **Pipeline System** uses **Validation Agent**: orchestrates validation stage
+- **Extraction Agent** uses **Chunking System**: chunks large inputs before processing
+- **Extraction Agent** uses **Source Type Detector**: gets source-specific prompts
+- **Extraction Agent** uses **Anthropic Claude**: calls LLM for extraction
+- **Structuring Agent** uses **WorldModel Schema**: validates output against schema
+- **Validation Agent** uses **Graph Operations**: analyzes model integrity
+- **Second Pass Agent** uses **Anthropic Claude**: finds implicit elements
+- **Refinement Agent** uses **Merge System**: merges new extractions with existing model
+- **Query Agent** uses **Graph Operations**: performs deterministic graph queries
+- **Query Agent** uses **Anthropic Claude**: handles open-ended inference queries
+- **Transform Agent** uses **Merge System**: applies transformations via merging
+- **MCP Server** uses **Query Agent**: exposes query functionality as tools
+- **MCP Server** uses **Graph Operations**: exposes graph analysis as tools
+- **Export System** uses **Graph Operations**: generates Mermaid diagrams
+- **Timeline System** uses **Merge System**: computes diffs between snapshots
+- **Fix System** uses **Validation Agent**: identifies issues to repair
+- **Coverage System** uses **Graph Operations**: analyzes model similarity
+- **SWM System** produces **WorldModel Schema**: generates structured world models
+- **WorldModel Schema** contains **Entity**: defines entity structure
+- **WorldModel Schema** contains **Relation**: defines relation structure
+- **WorldModel Schema** contains **Process**: defines process structure
+- **WorldModel Schema** contains **Constraint**: defines constraint structure
+- **JSON Schema Generator** transforms **WorldModel Schema**: converts Zod to JSON Schema
 
 ## Processes
 
@@ -98,52 +95,60 @@ When these events occur, follow these sequences:
 
 ### World Model Extraction
 
-Complete pipeline to extract structured world models from any input type
-**Trigger:** User runs swm model command with input
+Multi-stage pipeline that converts raw input into structured world model
+**Trigger:** User provides input text, code, or document
 
-1. **CLI Interface**: Detect source type from file extension or content patterns
-2. **Chunker Module**: Check input size and chunk if necessary
-3. **Extraction Agent**: Extract entities, relations, processes, constraints using specialized prompts
-4. **Structuring Agent**: Structure raw extraction into proper world model with ID generation
-5. **Validation Agent**: Validate model integrity and generate quality score
+1. **Source Type Detector**: Detect source type and chunk large inputs
+2. **Extraction Agent**: Extract entities, relations, processes, constraints using LLM
+3. **Structuring Agent**: Convert to valid schema with ID generation and deduplication
+4. **Validation Agent**: Validate integrity and compute quality score
 
-**Outcomes:** Structured world model with validation report
+**Outcomes:** Complete structured world model with validation report
 
 ### Multi-Pass Extraction
 
-Enhanced extraction with multiple passes to find implicit elements
-**Trigger:** User specifies passes > 1
+Enhanced extraction with second pass to find implicit elements
+**Trigger:** User requests deeper analysis with --passes 2+
 
 1. **Pipeline System**: Run standard extraction pipeline
-2. **Second Pass Agent**: Find implicit entities and relations missed in first pass
-3. **Structuring Agent**: Structure delta extraction
-4. **Merge System**: Merge original and delta models
-5. **Validation Agent**: Final validation of merged result
+2. **Second Pass Agent**: Analyze first pass results and find missing implicit elements
+3. **Merge System**: Merge delta with existing model
+4. **Validation Agent**: Final validation of merged result
 
-**Outcomes:** More complete world model with implicit elements captured
+**Outcomes:** More complete world model with inferred elements
 
-### Natural Language Query
+### Model Query
 
-Answer questions about world models using graph patterns and LLM inference
-**Trigger:** User asks question via swm query command
+Process natural language questions about world model
+**Trigger:** User asks question about model
 
-1. **Query Agent**: Try to match question against known graph patterns
-2. **Graph Analysis Module**: If pattern matched, execute graph analysis
-3. **Query Agent**: If no pattern match, use LLM inference with model context
-4. **Query Agent**: Format answer with method, confidence, and referenced entities
+1. **Query Agent**: Try deterministic graph pattern matching
+2. **Query Agent**: If no pattern match, use LLM inference
+3. **Query Agent**: Extract referenced entities from answer
 
-**Outcomes:** Natural language answer with confidence and method
+**Outcomes:** Natural language answer with method and confidence
 
-### MCP Tool Execution
+### Model Merge
 
-Serve world model as live tools for AI agents via Model Context Protocol
-**Trigger:** AI agent calls MCP tool
+Combine two world models into unified representation
+**Trigger:** User requests merge of two models
 
-1. **MCP Server**: Parse tool call parameters
-2. **Graph Analysis Module**: Execute appropriate graph analysis or query
-3. **MCP Server**: Format result for AI agent consumption
+1. **Merge System**: Deduplicate entities by normalized name
+2. **Merge System**: Remap all IDs and merge relations/processes/constraints
+3. **Validation Agent**: Validate merged result
 
-**Outcomes:** Real-time domain expertise for AI agents
+**Outcomes:** Single unified world model
+
+### MCP Service
+
+Serve world model as live queryable tools for AI agents
+**Trigger:** User starts MCP server
+
+1. **MCP Server**: Load world model from file
+2. **MCP Server**: Register 9 tools for entity lookup, relations, queries, etc.
+3. **MCP Server**: Listen for tool calls and route to appropriate handlers
+
+**Outcomes:** Live AI-queryable domain expertise
 
 ## Constraints
 
@@ -151,24 +156,26 @@ You MUST respect these rules at all times:
 
 ### Hard Constraints (violations are errors)
 
-- **Token Limit Constraint** (applies to: Chunker Module, LLM Client): Input chunks must not exceed 80,000 tokens to fit within Claude's context window
-- **Relation Reference Integrity** (applies to: Validation Agent, Fix System): All relation source and target IDs must reference existing entities
-- **Schema Compliance** (applies to: Structuring Agent, World Model Schema): All world models must validate against the Zod schema
-- **API Rate Limiting** (applies to: LLM Client): Claude API calls must respect rate limits with exponential backoff retry
+- **LLM Dependency** (applies to: Extraction Agent, Query Agent, Second Pass Agent, Refinement Agent, Transform Agent): System requires ANTHROPIC_API_KEY and network access to function
+- **Schema Validation** (applies to: WorldModel Schema, Structuring Agent, Validation Agent): All world models must conform to WorldModel Zod schema
+- **Entity Reference Integrity** (applies to: Relation, Entity): All relation source/target IDs must reference existing entities
+- **Chunk Size Limit** (applies to: Chunking System, Extraction Agent): Individual chunks cannot exceed 80,000 tokens for LLM processing
+- **Quality Score Range** (applies to: Validation Agent): Quality scores must be between 0-100
+- **Confidence Range** (applies to: Entity, Extraction Agent): Entity and extraction confidence values must be between 0.0-1.0
+- **MCP Tool Limit** (applies to: MCP Server): MCP server exposes exactly 9 predefined tools
 
 ### Soft Constraints (violations are warnings)
 
-- **Entity Name Uniqueness** (applies to: Structuring Agent, Merge System): Entity names within a world model should be unique after normalization
-- **Process Step Ordering** (applies to: Structuring Agent, Fix System): Process steps must have monotonically increasing order numbers
-- **Source Type Detection** (applies to: CLI Interface, Prompt Templates): Input must be classified into one of six source types for appropriate prompt selection
-- **Confidence Scoring** (applies to: Extraction Agent, Validation Agent): All extractions must include confidence scores between 0 and 1
+- **Process Step Ordering** (applies to: Process): Process steps should be in ascending order
+- **Entity Name Uniqueness** (applies to: Entity): Entity names should be unique within a model to avoid confusion
+- **Multi-Pass Limit** (applies to: Pipeline System): Maximum 3 extraction passes to prevent excessive processing
 
 ## Notes
 
 The following observations were made during model extraction:
 
-- System implements sophisticated multi-pass extraction with chunk handling
-- Strong emphasis on validation and auto-fixing of model integrity issues
-- Provides both CLI and MCP server interfaces for different use cases
-- Graph analysis capabilities include pathfinding, clustering, and impact analysis
-- Export system supports multiple formats for AI consumption (Claude MD, system prompts, MCP schemas)
+- Extracted from comprehensive TypeScript codebase showing sophisticated multi-agent architecture
+- System demonstrates clear separation of concerns with specialized agents for each phase
+- Strong emphasis on validation, quality scoring, and error recovery
+- Extensible design supports multiple input types and output formats
+- MCP integration enables AI agent interoperability
