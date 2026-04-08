@@ -902,4 +902,15 @@ program
     }
   });
 
+// ─── schema ───────────────────────────────────────────────────
+program
+  .command("schema")
+  .description(
+    "Output the WorldModel JSON Schema (for validation or code generation)",
+  )
+  .action(async () => {
+    const { getWorldModelJsonSchema } = await import("./schema/json-schema.js");
+    console.log(JSON.stringify(getWorldModelJsonSchema(), null, 2));
+  });
+
 program.parse();

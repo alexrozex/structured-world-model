@@ -30,6 +30,7 @@ export { intersection, difference, overlay } from "./utils/algebra.js";
 export { toClaudeMd } from "./export/claude-md.js";
 export { toSystemPrompt } from "./export/system-prompt.js";
 export { toMcpSchema } from "./export/mcp-schema.js";
+export { getWorldModelJsonSchema } from "./schema/json-schema.js";
 
 // Timeline
 export {
