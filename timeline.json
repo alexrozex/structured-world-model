@@ -1540,6 +1540,974 @@
         "processes": 6,
         "constraints": 12
       }
+    },
+    {
+      "id": "snap_cd5fbf144972",
+      "timestamp": "2026-04-08T15:04:15.795Z",
+      "label": "v4 — tightened prompt, placeholder removal, 27 entities",
+      "model": {
+        "id": "wm_b9e3d929be5f",
+        "name": "SWM System Architecture",
+        "description": "A comprehensive TypeScript system for extracting, structuring, analyzing, and serving world models from diverse inputs using LLM agents and graph analysis",
+        "version": "0.1.0",
+        "created_at": "2026-04-08T15:03:46.774Z",
+        "entities": [
+          {
+            "id": "ent_3195d733558e",
+            "name": "CLI Interface",
+            "type": "system",
+            "description": "Command-line interface providing 20+ commands for building, inspecting, merging, and transforming world models",
+            "properties": {
+              "commands": 20
+            },
+            "tags": [
+              "entry-point"
+            ]
+          },
+          {
+            "id": "ent_b21b842b22db",
+            "name": "Pipeline System",
+            "type": "system",
+            "description": "Orchestrates the multi-stage world model extraction process with callbacks and progress tracking",
+            "properties": {},
+            "tags": [
+              "core"
+            ]
+          },
+          {
+            "id": "ent_8aba96e8ba62",
+            "name": "Extraction Agent",
+            "type": "actor",
+            "description": "LLM-powered agent that analyzes raw input and extracts entities, relations, processes, and constraints",
+            "properties": {},
+            "tags": [
+              "llm-agent"
+            ]
+          },
+          {
+            "id": "ent_b0ef7d912c0d",
+            "name": "Structuring Agent",
+            "type": "actor",
+            "description": "Agent that converts raw LLM extractions into properly structured world models with normalized types and IDs",
+            "properties": {},
+            "tags": [
+              "agent"
+            ]
+          },
+          {
+            "id": "ent_260de0b1cfd6",
+            "name": "Validation Agent",
+            "type": "actor",
+            "description": "Agent that performs integrity checks on world models, detecting orphans, dangling references, and circular dependencies",
+            "properties": {},
+            "tags": [
+              "agent"
+            ]
+          },
+          {
+            "id": "ent_459e036e7f6c",
+            "name": "Second Pass Agent",
+            "type": "actor",
+            "description": "Agent that finds implicit entities and relations missed in the first extraction pass",
+            "properties": {},
+            "tags": [
+              "llm-agent"
+            ]
+          },
+          {
+            "id": "ent_5ead4e046868",
+            "name": "Query Agent",
+            "type": "actor",
+            "description": "Agent that answers natural language questions about world models using graph patterns and LLM inference",
+            "properties": {},
+            "tags": [
+              "llm-agent"
+            ]
+          },
+          {
+            "id": "ent_9276af29d0fc",
+            "name": "Refinement Agent",
+            "type": "actor",
+            "description": "Agent that incrementally updates existing world models with new input",
+            "properties": {},
+            "tags": [
+              "llm-agent"
+            ]
+          },
+          {
+            "id": "ent_f8c8ffc36577",
+            "name": "Transform Agent",
+            "type": "actor",
+            "description": "Agent that applies natural language transformations to modify world models",
+            "properties": {},
+            "tags": [
+              "llm-agent"
+            ]
+          },
+          {
+            "id": "ent_0dbc2166dbdd",
+            "name": "Chunker Module",
+            "type": "system",
+            "description": "Splits large inputs into token-sized chunks with paragraph-boundary awareness and overlap",
+            "properties": {
+              "max_tokens": 80000,
+              "overlap_chars": 500
+            },
+            "tags": [
+              "utility"
+            ]
+          },
+          {
+            "id": "ent_9fcca4191552",
+            "name": "LLM Client",
+            "type": "system",
+            "description": "Anthropic Claude API client with retry logic, timeout handling, and token estimation",
+            "properties": {
+              "default_model": "claude-sonnet-4-20250514"
+            },
+            "tags": [
+              "external"
+            ]
+          },
+          {
+            "id": "ent_16ab039dbf5e",
+            "name": "Graph Analysis Module",
+            "type": "system",
+            "description": "Provides pathfinding, dependency analysis, impact analysis, clustering, and subgraph extraction",
+            "properties": {},
+            "tags": [
+              "utility"
+            ]
+          },
+          {
+            "id": "ent_6aea0eda6334",
+            "name": "World Model Schema",
+            "type": "concept",
+            "description": "Zod-based schema defining entities, relations, processes, constraints with validation",
+            "properties": {},
+            "tags": [
+              "schema"
+            ]
+          },
+          {
+            "id": "ent_9bf4f0b907f6",
+            "name": "MCP Server",
+            "type": "system",
+            "description": "Model Context Protocol server exposing world model as 9 live queryable tools for AI agents",
+            "properties": {
+              "tools": 9
+            },
+            "tags": [
+              "server"
+            ]
+          },
+          {
+            "id": "ent_7a829a0992a2",
+            "name": "Export System",
+            "type": "system",
+            "description": "Converts world models to Claude MD, system prompts, MCP schemas, Mermaid diagrams, and DOT graphs",
+            "properties": {},
+            "tags": [
+              "export"
+            ]
+          },
+          {
+            "id": "ent_27d2799ee9df",
+            "name": "Timeline System",
+            "type": "system",
+            "description": "Tracks world model evolution over time with snapshots and automatic diffing",
+            "properties": {},
+            "tags": [
+              "versioning"
+            ]
+          },
+          {
+            "id": "ent_ada16facbb56",
+            "name": "Merge System",
+            "type": "system",
+            "description": "Combines multiple world models with entity deduplication and ID remapping",
+            "properties": {},
+            "tags": [
+              "utility"
+            ]
+          },
+          {
+            "id": "ent_2982b9100a3c",
+            "name": "Fix System",
+            "type": "system",
+            "description": "Auto-repairs world model validation issues like orphan entities and dangling references",
+            "properties": {},
+            "tags": [
+              "utility"
+            ]
+          },
+          {
+            "id": "ent_6736e5368e2b",
+            "name": "Entity",
+            "type": "concept",
+            "description": "Core domain object representing actors, systems, concepts, locations, events, groups, objects, or resources",
+            "properties": {},
+            "tags": [
+              "data-model"
+            ]
+          },
+          {
+            "id": "ent_f748886a8e05",
+            "name": "Relation",
+            "type": "concept",
+            "description": "Directed connection between entities with semantic types like depends_on, uses, contains",
+            "properties": {},
+            "tags": [
+              "data-model"
+            ]
+          },
+          {
+            "id": "ent_62564f4e78f5",
+            "name": "Process",
+            "type": "concept",
+            "description": "Dynamic sequence of ordered steps with actors, triggers, and outcomes",
+            "properties": {},
+            "tags": [
+              "data-model"
+            ]
+          },
+          {
+            "id": "ent_8b6a5b43e3a1",
+            "name": "Constraint",
+            "type": "concept",
+            "description": "Invariant rule that must hold true, with hard or soft severity",
+            "properties": {},
+            "tags": [
+              "data-model"
+            ]
+          },
+          {
+            "id": "ent_f0f75ccebb4f",
+            "name": "Prompt Templates",
+            "type": "resource",
+            "description": "Specialized extraction prompts for different source types (text, code, conversation, document, URL)",
+            "properties": {},
+            "tags": [
+              "prompts"
+            ]
+          },
+          {
+            "id": "ent_564cd654826a",
+            "name": "File Input",
+            "type": "resource",
+            "description": "Text files, code files, JSON, YAML, CSV, and other document formats",
+            "properties": {},
+            "tags": [
+              "input"
+            ]
+          },
+          {
+            "id": "ent_a20e65bf635b",
+            "name": "URL Input",
+            "type": "resource",
+            "description": "Web pages fetched and stripped of HTML for content extraction",
+            "properties": {},
+            "tags": [
+              "input"
+            ]
+          },
+          {
+            "id": "ent_e555e540929e",
+            "name": "Validation Result",
+            "type": "object",
+            "description": "Comprehensive validation report with issues, stats, and quality scores",
+            "properties": {},
+            "tags": [
+              "output"
+            ]
+          },
+          {
+            "id": "ent_bc30391a67ad",
+            "name": "Query Result",
+            "type": "object",
+            "description": "Answer to natural language questions with method, confidence, and referenced entities",
+            "properties": {},
+            "tags": [
+              "output"
+            ]
+          }
+        ],
+        "relations": [
+          {
+            "id": "rel_65e71ee8218a",
+            "type": "uses",
+            "source": "ent_3195d733558e",
+            "target": "ent_b21b842b22db",
+            "label": "orchestrates extraction via"
+          },
+          {
+            "id": "rel_789ddeef7644",
+            "type": "contains",
+            "source": "ent_b21b842b22db",
+            "target": "ent_8aba96e8ba62",
+            "label": "first stage runs"
+          },
+          {
+            "id": "rel_49e2f42c3bae",
+            "type": "contains",
+            "source": "ent_b21b842b22db",
+            "target": "ent_b0ef7d912c0d",
+            "label": "second stage runs"
+          },
+          {
+            "id": "rel_eff0bc3929b6",
+            "type": "contains",
+            "source": "ent_b21b842b22db",
+            "target": "ent_260de0b1cfd6",
+            "label": "final stage runs"
+          },
+          {
+            "id": "rel_ee98d51e548c",
+            "type": "uses",
+            "source": "ent_8aba96e8ba62",
+            "target": "ent_9fcca4191552",
+            "label": "calls Claude API via"
+          },
+          {
+            "id": "rel_6a6fd7822c1f",
+            "type": "uses",
+            "source": "ent_8aba96e8ba62",
+            "target": "ent_0dbc2166dbdd",
+            "label": "splits large input with"
+          },
+          {
+            "id": "rel_c225528e185f",
+            "type": "uses",
+            "source": "ent_8aba96e8ba62",
+            "target": "ent_f0f75ccebb4f",
+            "label": "selects specialized prompts from"
+          },
+          {
+            "id": "rel_8e3d19cdb6ef",
+            "type": "uses",
+            "source": "ent_b0ef7d912c0d",
+            "target": "ent_6aea0eda6334",
+            "label": "validates against"
+          },
+          {
+            "id": "rel_181a6f652792",
+            "type": "uses",
+            "source": "ent_260de0b1cfd6",
+            "target": "ent_16ab039dbf5e",
+            "label": "detects issues via"
+          },
+          {
+            "id": "rel_fab46ce5eaf0",
+            "type": "uses",
+            "source": "ent_459e036e7f6c",
+            "target": "ent_9fcca4191552",
+            "label": "finds implicit elements via"
+          },
+          {
+            "id": "rel_333c3d44ca2c",
+            "type": "uses",
+            "source": "ent_5ead4e046868",
+            "target": "ent_16ab039dbf5e",
+            "label": "answers structural questions via"
+          },
+          {
+            "id": "rel_4b9a130af571",
+            "type": "uses",
+            "source": "ent_5ead4e046868",
+            "target": "ent_9fcca4191552",
+            "label": "handles open-ended questions via"
+          },
+          {
+            "id": "rel_d9771f23621f",
+            "type": "uses",
+            "source": "ent_9276af29d0fc",
+            "target": "ent_ada16facbb56",
+            "label": "combines models via"
+          },
+          {
+            "id": "rel_db29a28ab093",
+            "type": "uses",
+            "source": "ent_f8c8ffc36577",
+            "target": "ent_9fcca4191552",
+            "label": "applies transformations via"
+          },
+          {
+            "id": "rel_c7abb06dcb54",
+            "type": "uses",
+            "source": "ent_9bf4f0b907f6",
+            "target": "ent_16ab039dbf5e",
+            "label": "exposes tools backed by"
+          },
+          {
+            "id": "rel_4aeef252c777",
+            "type": "uses",
+            "source": "ent_9bf4f0b907f6",
+            "target": "ent_5ead4e046868",
+            "label": "provides query tool via"
+          },
+          {
+            "id": "rel_0330db25d48f",
+            "type": "uses",
+            "source": "ent_7a829a0992a2",
+            "target": "ent_16ab039dbf5e",
+            "label": "generates diagrams via"
+          },
+          {
+            "id": "rel_649aa742ef43",
+            "type": "uses",
+            "source": "ent_27d2799ee9df",
+            "target": "ent_ada16facbb56",
+            "label": "computes diffs via"
+          },
+          {
+            "id": "rel_f8f05cc9a882",
+            "type": "uses",
+            "source": "ent_2982b9100a3c",
+            "target": "ent_260de0b1cfd6",
+            "label": "repairs issues identified by"
+          },
+          {
+            "id": "rel_27c3f72b7797",
+            "type": "consumes",
+            "source": "ent_3195d733558e",
+            "target": "ent_564cd654826a",
+            "label": "reads various formats from"
+          },
+          {
+            "id": "rel_f786534ef996",
+            "type": "consumes",
+            "source": "ent_3195d733558e",
+            "target": "ent_a20e65bf635b",
+            "label": "fetches and processes"
+          },
+          {
+            "id": "rel_bcd5ca570108",
+            "type": "contains",
+            "source": "ent_6aea0eda6334",
+            "target": "ent_6736e5368e2b",
+            "label": "defines structure of"
+          },
+          {
+            "id": "rel_3aefb750a190",
+            "type": "contains",
+            "source": "ent_6aea0eda6334",
+            "target": "ent_f748886a8e05",
+            "label": "defines structure of"
+          },
+          {
+            "id": "rel_fe3474f1fb5a",
+            "type": "contains",
+            "source": "ent_6aea0eda6334",
+            "target": "ent_62564f4e78f5",
+            "label": "defines structure of"
+          },
+          {
+            "id": "rel_70eddf9b63d2",
+            "type": "contains",
+            "source": "ent_6aea0eda6334",
+            "target": "ent_8b6a5b43e3a1",
+            "label": "defines structure of"
+          },
+          {
+            "id": "rel_075f2982d191",
+            "type": "produces",
+            "source": "ent_260de0b1cfd6",
+            "target": "ent_e555e540929e",
+            "label": "generates detailed"
+          },
+          {
+            "id": "rel_422248e49ecb",
+            "type": "produces",
+            "source": "ent_5ead4e046868",
+            "target": "ent_bc30391a67ad",
+            "label": "returns structured"
+          },
+          {
+            "id": "rel_cdf1a0119d80",
+            "type": "flows_to",
+            "source": "ent_6736e5368e2b",
+            "target": "ent_f748886a8e05",
+            "label": "connected by"
+          },
+          {
+            "id": "rel_5b59dba9806f",
+            "type": "uses",
+            "source": "ent_62564f4e78f5",
+            "target": "ent_6736e5368e2b",
+            "label": "involves multiple"
+          },
+          {
+            "id": "rel_d88203338ead",
+            "type": "controls",
+            "source": "ent_8b6a5b43e3a1",
+            "target": "ent_6736e5368e2b",
+            "label": "applies rules to"
+          },
+          {
+            "id": "rel_295a5a82a93c",
+            "type": "depends_on",
+            "source": "ent_0dbc2166dbdd",
+            "target": "ent_9fcca4191552",
+            "label": "uses token limits from"
+          }
+        ],
+        "processes": [
+          {
+            "id": "proc_b9e8676c6fb5",
+            "name": "World Model Extraction",
+            "description": "Complete pipeline to extract structured world models from any input type",
+            "trigger": "User runs swm model command with input",
+            "steps": [
+              {
+                "order": 1,
+                "action": "Detect source type from file extension or content patterns",
+                "actor": "ent_3195d733558e",
+                "input": [
+                  "ent_564cd654826a"
+                ],
+                "output": []
+              },
+              {
+                "order": 2,
+                "action": "Check input size and chunk if necessary",
+                "actor": "ent_0dbc2166dbdd",
+                "input": [],
+                "output": []
+              },
+              {
+                "order": 3,
+                "action": "Extract entities, relations, processes, constraints using specialized prompts",
+                "actor": "ent_8aba96e8ba62",
+                "input": [],
+                "output": []
+              },
+              {
+                "order": 4,
+                "action": "Structure raw extraction into proper world model with ID generation",
+                "actor": "ent_b0ef7d912c0d",
+                "input": [],
+                "output": []
+              },
+              {
+                "order": 5,
+                "action": "Validate model integrity and generate quality score",
+                "actor": "ent_260de0b1cfd6",
+                "input": [],
+                "output": [
+                  "ent_e555e540929e"
+                ]
+              }
+            ],
+            "participants": [
+              "ent_3195d733558e",
+              "ent_0dbc2166dbdd",
+              "ent_8aba96e8ba62",
+              "ent_b0ef7d912c0d",
+              "ent_260de0b1cfd6"
+            ],
+            "outcomes": [
+              "Structured world model with validation report"
+            ]
+          },
+          {
+            "id": "proc_756cf57f87f8",
+            "name": "Multi-Pass Extraction",
+            "description": "Enhanced extraction with multiple passes to find implicit elements",
+            "trigger": "User specifies passes > 1",
+            "steps": [
+              {
+                "order": 1,
+                "action": "Run standard extraction pipeline",
+                "actor": "ent_b21b842b22db",
+                "input": [],
+                "output": []
+              },
+              {
+                "order": 2,
+                "action": "Find implicit entities and relations missed in first pass",
+                "actor": "ent_459e036e7f6c",
+                "input": [],
+                "output": []
+              },
+              {
+                "order": 3,
+                "action": "Structure delta extraction",
+                "actor": "ent_b0ef7d912c0d",
+                "input": [],
+                "output": []
+              },
+              {
+                "order": 4,
+                "action": "Merge original and delta models",
+                "actor": "ent_ada16facbb56",
+                "input": [],
+                "output": []
+              },
+              {
+                "order": 5,
+                "action": "Final validation of merged result",
+                "actor": "ent_260de0b1cfd6",
+                "input": [],
+                "output": []
+              }
+            ],
+            "participants": [
+              "ent_b21b842b22db",
+              "ent_459e036e7f6c",
+              "ent_b0ef7d912c0d",
+              "ent_ada16facbb56",
+              "ent_260de0b1cfd6"
+            ],
+            "outcomes": [
+              "More complete world model with implicit elements captured"
+            ]
+          },
+          {
+            "id": "proc_c8ab5c399b13",
+            "name": "Natural Language Query",
+            "description": "Answer questions about world models using graph patterns and LLM inference",
+            "trigger": "User asks question via swm query command",
+            "steps": [
+              {
+                "order": 1,
+                "action": "Try to match question against known graph patterns",
+                "actor": "ent_5ead4e046868",
+                "input": [],
+                "output": []
+              },
+              {
+                "order": 2,
+                "action": "If pattern matched, execute graph analysis",
+                "actor": "ent_16ab039dbf5e",
+                "input": [],
+                "output": []
+              },
+              {
+                "order": 3,
+                "action": "If no pattern match, use LLM inference with model context",
+                "actor": "ent_5ead4e046868",
+                "input": [],
+                "output": []
+              },
+              {
+                "order": 4,
+                "action": "Format answer with method, confidence, and referenced entities",
+                "actor": "ent_5ead4e046868",
+                "input": [],
+                "output": [
+                  "ent_bc30391a67ad"
+                ]
+              }
+            ],
+            "participants": [
+              "ent_5ead4e046868",
+              "ent_16ab039dbf5e"
+            ],
+            "outcomes": [
+              "Natural language answer with confidence and method"
+            ]
+          },
+          {
+            "id": "proc_cc553f18c8cb",
+            "name": "MCP Tool Execution",
+            "description": "Serve world model as live tools for AI agents via Model Context Protocol",
+            "trigger": "AI agent calls MCP tool",
+            "steps": [
+              {
+                "order": 1,
+                "action": "Parse tool call parameters",
+                "actor": "ent_9bf4f0b907f6",
+                "input": [],
+                "output": []
+              },
+              {
+                "order": 2,
+                "action": "Execute appropriate graph analysis or query",
+                "actor": "ent_16ab039dbf5e",
+                "input": [],
+                "output": []
+              },
+              {
+                "order": 3,
+                "action": "Format result for AI agent consumption",
+                "actor": "ent_9bf4f0b907f6",
+                "input": [],
+                "output": []
+              }
+            ],
+            "participants": [
+              "ent_9bf4f0b907f6",
+              "ent_16ab039dbf5e",
+              "ent_5ead4e046868"
+            ],
+            "outcomes": [
+              "Real-time domain expertise for AI agents"
+            ]
+          }
+        ],
+        "constraints": [
+          {
+            "id": "cstr_1b8c9e3a0803",
+            "name": "Token Limit Constraint",
+            "type": "capacity",
+            "description": "Input chunks must not exceed 80,000 tokens to fit within Claude's context window",
+            "scope": [
+              "ent_0dbc2166dbdd",
+              "ent_9fcca4191552"
+            ],
+            "severity": "hard"
+          },
+          {
+            "id": "cstr_3c03dea85fcc",
+            "name": "Entity Name Uniqueness",
+            "type": "invariant",
+            "description": "Entity names within a world model should be unique after normalization",
+            "scope": [
+              "ent_b0ef7d912c0d",
+              "ent_ada16facbb56"
+            ],
+            "severity": "soft"
+          },
+          {
+            "id": "cstr_739d0f37aade",
+            "name": "Relation Reference Integrity",
+            "type": "dependency",
+            "description": "All relation source and target IDs must reference existing entities",
+            "scope": [
+              "ent_260de0b1cfd6",
+              "ent_2982b9100a3c"
+            ],
+            "severity": "hard"
+          },
+          {
+            "id": "cstr_df2aec903563",
+            "name": "Process Step Ordering",
+            "type": "temporal",
+            "description": "Process steps must have monotonically increasing order numbers",
+            "scope": [
+              "ent_b0ef7d912c0d",
+              "ent_2982b9100a3c"
+            ],
+            "severity": "soft"
+          },
+          {
+            "id": "cstr_7d68a11c9ba7",
+            "name": "Schema Compliance",
+            "type": "invariant",
+            "description": "All world models must validate against the Zod schema",
+            "scope": [
+              "ent_b0ef7d912c0d",
+              "ent_6aea0eda6334"
+            ],
+            "severity": "hard"
+          },
+          {
+            "id": "cstr_18a7a38cd552",
+            "name": "API Rate Limiting",
+            "type": "boundary",
+            "description": "Claude API calls must respect rate limits with exponential backoff retry",
+            "scope": [
+              "ent_9fcca4191552"
+            ],
+            "severity": "hard"
+          },
+          {
+            "id": "cstr_82e94807066d",
+            "name": "Source Type Detection",
+            "type": "rule",
+            "description": "Input must be classified into one of six source types for appropriate prompt selection",
+            "scope": [
+              "ent_3195d733558e",
+              "ent_f0f75ccebb4f"
+            ],
+            "severity": "soft"
+          },
+          {
+            "id": "cstr_0032917110c7",
+            "name": "Confidence Scoring",
+            "type": "rule",
+            "description": "All extractions must include confidence scores between 0 and 1",
+            "scope": [
+              "ent_8aba96e8ba62",
+              "ent_260de0b1cfd6"
+            ],
+            "severity": "soft"
+          }
+        ],
+        "metadata": {
+          "source_type": "code",
+          "source_summary": "Analysis of complete SWM codebase including CLI, agents, pipeline, schema, utilities, and server components",
+          "confidence": 0.9,
+          "extraction_notes": [
+            "System implements sophisticated multi-pass extraction with chunk handling",
+            "Strong emphasis on validation and auto-fixing of model integrity issues",
+            "Provides both CLI and MCP server interfaces for different use cases",
+            "Graph analysis capabilities include pathfinding, clustering, and impact analysis",
+            "Export system supports multiple formats for AI consumption (Claude MD, system prompts, MCP schemas)"
+          ]
+        }
+      },
+      "diff_from_previous": {
+        "entities": {
+          "added": [
+            "Chunker Module",
+            "Graph Analysis Module",
+            "Prompt Templates",
+            "File Input",
+            "URL Input",
+            "Validation Result",
+            "Query Result"
+          ],
+          "removed": [
+            "Chunker Agent",
+            "Source Type Detection",
+            "Graph Analysis Utils",
+            "Algebra Operations",
+            "Coverage Analysis",
+            "Prompt System",
+            "URL Fetcher",
+            "JSON Schema Generator",
+            "raw input",
+            "source type",
+            "text chunks",
+            "raw extraction",
+            "world model",
+            "validated model",
+            "issues",
+            "score",
+            "original input",
+            "delta extraction",
+            "delta model",
+            "enhanced model",
+            "final model",
+            "question",
+            "graph result or null",
+            "model context",
+            "inference result",
+            "result",
+            "formatted answer",
+            "existing model",
+            "new input",
+            "updated model",
+            "refined model",
+            "instruction",
+            "current model",
+            "change specification",
+            "transformation delta",
+            "transformed model",
+            "format type",
+            "formatter",
+            "formatted output",
+            "exported file"
+          ],
+          "modified": [
+            "CLI Interface",
+            "Pipeline System",
+            "Extraction Agent",
+            "Structuring Agent",
+            "Validation Agent",
+            "Second Pass Agent",
+            "Query Agent",
+            "Refinement Agent",
+            "Transform Agent",
+            "LLM Client",
+            "World Model Schema",
+            "MCP Server",
+            "Export System",
+            "Timeline System",
+            "Fix System",
+            "Relation",
+            "Process",
+            "Constraint"
+          ]
+        },
+        "relations": {
+          "added": [
+            "Extraction Agent::uses::Chunker Module",
+            "Extraction Agent::uses::Prompt Templates",
+            "Validation Agent::uses::Graph Analysis Module",
+            "Query Agent::uses::Graph Analysis Module",
+            "MCP Server::uses::Graph Analysis Module",
+            "Export System::uses::Graph Analysis Module",
+            "Fix System::uses::Validation Agent",
+            "CLI Interface::consumes::File Input",
+            "CLI Interface::consumes::URL Input",
+            "Validation Agent::produces::Validation Result",
+            "Query Agent::produces::Query Result",
+            "Process::uses::Entity",
+            "Constraint::controls::Entity",
+            "Chunker Module::depends_on::LLM Client"
+          ],
+          "removed": [
+            "Extraction Agent::uses::Chunker Agent",
+            "Extraction Agent::uses::Prompt System",
+            "Validation Agent::uses::World Model Schema",
+            "Query Agent::uses::Graph Analysis Utils",
+            "Refinement Agent::uses::Extraction Agent",
+            "Transform Agent::uses::Merge System",
+            "CLI Interface::uses::Source Type Detection",
+            "CLI Interface::uses::URL Fetcher",
+            "CLI Interface::uses::Query Agent",
+            "CLI Interface::uses::Graph Analysis Utils",
+            "CLI Interface::uses::Export System",
+            "CLI Interface::uses::Timeline System",
+            "CLI Interface::uses::Algebra Operations",
+            "CLI Interface::uses::Coverage Analysis",
+            "CLI Interface::uses::Fix System",
+            "MCP Server::uses::Graph Analysis Utils",
+            "Entity::flows_to::Process",
+            "Entity::flows_to::Constraint",
+            "Chunker Agent::uses::LLM Client",
+            "Export System::uses::JSON Schema Generator",
+            "Fix System::uses::World Model Schema",
+            "Merge System::produces::World Model Schema",
+            "Algebra Operations::produces::World Model Schema"
+          ]
+        },
+        "processes": {
+          "added": [
+            "Multi-Pass Extraction",
+            "Natural Language Query",
+            "MCP Tool Execution"
+          ],
+          "removed": [
+            "Multi-Pass Enhancement",
+            "World Model Querying",
+            "Model Refinement",
+            "Model Transformation",
+            "Model Export"
+          ]
+        },
+        "constraints": {
+          "added": [
+            "Entity Name Uniqueness",
+            "Relation Reference Integrity",
+            "Schema Compliance",
+            "API Rate Limiting",
+            "Source Type Detection",
+            "Confidence Scoring"
+          ],
+          "removed": [
+            "Schema Validation",
+            "Entity Reference Integrity",
+            "Unique Entity IDs",
+            "Retry Limit",
+            "Entity Name Deduplication",
+            "Quality Score Range",
+            "Circular Dependency Detection",
+            "Confidence Score Range",
+            "API Timeout",
+            "Non-Empty Extraction"
+          ]
+        },
+        "summary": "+7 entities, -40 entities, ~18 entities modified, +14 relations, -23 relations, +3 processes, +6 constraints"
+      },
+      "stats": {
+        "entities": 27,
+        "relations": 31,
+        "processes": 4,
+        "constraints": 8
+      }
     }
   ]
 }
