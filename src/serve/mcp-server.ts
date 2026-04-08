@@ -10,6 +10,7 @@ import {
   pathsBetween,
   getStats,
   toMermaid,
+  analyzeImpact,
 } from "../utils/graph.js";
 import { queryWorldModel } from "../agents/query.js";
 
@@ -324,6 +325,53 @@ export async function startMcpServer(modelPath: string): Promise<void> {
     {},
     async () => {
       return { content: [{ type: "text" as const, text: toMermaid(model) }] };
+    },
+  );
+
+  // ─── Tool: analyze_impact ────────────────────────────────
+  server.tool(
+    "analyze_impact",
+    "Analyze what breaks if an entity is removed — broken relations, dependents, affected processes and constraints, severity rating",
+    {
+      entity: z.string().describe("Entity name to analyze"),
+    },
+    async ({ entity: name }) => {
+      const entity = findEntity(model, name);
+      if (!entity) {
+        return {
+          content: [
+            { type: "text" as const, text: `Entity "${name}" not found.` },
+          ],
+        };
+      }
+      const result = analyzeImpact(model, entity.id);
+      if (!result) {
+        return {
+          content: [{ type: "text" as const, text: "Analysis failed." }],
+        };
+      }
+
+      const lines = [
+        `**Impact of removing ${entity.name}** — Severity: ${result.severity.toUpperCase()}`,
+        "",
+        result.summary,
+      ];
+      if (result.dependents.length > 0) {
+        lines.push(
+          `\nDependents: ${result.dependents.map((d) => d.name).join(", ")}`,
+        );
+      }
+      if (result.affectedProcesses.length > 0) {
+        lines.push(
+          `Affected processes: ${result.affectedProcesses.map((a) => `${a.process.name} (${a.role})`).join(", ")}`,
+        );
+      }
+      if (result.affectedConstraints.length > 0) {
+        lines.push(
+          `Affected constraints: ${result.affectedConstraints.map((c) => `[${c.severity}] ${c.name}`).join(", ")}`,
+        );
+      }
+      return { content: [{ type: "text" as const, text: lines.join("\n") }] };
     },
   );
 
