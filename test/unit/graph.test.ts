@@ -199,6 +199,72 @@ function run() {
     assert(dot.includes("}"), "toDot: properly closed");
   }
 
+  // ─── Escaping in Mermaid/DOT ─────────────────────────
+
+  {
+    const nastyModel: WorldModelType = {
+      ...model,
+      entities: [
+        {
+          id: "ent_q",
+          name: 'Entity "with" quotes',
+          type: "object",
+          description: "test",
+        },
+        {
+          id: "ent_b",
+          name: "Entity `with` backticks",
+          type: "system",
+          description: "test",
+        },
+        {
+          id: "ent_br",
+          name: "Entity [with] brackets",
+          type: "actor",
+          description: "test",
+        },
+        {
+          id: "ent_a",
+          name: "Entity <with> angles",
+          type: "concept",
+          description: "test",
+        },
+      ],
+      relations: [
+        {
+          id: "rel_q",
+          type: "uses",
+          source: "ent_q",
+          target: "ent_b",
+          label: "test",
+        },
+      ],
+    };
+
+    const mermaid = toMermaid(nastyModel);
+    assert(
+      !mermaid.includes('"with"'),
+      "mermaid escape: no raw double quotes in output",
+    );
+    assert(
+      !mermaid.includes("`with`"),
+      "mermaid escape: no raw backticks in output",
+    );
+    assert(
+      !mermaid.includes("[with]"),
+      "mermaid escape: no raw brackets in output",
+    );
+    assert(
+      !mermaid.includes("<with>"),
+      "mermaid escape: no raw angle brackets in output",
+    );
+    assert(mermaid.includes("graph TD"), "mermaid escape: still valid mermaid");
+
+    const dot = toDot(nastyModel);
+    assert(!dot.includes('"with"'), "dot escape: quotes escaped");
+    assert(dot.includes("digraph"), "dot escape: still valid dot");
+  }
+
   // ─── getStats ────────────────────────────────────────
 
   {
