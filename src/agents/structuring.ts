@@ -116,11 +116,16 @@ export function structuringAgent(stageInput: {
     return "rule" as WorldModelType["constraints"][number]["type"];
   }
 
-  // Build entity name → ID map
-  const entityIdMap = new Map<string, string>();
+  // Build entity name → ID map (case-insensitive + trimmed for robust matching)
+  const entityIdMap = new Map<string, string>(); // normalized name → id
+  const entityOriginalNames = new Map<string, string>(); // normalized name → original name
+  const normalizeForLookup = (name: string) => name.toLowerCase().trim();
+
   const entities = extraction.entities.map((e) => {
     const id = genId("ent");
-    entityIdMap.set(e.name, id);
+    const key = normalizeForLookup(e.name);
+    entityIdMap.set(key, id);
+    entityOriginalNames.set(key, e.name);
     return {
       id,
       name: e.name,
@@ -132,11 +137,13 @@ export function structuringAgent(stageInput: {
   });
 
   const resolveEntityId = (name: string): string => {
-    const existing = entityIdMap.get(name);
+    const key = normalizeForLookup(name);
+    const existing = entityIdMap.get(key);
     if (existing) return existing;
     // Create a placeholder entity for unresolved references
     const id = genId("ent");
-    entityIdMap.set(name, id);
+    entityIdMap.set(key, id);
+    entityOriginalNames.set(key, name);
     entities.push({
       id,
       name,

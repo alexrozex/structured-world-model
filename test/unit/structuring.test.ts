@@ -282,6 +282,60 @@ async function run() {
     );
   }
 
+  // Test 11: Case-insensitive entity name resolution
+  {
+    const ext = makeExtraction({
+      entities: [{ name: "User", type: "actor", description: "A user" }],
+      relations: [
+        {
+          source: "user",
+          target: "User",
+          type: "uses",
+          label: "self-ref via lowercase",
+        },
+        {
+          source: "USER",
+          target: "User",
+          type: "uses",
+          label: "self-ref via uppercase",
+        },
+      ],
+      processes: [],
+      constraints: [],
+    });
+    const { worldModel } = await structuringAgent({ input, extraction: ext });
+    assert(
+      worldModel.entities.length === 1,
+      "Case-insensitive: no duplicate entities created for 'user'/'USER'/'User'",
+    );
+    assert(
+      worldModel.relations.every((r) => r.source === r.target),
+      "Case-insensitive: all variants resolve to same ID",
+    );
+  }
+
+  // Test 12: Trimmed name resolution
+  {
+    const ext = makeExtraction({
+      entities: [{ name: "Database", type: "system", description: "DB" }],
+      relations: [
+        {
+          source: " Database ",
+          target: "Database",
+          type: "uses",
+          label: "whitespace variant",
+        },
+      ],
+      processes: [],
+      constraints: [],
+    });
+    const { worldModel } = await structuringAgent({ input, extraction: ext });
+    assert(
+      worldModel.entities.length === 1,
+      "Trimmed: no duplicate for ' Database ' vs 'Database'",
+    );
+  }
+
   console.log(`\n═══ ${passed}/${passed + failed} passed ═══\n`);
   if (failed > 0) process.exit(1);
 }
