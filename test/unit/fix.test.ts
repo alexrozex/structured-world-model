@@ -358,6 +358,59 @@ function run() {
     );
   }
 
+  // Low-confidence placeholder entities removed
+  {
+    const { model, fixes } = fixWorldModel(
+      makeModel({
+        entities: [
+          { id: "ent_1", name: "User", type: "actor", description: "A user" },
+          { id: "ent_2", name: "DB", type: "system", description: "Database" },
+          {
+            id: "ent_3",
+            name: "raw input",
+            type: "object",
+            description:
+              "Auto-created entity for unresolved reference: raw input",
+            tags: ["auto-created"],
+            confidence: 0.2,
+          },
+        ],
+        relations: [
+          {
+            id: "rel_1",
+            type: "uses",
+            source: "ent_1",
+            target: "ent_2",
+            label: "queries",
+          },
+          {
+            id: "rel_2",
+            type: "uses",
+            source: "ent_1",
+            target: "ent_3",
+            label: "reads",
+          },
+        ],
+      }),
+    );
+    assert(
+      model.entities.length === 2,
+      "Placeholder removal: removed low-confidence auto-created entity",
+    );
+    assert(
+      !model.entities.some((e) => e.name === "raw input"),
+      "Placeholder removal: 'raw input' gone",
+    );
+    assert(
+      model.relations.length === 1,
+      "Placeholder removal: cleaned relation to removed entity",
+    );
+    assert(
+      fixes.some((f) => f.includes("placeholder")),
+      "Placeholder removal: fix reported",
+    );
+  }
+
   console.log(`\n═══ ${passed}/${passed + failed} passed ═══\n`);
   if (failed > 0) process.exit(1);
 }

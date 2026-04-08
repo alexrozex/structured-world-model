@@ -78,6 +78,46 @@ export function fixWorldModel(model: WorldModelType): FixResult {
     }
   }
 
+  // Fix 0b: Remove low-confidence placeholder entities (auto-created by structuring)
+  {
+    const before = entities.length;
+    const removedIds = new Set<string>();
+    entities = entities.filter((e) => {
+      if (
+        e.confidence !== undefined &&
+        e.confidence <= 0.2 &&
+        e.tags?.includes("auto-created")
+      ) {
+        removedIds.add(e.id);
+        return false;
+      }
+      return true;
+    });
+    if (removedIds.size > 0) {
+      // Clean references to removed placeholders
+      relations = relations.filter(
+        (r) => !removedIds.has(r.source) && !removedIds.has(r.target),
+      );
+      processes = processes.map((p) => ({
+        ...p,
+        participants: p.participants.filter((pid) => !removedIds.has(pid)),
+        steps: p.steps.map((s) => ({
+          ...s,
+          actor: s.actor && removedIds.has(s.actor) ? undefined : s.actor,
+          input: s.input?.filter((id) => !removedIds.has(id)),
+          output: s.output?.filter((id) => !removedIds.has(id)),
+        })),
+      }));
+      constraints = constraints.map((c) => ({
+        ...c,
+        scope: c.scope.filter((id) => !removedIds.has(id)),
+      }));
+      fixes.push(
+        `Removed ${removedIds.size} low-confidence placeholder entities`,
+      );
+    }
+  }
+
   // Fix 1: Remove relations with dangling source or target
   {
     const ids = entityIds();
