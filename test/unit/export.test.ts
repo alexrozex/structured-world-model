@@ -1,0 +1,222 @@
+import { toClaudeMd } from "../../src/export/claude-md.js";
+import { toSystemPrompt } from "../../src/export/system-prompt.js";
+import { toMcpSchema } from "../../src/export/mcp-schema.js";
+import type { WorldModelType } from "../../src/schema/index.js";
+
+function makeModel(): WorldModelType {
+  return {
+    id: "wm_test",
+    name: "Test System",
+    description: "A test system",
+    version: "0.1.0",
+    created_at: new Date().toISOString(),
+    entities: [
+      { id: "ent_1", name: "User", type: "actor", description: "End user" },
+      {
+        id: "ent_2",
+        name: "API",
+        type: "system",
+        description: "REST API",
+        properties: { port: 3000 },
+      },
+      {
+        id: "ent_3",
+        name: "Database",
+        type: "system",
+        description: "PostgreSQL",
+      },
+    ],
+    relations: [
+      {
+        id: "rel_1",
+        type: "uses",
+        source: "ent_1",
+        target: "ent_2",
+        label: "sends requests",
+      },
+      {
+        id: "rel_2",
+        type: "depends_on",
+        source: "ent_2",
+        target: "ent_3",
+        label: "queries",
+      },
+    ],
+    processes: [
+      {
+        id: "proc_1",
+        name: "Request Flow",
+        description: "Handle API request",
+        trigger: "HTTP request received",
+        steps: [
+          { order: 1, action: "Authenticate", actor: "ent_2" },
+          { order: 2, action: "Query data", actor: "ent_3" },
+        ],
+        participants: ["ent_1", "ent_2", "ent_3"],
+        outcomes: ["Response sent"],
+      },
+    ],
+    constraints: [
+      {
+        id: "cstr_1",
+        name: "Rate Limit",
+        type: "capacity",
+        description: "Max 1000 req/min",
+        scope: ["ent_2"],
+        severity: "hard",
+      },
+      {
+        id: "cstr_2",
+        name: "Logging",
+        type: "rule",
+        description: "All requests logged",
+        scope: ["ent_2"],
+        severity: "soft",
+      },
+    ],
+    metadata: {
+      source_type: "text",
+      source_summary: "test",
+      confidence: 0.9,
+      extraction_notes: ["Test note"],
+    },
+  };
+}
+
+let passed = 0;
+let failed = 0;
+function assert(condition: boolean, label: string) {
+  if (condition) {
+    console.log(`  ✓ ${label}`);
+    passed++;
+  } else {
+    console.log(`  ✗ ${label}`);
+    failed++;
+  }
+}
+
+function run() {
+  console.log("═══ Export Unit Tests ═══\n");
+  const model = makeModel();
+
+  // ─── CLAUDE.md ───────────────────────────────────────
+
+  const claudeMd = toClaudeMd(model);
+  assert(
+    claudeMd.startsWith("# Test System"),
+    "CLAUDE.md: starts with model name as heading",
+  );
+  assert(
+    claudeMd.includes("End user"),
+    "CLAUDE.md: includes entity descriptions",
+  );
+  assert(claudeMd.includes("User"), "CLAUDE.md: includes entity names");
+  assert(
+    claudeMd.includes("sends requests"),
+    "CLAUDE.md: includes relation labels",
+  );
+  assert(
+    claudeMd.includes("Request Flow"),
+    "CLAUDE.md: includes process names",
+  );
+  assert(
+    claudeMd.includes("Authenticate"),
+    "CLAUDE.md: includes process steps",
+  );
+  assert(claudeMd.includes("Rate Limit"), "CLAUDE.md: includes constraints");
+  assert(
+    claudeMd.includes("Hard Constraints"),
+    "CLAUDE.md: separates hard/soft constraints",
+  );
+  assert(
+    claudeMd.includes("Soft Constraints"),
+    "CLAUDE.md: includes soft constraints section",
+  );
+  assert(
+    claudeMd.includes("Test note"),
+    "CLAUDE.md: includes extraction notes",
+  );
+  assert(
+    claudeMd.includes("3 entities"),
+    "CLAUDE.md: includes stats in header",
+  );
+
+  // ─── System Prompt ───────────────────────────────────
+
+  const prompt = toSystemPrompt(model);
+  assert(
+    prompt.includes("expert on the domain: Test System"),
+    "Prompt: declares domain expertise",
+  );
+  assert(prompt.includes("ENTITIES (3)"), "Prompt: correct entity count");
+  assert(
+    prompt.includes("RELATIONSHIPS (2)"),
+    "Prompt: correct relation count",
+  );
+  assert(prompt.includes("PROCESSES (1)"), "Prompt: correct process count");
+  assert(
+    prompt.includes("CONSTRAINTS (2)"),
+    "Prompt: correct constraint count",
+  );
+  assert(prompt.includes("[HARD]"), "Prompt: marks hard constraints");
+  assert(prompt.includes("[SOFT]"), "Prompt: marks soft constraints");
+  assert(prompt.includes("User (actor)"), "Prompt: includes entity type");
+  assert(
+    prompt.includes("HTTP request received"),
+    "Prompt: includes process trigger",
+  );
+
+  // ─── MCP Schema ──────────────────────────────────────
+
+  const mcp = toMcpSchema(model);
+  assert(mcp.name === "test-system", "MCP: normalized server name");
+  assert(mcp.tools.length >= 5, "MCP: at least 5 tools generated");
+
+  const toolNames = mcp.tools.map((t) => t.name);
+  assert(toolNames.includes("get_entity"), "MCP: has get_entity tool");
+  assert(toolNames.includes("get_relations"), "MCP: has get_relations tool");
+  assert(toolNames.includes("query_world_model"), "MCP: has query tool");
+  assert(toolNames.includes("check_constraint"), "MCP: has constraint checker");
+
+  const getEntity = mcp.tools.find((t) => t.name === "get_entity")!;
+  assert(
+    getEntity.inputSchema.properties.name.enum!.length === 3,
+    "MCP: get_entity enum has all 3 entity names",
+  );
+  assert(
+    getEntity.inputSchema.required.includes("name"),
+    "MCP: get_entity requires name",
+  );
+
+  const procTool = mcp.tools.find((t) => t.name.startsWith("process_"));
+  assert(!!procTool, "MCP: has process tool");
+  assert(
+    procTool!.name === "process_request_flow",
+    "MCP: process tool name normalized",
+  );
+
+  // Empty model
+  const empty: WorldModelType = {
+    id: "wm_e",
+    name: "Empty",
+    description: "empty",
+    version: "0.1.0",
+    created_at: new Date().toISOString(),
+    entities: [],
+    relations: [],
+    processes: [],
+    constraints: [],
+  };
+  const emptyMd = toClaudeMd(empty);
+  assert(
+    emptyMd.includes("# Empty"),
+    "CLAUDE.md empty: doesn't crash on empty model",
+  );
+  const emptyMcp = toMcpSchema(empty);
+  assert(emptyMcp.tools.length >= 2, "MCP empty: still generates base tools");
+
+  console.log(`\n═══ ${passed}/${passed + failed} passed ═══\n`);
+  if (failed > 0) process.exit(1);
+}
+
+run();

@@ -29,7 +29,8 @@ export function toSystemPrompt(model: WorldModelType): string {
           return `  ${s.order}. ${actor}: ${s.action}`;
         })
         .join("\n");
-      return `${p.name}: ${p.description}\n${steps}`;
+      const trigger = p.trigger ? `\n  Trigger: ${p.trigger}` : "";
+      return `${p.name}: ${p.description}${trigger}\n${steps}`;
     })
     .join("\n\n");
 
