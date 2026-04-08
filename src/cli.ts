@@ -270,6 +270,23 @@ async function readModel(path: string): Promise<WorldModelType> {
   }
 }
 
+function handleError(err: unknown): never {
+  const msg = err instanceof Error ? err.message : String(err);
+  if (
+    msg.includes("authentication") ||
+    msg.includes("apiKey") ||
+    msg.includes("API key")
+  ) {
+    console.error(chalk.red("Error: ANTHROPIC_API_KEY not set."));
+    console.error(
+      chalk.gray("  Set it with: export ANTHROPIC_API_KEY=sk-ant-..."),
+    );
+  } else {
+    console.error(chalk.red(`Error: ${msg}`));
+  }
+  process.exit(1);
+}
+
 function formatOutput(
   model: WorldModelType,
   format: string,
@@ -692,14 +709,7 @@ program
           // Keep process alive
           await new Promise(() => {});
         }
-      } catch (err) {
-        console.error(
-          chalk.red(
-            `Error: ${err instanceof Error ? err.message : String(err)}`,
-          ),
-        );
-        process.exit(1);
-      }
+      } catch (err) { handleError(err); }
     },
   );
 
@@ -776,14 +786,7 @@ program
             ),
           );
         }
-      } catch (err) {
-        console.error(
-          chalk.red(
-            `Error: ${err instanceof Error ? err.message : String(err)}`,
-          ),
-        );
-        process.exit(1);
-      }
+      } catch (err) { handleError(err); }
     },
   );
 
@@ -821,14 +824,7 @@ program
             `  ${merged.entities.length} entities, ${merged.relations.length} relations`,
           ),
         );
-      } catch (err) {
-        console.error(
-          chalk.red(
-            `Error: ${err instanceof Error ? err.message : String(err)}`,
-          ),
-        );
-        process.exit(1);
-      }
+      } catch (err) { handleError(err); }
     },
   );
 
@@ -905,12 +901,7 @@ program
           `\n  Quality: ${vBefore.score} → ${vAfter.score} (${arrow})`,
         );
       }
-    } catch (err) {
-      console.error(
-        chalk.red(`Error: ${err instanceof Error ? err.message : String(err)}`),
-      );
-      process.exit(1);
-    }
+    } catch (err) { handleError(err); }
   });
 
 // ─── inspect ──────────────────────────────────────────────────
@@ -1000,14 +991,7 @@ program
             console.log(`    ${mc.entity}: ${mc.connections} connections`);
           }
         }
-      } catch (err) {
-        console.error(
-          chalk.red(
-            `Error: ${err instanceof Error ? err.message : String(err)}`,
-          ),
-        );
-        process.exit(1);
-      }
+      } catch (err) { handleError(err); }
     },
   );
 
@@ -1078,12 +1062,7 @@ program
         );
         process.exit(1);
       }
-    } catch (err) {
-      console.error(
-        chalk.red(`Error: ${err instanceof Error ? err.message : String(err)}`),
-      );
-      process.exit(1);
-    }
+    } catch (err) { handleError(err); }
   });
 
 // ─── query ────────────────────────────────────────────────────
@@ -1113,14 +1092,7 @@ program
             ),
           );
         }
-      } catch (err) {
-        console.error(
-          chalk.red(
-            `Error: ${err instanceof Error ? err.message : String(err)}`,
-          ),
-        );
-        process.exit(1);
-      }
+      } catch (err) { handleError(err); }
     },
   );
 
@@ -1154,14 +1126,7 @@ program
             `  ${result.entities.length} shared entities, ${result.relations.length} shared relations`,
           ),
         );
-      } catch (err) {
-        console.error(
-          chalk.red(
-            `Error: ${err instanceof Error ? err.message : String(err)}`,
-          ),
-        );
-        process.exit(1);
-      }
+      } catch (err) { handleError(err); }
     },
   );
 
@@ -1193,14 +1158,7 @@ program
         console.error(
           chalk.gray(`  ${result.entities.length} unique entities remaining`),
         );
-      } catch (err) {
-        console.error(
-          chalk.red(
-            `Error: ${err instanceof Error ? err.message : String(err)}`,
-          ),
-        );
-        process.exit(1);
-      }
+      } catch (err) { handleError(err); }
     },
   );
 
@@ -1236,14 +1194,7 @@ program
             `  ${result.entities.length} entities, ${result.constraints.length} constraints after overlay`,
           ),
         );
-      } catch (err) {
-        console.error(
-          chalk.red(
-            `Error: ${err instanceof Error ? err.message : String(err)}`,
-          ),
-        );
-        process.exit(1);
-      }
+      } catch (err) { handleError(err); }
     },
   );
 
@@ -1291,14 +1242,7 @@ program
         } else {
           console.log(output);
         }
-      } catch (err) {
-        console.error(
-          chalk.red(
-            `Error: ${err instanceof Error ? err.message : String(err)}`,
-          ),
-        );
-        process.exit(1);
-      }
+      } catch (err) { handleError(err); }
     },
   );
 
@@ -1346,14 +1290,7 @@ program
         console.error(
           chalk.gray(`  Total snapshots: ${timeline.snapshots.length}`),
         );
-      } catch (err) {
-        console.error(
-          chalk.red(
-            `Error: ${err instanceof Error ? err.message : String(err)}`,
-          ),
-        );
-        process.exit(1);
-      }
+      } catch (err) { handleError(err); }
     },
   );
 
@@ -1398,12 +1335,7 @@ program
       } else {
         console.log(timelineSummary(timeline));
       }
-    } catch (err) {
-      console.error(
-        chalk.red(`Error: ${err instanceof Error ? err.message : String(err)}`),
-      );
-      process.exit(1);
-    }
+    } catch (err) { handleError(err); }
   });
 
 // ─── serve ────────────────────────────────────────────────────
@@ -1437,12 +1369,7 @@ program
 
       const { startMcpServer } = await import("./serve/mcp-server.js");
       await startMcpServer(modelPath);
-    } catch (err) {
-      console.error(
-        chalk.red(`Error: ${err instanceof Error ? err.message : String(err)}`),
-      );
-      process.exit(1);
-    }
+    } catch (err) { handleError(err); }
   });
 
 // ─── schema ───────────────────────────────────────────────────
@@ -1465,12 +1392,7 @@ program
     try {
       const model = await readModel(modelPath);
       console.log(summarize(model));
-    } catch (err) {
-      console.error(
-        chalk.red(`Error: ${err instanceof Error ? err.message : String(err)}`),
-      );
-      process.exit(1);
-    }
+    } catch (err) { handleError(err); }
   });
 
 // ─── entities ─────────────────────────────────────────────────
@@ -1511,14 +1433,7 @@ program
             ),
           );
         }
-      } catch (err) {
-        console.error(
-          chalk.red(
-            `Error: ${err instanceof Error ? err.message : String(err)}`,
-          ),
-        );
-        process.exit(1);
-      }
+      } catch (err) { handleError(err); }
     },
   );
 
@@ -1560,14 +1475,7 @@ program
             ),
           );
         }
-      } catch (err) {
-        console.error(
-          chalk.red(
-            `Error: ${err instanceof Error ? err.message : String(err)}`,
-          ),
-        );
-        process.exit(1);
-      }
+      } catch (err) { handleError(err); }
     },
   );
 
@@ -1654,14 +1562,7 @@ program
             ),
           );
         }
-      } catch (err) {
-        console.error(
-          chalk.red(
-            `Error: ${err instanceof Error ? err.message : String(err)}`,
-          ),
-        );
-        process.exit(1);
-      }
+      } catch (err) { handleError(err); }
     },
   );
 
@@ -1709,14 +1610,7 @@ program
             `  ${model.processes.length} processes, ${model.processes.reduce((a, p) => a + p.steps.length, 0)} total steps`,
           ),
         );
-      } catch (err) {
-        console.error(
-          chalk.red(
-            `Error: ${err instanceof Error ? err.message : String(err)}`,
-          ),
-        );
-        process.exit(1);
-      }
+      } catch (err) { handleError(err); }
     },
   );
 
@@ -1761,14 +1655,7 @@ program
             `  ${sub.entities.length} entities, ${sub.relations.length} relations within ${hops} hops of "${entity.name}"`,
           ),
         );
-      } catch (err) {
-        console.error(
-          chalk.red(
-            `Error: ${err instanceof Error ? err.message : String(err)}`,
-          ),
-        );
-        process.exit(1);
-      }
+      } catch (err) { handleError(err); }
     },
   );
 
@@ -1825,14 +1712,7 @@ program
           "utf-8",
         );
         console.log(chalk.green(`\n  ✓ Written to ${outPath}`));
-      } catch (err) {
-        console.error(
-          chalk.red(
-            `Error: ${err instanceof Error ? err.message : String(err)}`,
-          ),
-        );
-        process.exit(1);
-      }
+      } catch (err) { handleError(err); }
     },
   );
 
@@ -1882,14 +1762,7 @@ program
             `\n  ${constraints.length} constraints (${hard} hard, ${soft} soft)`,
           ),
         );
-      } catch (err) {
-        console.error(
-          chalk.red(
-            `Error: ${err instanceof Error ? err.message : String(err)}`,
-          ),
-        );
-        process.exit(1);
-      }
+      } catch (err) { handleError(err); }
     },
   );
 
@@ -1978,12 +1851,7 @@ program
       } else {
         console.error(chalk.gray(`\n  ${found} matches for "${query}"`));
       }
-    } catch (err) {
-      console.error(
-        chalk.red(`Error: ${err instanceof Error ? err.message : String(err)}`),
-      );
-      process.exit(1);
-    }
+    } catch (err) { handleError(err); }
   });
 
 // ─── clusters ─────────────────────────────────────────────────
@@ -2040,14 +1908,7 @@ program
           }
           console.log("");
         }
-      } catch (err) {
-        console.error(
-          chalk.red(
-            `Error: ${err instanceof Error ? err.message : String(err)}`,
-          ),
-        );
-        process.exit(1);
-      }
+      } catch (err) { handleError(err); }
     },
   );
 
@@ -2099,14 +1960,7 @@ program
         } else {
           console.log(output);
         }
-      } catch (err) {
-        console.error(
-          chalk.red(
-            `Error: ${err instanceof Error ? err.message : String(err)}`,
-          ),
-        );
-        process.exit(1);
-      }
+      } catch (err) { handleError(err); }
     },
   );
 
@@ -2148,12 +2002,7 @@ program
           `  ${pad(name, 30)} ${pad(String(model.entities.length), 6)} ${pad(String(model.relations.length), 6)} ${pad(String(model.processes.length), 6)} ${pad(String(model.constraints.length), 6)} ${pad(conf, 6)} ${pad(scoreStr, 6)}`,
         );
       }
-    } catch (err) {
-      console.error(
-        chalk.red(`Error: ${err instanceof Error ? err.message : String(err)}`),
-      );
-      process.exit(1);
-    }
+    } catch (err) { handleError(err); }
   });
 
 // ─── help ─────────────────────────────────────────────────────
@@ -2360,14 +2209,7 @@ program
             console.log(`    [${c.severity}] ${c.name}`);
         }
         console.log(chalk.gray(`\n  ${result.summary}`));
-      } catch (err) {
-        console.error(
-          chalk.red(
-            `Error: ${err instanceof Error ? err.message : String(err)}`,
-          ),
-        );
-        process.exit(1);
-      }
+      } catch (err) { handleError(err); }
     },
   );
 
@@ -2409,14 +2251,7 @@ program
             console.log(chalk.gray(`    ${b.name}: ${c.modelB}`));
           }
         }
-      } catch (err) {
-        console.error(
-          chalk.red(
-            `Error: ${err instanceof Error ? err.message : String(err)}`,
-          ),
-        );
-        process.exit(1);
-      }
+      } catch (err) { handleError(err); }
     },
   );
 
@@ -2467,12 +2302,7 @@ program
           `  Model: ${model.entities.length} entities, ${model.relations.length} relations`,
         ),
       );
-    } catch (err) {
-      console.error(
-        chalk.red(`Error: ${err instanceof Error ? err.message : String(err)}`),
-      );
-      process.exit(1);
-    }
+    } catch (err) { handleError(err); }
   });
 
 program.parse();
