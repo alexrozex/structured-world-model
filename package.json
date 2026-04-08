@@ -1,6 +1,6 @@
 {
   "name": "structured-world-model",
-  "version": "0.1.0",
+  "version": "1.0.0",
   "description": "Agentic software that turns anything you throw at it into structured world models",
   "type": "module",
   "main": "./dist/index.js",
