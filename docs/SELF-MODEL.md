@@ -1,147 +1,101 @@
-# Structured World Model System Architecture
+# Structured World Model (SWM) System Architecture
 
-TypeScript/Node.js system for extracting structured world models from any input using LLM agents, with pipeline orchestration, validation, querying, and export capabilities
+Complete architecture of a TypeScript system for extracting, structuring, and manipulating world models from arbitrary input using LLM-based agents and graph operations
 
-> World model v0.1.0 — 57 entities, 29 relations, 5 processes, 9 constraints
-> Confidence: 0.9
+> World model v0.1.0 — 30 entities, 36 relations, 5 processes, 10 constraints
+> Confidence: 0.95
 
 ## Domain Entities
 
 The system you are working with has these components:
 
-### Systems
+### Actors
 
-- **Chunker Agent**: Splits large text inputs into manageable chunks that fit within LLM context limits, preserving context at boundaries
+- **Chunker Agent**: Agent responsible for splitting large text inputs into manageable chunks that fit within LLM context limits
   - max_chunk_tokens: 80000
   - overlap_chars: 500
-- **Extraction Agent**: LLM-powered agent that extracts structured world models from raw input using specialized prompts for different source types
-- **Structuring Agent**: Converts raw extraction data into structured WorldModel format with proper ID mapping and validation
-- **Validation Agent**: Validates world model integrity by checking entity references, detecting orphans, and identifying issues
-- **Refinement Agent**: Incrementally updates existing world models with new input, extracting only deltas and changes
-- **Second Pass Agent**: Performs completeness analysis to find implicit entities, relations, and constraints missed in first pass
-- **Query Agent**: Answers natural language questions about world models using deterministic graph operations or LLM inference
-- **Pipeline**: Sequential stage execution framework with timing and progress callbacks for building world models
-- **LLM Client**: Anthropic Claude integration with retry logic, timeout handling, and JSON parsing capabilities
-- **Graph Utilities**: Graph traversal and analysis functions for finding paths, dependencies, and generating visualizations
-- **CLI Tool**: Command-line interface providing model building, refinement, querying, and export functionality
-- **Schema Validation**: Zod-based schema validation for raw extractions with coercion and error recovery
-- **Export Formats**: Multiple export formats including Claude.md, system prompts, MCP schemas, Mermaid, and DOT
-- **Merge Engine**: Merges multiple world models with entity deduplication, ID remapping, and conflict resolution
-- **Timeline System**: Tracks world model evolution over time with snapshots, diffs, and entity history
-- **Algebra Operations**: Set-theoretic operations on world models: intersection, difference, and overlay
-- **Token Estimator**: Estimates token count from text input using 4-character-per-token approximation
-- **ID Generator**: Generates unique identifiers with prefixes using cryptographic random bytes
+- **Extraction Agent**: Core agent that analyzes input and extracts structured world models using LLM calls
+- **Structuring Agent**: Agent that converts raw extraction output into properly structured world model format with normalized types and ID mapping
+- **Validation Agent**: Agent that validates world model integrity, checking for dangling references and structural issues
+- **Second Pass Agent**: Agent that performs completeness analysis to find implicit entities and relations missed in the first extraction pass
+- **Refinement Agent**: Agent that incrementally refines existing world models with new input, extracting only delta changes
+- **Query Agent**: Agent that answers natural language questions about world models using deterministic graph queries or LLM inference
+
+### Systems
+
+- **Pipeline**: Orchestration system that manages the sequential execution of processing stages with timing and callback support
+- **CLI Interface**: Command-line interface providing commands for modeling, validation, querying, and manipulation operations
+- **LLM Client**: Anthropic Claude client with retry logic, timeout handling, and JSON parsing capabilities
+- **Graph Utils**: Graph analysis utilities for entity lookup, dependency finding, path discovery, and format export
+- **Merge System**: System for merging multiple world models with entity deduplication and ID remapping
+- **Timeline System**: Version control system for tracking world model evolution across snapshots with diff computation
+- **Export System**: Multi-format export system supporting Claude MD, system prompts, MCP schemas, Mermaid, and DOT formats
+- **Algebra Operations**: Set algebra operations for world models including intersection, difference, and overlay functions
+- **Schema Validation**: Zod-based schema validation system for raw extractions and world model structures
+- **ID Generator**: Cryptographic random ID generation system using prefixes for different entity types
 
 ### Concepts
 
-- **World Model**: Structured representation containing entities, relations, processes, and constraints extracted from input
-  - id: "string"
-  - name: "string"
-  - version: "string"
-  - created_at: "timestamp"
-- **Entity**: Something that exists in the world - actors, objects, systems, concepts, locations, events, groups, or resources
-  - id: "EntityId"
-  - name: "string"
-  - type: "enum"
-  - description: "string"
-  - properties: "object"
-  - tags: "array"
-- **Relation**: Directed connection between two entities with semantic type and human-readable label
-  - id: "RelationId"
-  - type: "enum"
-  - source: "EntityId"
-  - target: "EntityId"
-  - label: "string"
-  - bidirectional: "boolean"
-- **Process**: Dynamic sequence of steps that happen over time with actors, inputs, and outputs
-  - id: "ProcessId"
-  - name: "string"
-  - description: "string"
-  - trigger: "string"
-  - steps: "array"
-  - participants: "array"
-  - outcomes: "array"
-- **Constraint**: Invariant rule that must always hold true, with scope and severity level
-  - id: "ConstraintId"
-  - name: "string"
-  - type: "enum"
-  - description: "string"
-  - scope: "array"
-  - severity: "hard|soft"
+- **World Model**: Core data structure representing entities, relations, processes, and constraints extracted from input
+- **Entity**: Fundamental building block representing actors, objects, systems, concepts, locations, events, groups, or resources
+- **Relation**: Directed connection between entities with semantic type and optional bidirectionality
+- **Process**: Dynamic sequence of ordered steps with participants, triggers, and outcomes
+- **Constraint**: Rule or invariant that applies to entities with hard or soft severity levels
 
 ### Resources
 
-- **Prompt Templates**: Source-type-specific prompts for code, conversation, document, URL, and mixed content analysis
+- **Input Text**: Raw input text to be processed, classified by source type (text, code, document, url, conversation, mixed)
 
 ### Objects
 
-- **raw text input**: Auto-created entity for unresolved reference: raw text input
-- **text chunks**: Auto-created entity for unresolved reference: text chunks
-- **source type**: Auto-created entity for unresolved reference: source type
-- **raw extraction data**: Auto-created entity for unresolved reference: raw extraction data
-- **structured world model**: Auto-created entity for unresolved reference: structured world model
-- **validated model**: Auto-created entity for unresolved reference: validated model
-- **validation issues**: Auto-created entity for unresolved reference: validation issues
-- **initial world model**: Auto-created entity for unresolved reference: initial world model
-- **original input**: Auto-created entity for unresolved reference: original input
-- **delta extraction**: Auto-created entity for unresolved reference: delta extraction
-- **delta model**: Auto-created entity for unresolved reference: delta model
-- **merged model**: Auto-created entity for unresolved reference: merged model
-- **final validated model**: Auto-created entity for unresolved reference: final validated model
-- **existing world model**: Auto-created entity for unresolved reference: existing world model
-- **model summary**: Auto-created entity for unresolved reference: model summary
-- **new input**: Auto-created entity for unresolved reference: new input
-- **existing model**: Auto-created entity for unresolved reference: existing model
-- **updated model**: Auto-created entity for unresolved reference: updated model
-- **validated updated model**: Auto-created entity for unresolved reference: validated updated model
-- **question**: Auto-created entity for unresolved reference: question
-- **world model**: Auto-created entity for unresolved reference: world model
-- **graph result or null**: Auto-created entity for unresolved reference: graph result or null
-- **model context**: Auto-created entity for unresolved reference: model context
-- **inference result**: Auto-created entity for unresolved reference: inference result
-- **new model**: Auto-created entity for unresolved reference: new model
-- **previous snapshot**: Auto-created entity for unresolved reference: previous snapshot
-- **model diff**: Auto-created entity for unresolved reference: model diff
-- **diff**: Auto-created entity for unresolved reference: diff
-- **label**: Auto-created entity for unresolved reference: label
-- **timeline snapshot**: Auto-created entity for unresolved reference: timeline snapshot
-- **timeline**: Auto-created entity for unresolved reference: timeline
-- **snapshot**: Auto-created entity for unresolved reference: snapshot
-- **updated timeline**: Auto-created entity for unresolved reference: updated timeline
+- **Chunk**: Individual text segment with index, total count, content, and token estimate
+- **Raw Extraction**: Unstructured extraction output from LLM containing arrays of entities, relations, processes, and constraints
+- **Validation Result**: Validation outcome containing validity status, issues list, and statistical summary
+- **Query Result**: Query response containing answer, method used, referenced entities, and confidence score
+- **Timeline**: Version history container holding ordered snapshots of world model evolution
+- **Snapshot**: Point-in-time world model state with timestamp, diff from previous, and statistics
+- **Diff**: Comparison result showing added, removed, and modified elements between world model versions
 
 ## Relationships
 
 These are the dependencies and connections between components:
 
 - **Extraction Agent** uses **Chunker Agent**: splits large inputs into processable chunks
-- **Extraction Agent** uses **Prompt Templates**: selects appropriate prompt based on source type
-- **Extraction Agent** uses **LLM Client**: makes agent calls for structured extraction
-- **Extraction Agent** uses **Schema Validation**: validates and coerces LLM output
-- **Structuring Agent** produces **World Model**: converts raw extraction into structured model
-- **Structuring Agent** uses **ID Generator**: generates unique IDs for all model elements
-- **Validation Agent** consumes **World Model**: checks model integrity and references
-- **Pipeline** contains **Extraction Agent**: orchestrates extraction stage
-- **Pipeline** contains **Structuring Agent**: orchestrates structuring stage
-- **Pipeline** contains **Validation Agent**: orchestrates validation stage
-- **World Model** contains **Entity**: collection of domain entities
-- **World Model** contains **Relation**: collection of entity relationships
-- **World Model** contains **Process**: collection of dynamic sequences
-- **World Model** contains **Constraint**: collection of invariant rules
-- **Relation** depends on **Entity**: references source and target entities
-- **Process** depends on **Entity**: references participant and actor entities
-- **Constraint** depends on **Entity**: applies to entities in scope
-- **Refinement Agent** uses **Merge Engine**: merges existing model with extracted delta
-- **Second Pass Agent** consumes **World Model**: analyzes model for missing implicit elements
-- **Query Agent** uses **Graph Utilities**: performs deterministic graph queries
-- **Query Agent** uses **LLM Client**: falls back to inference for complex queries
-- **CLI Tool** uses **Pipeline**: executes model building workflow
-- **CLI Tool** uses **Export Formats**: outputs models in various formats
-- **CLI Tool** uses **Query Agent**: provides query command functionality
-- **CLI Tool** uses **Timeline System**: manages model snapshots and history
-- **CLI Tool** uses **Algebra Operations**: provides intersection, difference, overlay commands
-- **LLM Client** uses **Token Estimator**: estimates input size for chunking decisions
-- **Chunker Agent** uses **Token Estimator**: estimates tokens to determine chunk boundaries
-- **Timeline System** uses **Merge Engine**: uses diff functionality for snapshot comparison
+- **Extraction Agent** uses **LLM Client**: calls LLM for world model extraction
+- **Extraction Agent** produces **Raw Extraction**: generates unstructured extraction output
+- **Structuring Agent** consumes **Raw Extraction**: processes raw extraction into structured format
+- **Structuring Agent** produces **World Model**: creates structured world model with normalized types and IDs
+- **Validation Agent** consumes **World Model**: validates world model integrity
+- **Validation Agent** produces **Validation Result**: generates validation outcome with issues and stats
+- **Pipeline** contains **Extraction Agent**: orchestrates extraction stage execution
+- **Pipeline** contains **Structuring Agent**: orchestrates structuring stage execution
+- **Pipeline** contains **Validation Agent**: orchestrates validation stage execution
+- **World Model** contains **Entity**: composed of entity instances
+- **World Model** contains **Relation**: composed of relation instances
+- **World Model** contains **Process**: composed of process instances
+- **World Model** contains **Constraint**: composed of constraint instances
+- **Relation** depends on **Entity**: references source and target entities by ID
+- **Process** depends on **Entity**: references participant entities and step actors
+- **Constraint** depends on **Entity**: applies to entities in scope array
+- **CLI Interface** uses **Pipeline**: executes world model building pipeline
+- **CLI Interface** uses **Query Agent**: processes query commands
+- **CLI Interface** uses **Export System**: exports world models in various formats
+- **Query Agent** uses **Graph Utils**: performs deterministic graph queries
+- **Query Agent** uses **LLM Client**: performs inference queries when graph patterns don't match
+- **Query Agent** produces **Query Result**: generates query responses with answers and metadata
+- **Refinement Agent** uses **Merge System**: merges existing models with delta changes
+- **Second Pass Agent** consumes **World Model**: analyzes existing model to find gaps
+- **Second Pass Agent** produces **Raw Extraction**: extracts implicit entities and relations
+- **Timeline System** contains **Snapshot**: maintains ordered collection of snapshots
+- **Snapshot** contains **World Model**: preserves point-in-time model state
+- **Snapshot** contains **Diff**: includes diff from previous snapshot
+- **Schema Validation** uses **Raw Extraction**: validates and coerces LLM extraction output
+- **Chunker Agent** produces **Chunk**: splits text into manageable chunks
+- **Chunker Agent** consumes **Input Text**: processes raw input text
+- **ID Generator** produces **Entity**: generates unique entity IDs
+- **ID Generator** produces **Relation**: generates unique relation IDs
+- **ID Generator** produces **Process**: generates unique process IDs
+- **ID Generator** produces **Constraint**: generates unique constraint IDs
 
 ## Processes
 
@@ -149,62 +103,64 @@ When these events occur, follow these sequences:
 
 ### World Model Extraction
 
-Complete pipeline for extracting structured world models from raw input
-**Trigger:** Raw input provided to buildWorldModel function
+Multi-stage pipeline that converts raw input into structured world model
+**Trigger:** User provides input text with source type
 
-1. **Chunker Agent**: Check input size and chunk if necessary
-2. **Extraction Agent**: Extract entities, relations, processes, constraints using LLM
-3. **Structuring Agent**: Convert raw data to structured world model format
-4. **Validation Agent**: Validate model integrity and check references
+1. **Chunker Agent**: Check input size and split into chunks if needed
+2. **Extraction Agent**: Extract entities, relations, processes, and constraints from each chunk
+3. **Extraction Agent**: Merge raw extractions from multiple chunks if applicable
+4. **Structuring Agent**: Convert raw extraction to structured world model with ID mapping
+5. **Validation Agent**: Validate world model integrity and generate issues report
 
-**Outcomes:** Validated world model with confidence score and extraction notes
+**Outcomes:** Structured world model, Validation report, Processing statistics
 
 ### Multi-Pass Extraction
 
-Enhanced extraction with multiple passes to find implicit elements
-**Trigger:** passes parameter > 1 in buildWorldModel options
+Enhanced extraction process with additional passes to capture implicit information
+**Trigger:** User requests multiple extraction passes
 
-1. **Pipeline**: Perform standard extraction pipeline
-2. **Second Pass Agent**: Analyze model for missing implicit elements
-3. **Structuring Agent**: Structure delta into world model format
-4. **Merge Engine**: Merge initial model with delta
-5. **Validation Agent**: Final validation of merged model
+1. **Pipeline**: Execute standard extraction pipeline
+2. **Second Pass Agent**: Analyze model for implicit entities and missing relations
+3. **Structuring Agent**: Structure delta extraction into world model format
+4. **Merge System**: Merge original model with delta model
+5. **Validation Agent**: Validate final merged model
 
-**Outcomes:** Enhanced world model with implicit elements discovered
-
-### Model Refinement
-
-Incremental update of existing world model with new input
-**Trigger:** refineWorldModel called with existing model and new input
-
-1. **Refinement Agent**: Summarize existing model for LLM context
-2. **Refinement Agent**: Extract only new/changed elements from input
-3. **Structuring Agent**: Structure delta into world model
-4. **Merge Engine**: Merge existing model with delta
-5. **Validation Agent**: Validate merged result
-
-**Outcomes:** Updated world model incorporating new input, Delta model showing what changed
+**Outcomes:** Enhanced world model, Improved completeness, Additional implicit information
 
 ### World Model Query
 
-Answer natural language questions about world models
-**Trigger:** queryWorldModel called with model and question
+Natural language query processing against world models using graph patterns or LLM inference
+**Trigger:** User asks question about world model
 
-1. **Query Agent**: Try deterministic graph pattern matching
+1. **Query Agent**: Parse query against deterministic graph patterns
 2. **Query Agent**: Fall back to LLM inference if no pattern matches
+3. **Query Agent**: Extract referenced entities from response
 
-**Outcomes:** Natural language answer with confidence and method used
+**Outcomes:** Natural language answer, Method used (graph vs inference), Confidence score
 
-### Timeline Snapshot
+### Incremental Refinement
 
-Add world model snapshot to timeline with automatic diffing
-**Trigger:** addSnapshot called or CLI snapshot command
+Update existing world model with new input while preserving existing structure
+**Trigger:** User provides new input to refine existing model
 
-1. **Timeline System**: Compare model with previous snapshot if exists
-2. **Timeline System**: Create snapshot with metadata and diff
-3. **Timeline System**: Add snapshot to timeline
+1. **Refinement Agent**: Summarize existing world model for context
+2. **Refinement Agent**: Extract only delta changes from new input
+3. **Structuring Agent**: Structure delta extraction into world model
+4. **Merge System**: Merge existing model with delta model
+5. **Validation Agent**: Validate merged result
 
-**Outcomes:** Timeline with new snapshot showing evolution
+**Outcomes:** Updated world model, Delta model, Merge statistics
+
+### Timeline Management
+
+Version control for world model evolution with snapshot management and history tracking
+**Trigger:** User adds snapshot to timeline
+
+1. **Timeline System**: Create snapshot from current world model
+2. **Timeline System**: Compute diff from previous snapshot if exists
+3. **Timeline System**: Add snapshot to timeline with metadata
+
+**Outcomes:** Updated timeline, Snapshot with diff, Evolution tracking
 
 ## Constraints
 
@@ -212,28 +168,27 @@ You MUST respect these rules at all times:
 
 ### Hard Constraints (violations are errors)
 
-- **Entity ID Consistency** (applies to: Relation, Entity): All relation source/target IDs must reference existing entity IDs
-- **Process Participant Validity** (applies to: Process, Entity): All process participants and step actors must reference existing entity IDs
-- **Constraint Scope Validity** (applies to: Constraint, Entity): All constraint scope entity IDs must reference existing entities
-- **Chunk Size Limit** (applies to: Chunker Agent): Text chunks must not exceed MAX_CHUNK_TOKENS (80,000) to fit in LLM context
-- **JSON Output Format** (applies to: Extraction Agent, Second Pass Agent, Refinement Agent): LLM agents must output valid JSON matching expected schema
-- **CLI Command Authorization** (applies to: CLI Tool): CLI operations require appropriate file permissions for read/write
+- **Entity ID Uniqueness** (applies to: World Model, Entity): All entity IDs within a world model must be unique
+- **Relation Reference Integrity** (applies to: Relation, Entity): Relations must reference existing entity IDs for both source and target
+- **Process Participant Validity** (applies to: Process, Entity): Process participants and step actors must reference existing entity IDs
+- **Constraint Scope Validity** (applies to: Constraint, Entity): Constraint scope arrays must reference existing entity IDs
+- **Chunk Size Limit** (applies to: Chunk, Chunker Agent): Individual chunks must not exceed maximum token limit for LLM processing
+- **LLM Response Timeout** (applies to: LLM Client): LLM calls must complete within configured timeout period
+- **CLI Input Validation** (applies to: CLI Interface): CLI commands must receive valid input parameters and file paths
+- **Schema Compliance** (applies to: Schema Validation, World Model, Raw Extraction): All data structures must comply with their respective Zod schemas
 
 ### Soft Constraints (violations are warnings)
 
-- **Entity Name Uniqueness** (applies to: Entity): Entity names should be unique within a world model to avoid confusion
-- **Relation Cycle Prevention** (applies to: Relation): Self-referencing relations should be flagged as warnings
-- **Process Step Ordering** (applies to: Process): Process steps must have sequential order numbers
+- **Entity Name Consistency** (applies to: Entity, Merge System): Entity names should be consistent across merges and not contain only whitespace
+- **Confidence Score Range** (applies to: World Model, Raw Extraction, Query Result): All confidence scores must be between 0.0 and 1.0 inclusive
 
 ## Notes
 
 The following observations were made during model extraction:
 
-- System follows clean agent-based architecture with clear separation of concerns
-- Heavy use of TypeScript for type safety and schema validation with Zod
-- LLM integration is well-abstracted with retry logic and error handling
-- CLI provides comprehensive functionality for all operations
-- Export formats enable integration with various AI systems and tools
-- Timeline and versioning capabilities support model evolution tracking
-- Algebra operations provide advanced model manipulation capabilities
-- Graph utilities enable rich querying and visualization features
+- Extracted architectural components from TypeScript modules focusing on data flow and system interactions
+- Identified agent-based processing pipeline with clear stage dependencies
+- Captured world model schema with entities, relations, processes, and constraints as core concepts
+- Mapped CLI command structure to underlying system operations
+- Noted comprehensive utility systems for graph operations, merging, timeline management, and export formats
+- System shows sophisticated retry logic, validation, and error handling throughout

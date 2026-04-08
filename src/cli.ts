@@ -59,8 +59,16 @@ function readInput(inputArg?: string, filePath?: string): string {
 }
 
 function readModel(path: string): WorldModelType {
-  const raw = readFileSync(resolve(path), "utf-8");
-  return JSON.parse(raw) as WorldModelType;
+  const resolved = resolve(path);
+  if (!existsSync(resolved)) {
+    throw new Error(`File not found: ${resolved}`);
+  }
+  const raw = readFileSync(resolved, "utf-8");
+  try {
+    return JSON.parse(raw) as WorldModelType;
+  } catch {
+    throw new Error(`Invalid JSON in ${path} — is this a world model file?`);
+  }
 }
 
 function formatOutput(

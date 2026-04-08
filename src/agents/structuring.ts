@@ -1,4 +1,5 @@
 import type { WorldModelType } from "../schema/index.js";
+import { WorldModel } from "../schema/world-model.js";
 import type { PipelineInput } from "../pipeline/index.js";
 import type { RawExtraction } from "./extraction.js";
 import { genId } from "../utils/ids.js";
@@ -198,6 +199,19 @@ export function structuringAgent(stageInput: {
       extraction_notes: extraction.extraction_notes,
     },
   };
+
+  // Validate output against Zod schema — catch structuring bugs before they propagate
+  const parseResult = WorldModel.safeParse(worldModel);
+  if (!parseResult.success) {
+    const issues = parseResult.error.issues
+      .slice(0, 3)
+      .map((i) => i.message)
+      .join("; ");
+    process.stderr.write(
+      `  [structuring] Output failed schema validation: ${issues}\n`,
+    );
+    // Don't throw — return what we have, validation agent will catch specifics
+  }
 
   return Promise.resolve({ input, worldModel });
 }
