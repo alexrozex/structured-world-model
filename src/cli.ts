@@ -857,7 +857,8 @@ program
   .command("validate")
   .description("Validate a world model JSON file with full integrity checks")
   .argument("<file>", "Path to world model JSON")
-  .action(async (file: string) => {
+  .option("--strict", "Exit non-zero on any warning (not just errors)")
+  .action(async (file: string, opts: Record<string, boolean | undefined>) => {
     try {
       const model = await readModel(file);
 
@@ -910,6 +911,14 @@ program
       }
 
       if (!validation.valid) process.exit(1);
+      if (opts.strict && validation.issues.length > 0) {
+        console.error(
+          chalk.red(
+            `  Strict mode: ${validation.issues.length} issue(s) found`,
+          ),
+        );
+        process.exit(1);
+      }
     } catch (err) {
       console.error(
         chalk.red(`Error: ${err instanceof Error ? err.message : String(err)}`),
