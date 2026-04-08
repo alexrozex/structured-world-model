@@ -206,11 +206,26 @@ function formatOutput(
 }
 
 function stageCallbacks(quiet?: boolean) {
+  let timer: ReturnType<typeof setInterval> | null = null;
+  let stageStart = 0;
   return {
     onStageStart: (name: string) => {
-      if (!quiet) process.stderr.write(chalk.yellow(`  ▸ ${name}...`));
+      if (!quiet) {
+        process.stderr.write(chalk.yellow(`  ▸ ${name}...`));
+        stageStart = Date.now();
+        timer = setInterval(() => {
+          const elapsed = Math.round((Date.now() - stageStart) / 1000);
+          process.stderr.write(
+            `\r${chalk.yellow(`  ▸ ${name}... ${elapsed}s`)}`,
+          );
+        }, 2000);
+      }
     },
     onStageEnd: (_name: string, ms: number, data?: unknown) => {
+      if (timer) {
+        clearInterval(timer);
+        timer = null;
+      }
       if (!quiet) {
         let detail = "";
         if (data && typeof data === "object") {
