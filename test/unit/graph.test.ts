@@ -183,7 +183,11 @@ function run() {
 
   {
     const mermaid = toMermaid(model);
-    assert(mermaid.startsWith("graph TD"), "toMermaid: starts with graph TD");
+    assert(mermaid.includes("graph TD"), "toMermaid: contains graph TD");
+    assert(
+      mermaid.includes("title:"),
+      "toMermaid: includes title from model name",
+    );
     assert(mermaid.includes("ent_1"), "toMermaid: includes entity IDs");
     assert(mermaid.includes("uses"), "toMermaid: includes relation types");
     assert(mermaid.includes("-->"), "toMermaid: includes arrows");

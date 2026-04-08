@@ -117,7 +117,11 @@ export function pathsBetween(
  * Export world model as Mermaid diagram.
  */
 export function toMermaid(model: WorldModelType): string {
-  const lines: string[] = ["graph TD"];
+  const lines: string[] = [];
+  if (model.name) {
+    lines.push("---", `title: ${model.name}`, "---");
+  }
+  lines.push("graph TD");
   const entityMap = new Map(model.entities.map((e) => [e.id, e]));
 
   // Sanitize ID for Mermaid (no special chars)
