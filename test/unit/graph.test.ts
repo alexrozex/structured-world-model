@@ -11,6 +11,7 @@ import {
   getStats,
   summarize,
   subgraph,
+  findClusters,
 } from "../../src/utils/graph.js";
 import type { WorldModelType } from "../../src/schema/index.js";
 
@@ -307,6 +308,80 @@ function run() {
     assert(
       sub.constraints.length >= 1,
       "subgraph: includes constraints scoped to subgraph entities",
+    );
+  }
+
+  // ─── findClusters ────────────────────────────────────
+
+  // All connected = 1 cluster
+  {
+    const clusters = findClusters(model);
+    assert(
+      clusters.length === 1,
+      "clusters: fully connected model = 1 cluster",
+    );
+    assert(
+      clusters[0].entities.length === 4,
+      "clusters: cluster contains all 4 entities",
+    );
+  }
+
+  // Disconnected entities = multiple clusters
+  {
+    const disconnected: WorldModelType = {
+      ...model,
+      entities: [
+        ...model.entities,
+        {
+          id: "ent_5",
+          name: "Isolated",
+          type: "object",
+          description: "No relations",
+        },
+      ],
+    };
+    const clusters = findClusters(disconnected);
+    assert(clusters.length === 2, "clusters: disconnected entity = 2 clusters");
+    assert(
+      clusters.some((c) => c.entities.length === 1),
+      "clusters: isolated entity is its own cluster",
+    );
+  }
+
+  // Empty model
+  {
+    const empty: WorldModelType = {
+      ...model,
+      entities: [],
+      relations: [],
+      processes: [],
+      constraints: [],
+    };
+    assert(
+      findClusters(empty).length === 0,
+      "clusters: empty model = 0 clusters",
+    );
+  }
+
+  // Cluster naming uses most connected entity
+  {
+    const clusters = findClusters(model);
+    assert(
+      clusters[0].name.includes("API"),
+      "clusters: named after most connected entity (API)",
+    );
+  }
+
+  // Internal vs external relations
+  {
+    const clusters = findClusters(model);
+    assert(
+      clusters[0].internalRelations === 4,
+      "clusters: correct internal relation count",
+    );
+    assert(
+      clusters[0].externalRelations === 0,
+      "clusters: 0 external when fully connected",
     );
   }
 

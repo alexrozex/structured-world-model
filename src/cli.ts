@@ -17,6 +17,7 @@ import {
   getStats,
   summarize,
   subgraph,
+  findClusters,
 } from "./utils/graph.js";
 import { queryWorldModel } from "./agents/query.js";
 import { intersection, difference, overlay } from "./utils/algebra.js";
@@ -1522,6 +1523,65 @@ program
         console.log(chalk.gray(`  No matches for "${query}".`));
       } else {
         console.error(chalk.gray(`\n  ${found} matches for "${query}"`));
+      }
+    } catch (err) {
+      console.error(
+        chalk.red(`Error: ${err instanceof Error ? err.message : String(err)}`),
+      );
+      process.exit(1);
+    }
+  });
+
+// ─── clusters ─────────────────────────────────────────────────
+program
+  .command("clusters")
+  .description("Find natural clusters (connected components) in a world model")
+  .argument("<model>", "Path to world model JSON")
+  .option("--json", "Output as JSON array")
+  .action((modelPath: string, opts: Record<string, boolean | undefined>) => {
+    try {
+      const model = readModel(modelPath);
+      const clusters = findClusters(model);
+
+      if (opts.json) {
+        console.log(
+          JSON.stringify(
+            clusters.map((c) => ({
+              name: c.name,
+              entities: c.entities.map((e) => e.name),
+              internalRelations: c.internalRelations,
+              externalRelations: c.externalRelations,
+            })),
+            null,
+            2,
+          ),
+        );
+        return;
+      }
+
+      if (clusters.length === 0) {
+        console.log(chalk.gray("  No entities to cluster."));
+        return;
+      }
+
+      console.log(
+        chalk.blue(
+          `■ ${clusters.length} cluster${clusters.length > 1 ? "s" : ""} found\n`,
+        ),
+      );
+      for (const cluster of clusters) {
+        console.log(
+          chalk.bold(`  ${cluster.name} (${cluster.entities.length} entities)`),
+        );
+        console.log(
+          chalk.gray(
+            `    Internal relations: ${cluster.internalRelations} | External: ${cluster.externalRelations}`,
+          ),
+        );
+        for (const e of cluster.entities) {
+          console.log(`    - [${e.type}] ${e.name}`);
+        }
+        console.log("");
       }
     } catch (err) {
       console.error(

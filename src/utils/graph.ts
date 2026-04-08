@@ -316,6 +316,94 @@ export function subgraph(
   };
 }
 
+export interface Cluster {
+  name: string;
+  entities: Entity[];
+  internalRelations: number;
+  externalRelations: number;
+}
+
+/**
+ * Find natural clusters in a world model using connected components
+ * on strongly-connected subgraphs. Entities that are densely interconnected
+ * get grouped together.
+ */
+export function findClusters(model: WorldModelType): Cluster[] {
+  if (model.entities.length === 0) return [];
+
+  // Build undirected adjacency
+  const adj = new Map<string, Set<string>>();
+  for (const e of model.entities) adj.set(e.id, new Set());
+  for (const r of model.relations) {
+    adj.get(r.source)?.add(r.target);
+    adj.get(r.target)?.add(r.source);
+  }
+
+  // Find connected components via BFS
+  const visited = new Set<string>();
+  const components: string[][] = [];
+
+  for (const entity of model.entities) {
+    if (visited.has(entity.id)) continue;
+    const component: string[] = [];
+    const queue = [entity.id];
+    while (queue.length > 0) {
+      const id = queue.shift()!;
+      if (visited.has(id)) continue;
+      visited.add(id);
+      component.push(id);
+      for (const neighbor of adj.get(id) ?? []) {
+        if (!visited.has(neighbor)) queue.push(neighbor);
+      }
+    }
+    components.push(component);
+  }
+
+  const entityMap = new Map(model.entities.map((e) => [e.id, e]));
+
+  return components
+    .map((component) => {
+      const entitySet = new Set(component);
+      const entities = component
+        .map((id) => entityMap.get(id)!)
+        .filter(Boolean);
+
+      const internalRelations = model.relations.filter(
+        (r) => entitySet.has(r.source) && entitySet.has(r.target),
+      ).length;
+
+      const externalRelations = model.relations.filter(
+        (r) =>
+          (entitySet.has(r.source) || entitySet.has(r.target)) &&
+          !(entitySet.has(r.source) && entitySet.has(r.target)),
+      ).length;
+
+      // Name the cluster after its most connected entity
+      const connectionCounts = new Map<string, number>();
+      for (const r of model.relations) {
+        if (entitySet.has(r.source))
+          connectionCounts.set(
+            r.source,
+            (connectionCounts.get(r.source) ?? 0) + 1,
+          );
+        if (entitySet.has(r.target))
+          connectionCounts.set(
+            r.target,
+            (connectionCounts.get(r.target) ?? 0) + 1,
+          );
+      }
+      const topEntity = [...connectionCounts.entries()].sort(
+        (a, b) => b[1] - a[1],
+      )[0];
+      const name = topEntity
+        ? `${entityMap.get(topEntity[0])?.name ?? "Unknown"} cluster`
+        : (entities[0]?.name ?? "Isolated");
+
+      return { name, entities, internalRelations, externalRelations };
+    })
+    .sort((a, b) => b.entities.length - a.entities.length);
+}
+
 /**
  * Generate a natural-language summary of a world model. No LLM — pure graph analysis.
  */

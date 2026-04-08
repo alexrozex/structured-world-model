@@ -19,7 +19,9 @@ export {
   getStats,
   summarize,
   subgraph,
+  findClusters,
 } from "./utils/graph.js";
+export type { Cluster } from "./utils/graph.js";
 
 // Merge & diff
 export { mergeWorldModels, diffWorldModels } from "./utils/merge.js";
