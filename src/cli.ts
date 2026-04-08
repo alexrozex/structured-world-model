@@ -1141,4 +1141,54 @@ program
     },
   );
 
+// ─── processes ────────────────────────────────────────────────
+program
+  .command("processes")
+  .description("List all processes with their steps")
+  .argument("<model>", "Path to world model JSON")
+  .option("--json", "Output as JSON array")
+  .action((modelPath: string, opts: Record<string, boolean | undefined>) => {
+    try {
+      const model = readModel(modelPath);
+      if (opts.json) {
+        console.log(JSON.stringify(model.processes, null, 2));
+        return;
+      }
+      if (model.processes.length === 0) {
+        console.log(chalk.gray("  No processes in this model."));
+        return;
+      }
+      for (const proc of model.processes) {
+        console.log(chalk.bold(`  ${proc.name}`));
+        console.log(chalk.gray(`  ${proc.description}`));
+        if (proc.trigger) console.log(chalk.gray(`  Trigger: ${proc.trigger}`));
+        console.log("");
+        for (const step of proc.steps) {
+          const actor = step.actor
+            ? (model.entities.find((e) => e.id === step.actor)?.name ?? "?")
+            : "system";
+          console.log(
+            `    ${step.order}. ${chalk.cyan(actor)}: ${step.action}`,
+          );
+        }
+        if (proc.outcomes.length > 0) {
+          console.log(
+            chalk.gray(`\n    Outcomes: ${proc.outcomes.join(", ")}`),
+          );
+        }
+        console.log("");
+      }
+      console.error(
+        chalk.gray(
+          `  ${model.processes.length} processes, ${model.processes.reduce((a, p) => a + p.steps.length, 0)} total steps`,
+        ),
+      );
+    } catch (err) {
+      console.error(
+        chalk.red(`Error: ${err instanceof Error ? err.message : String(err)}`),
+      );
+      process.exit(1);
+    }
+  });
+
 program.parse();
