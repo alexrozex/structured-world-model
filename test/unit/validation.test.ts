@@ -317,6 +317,60 @@ async function run() {
     );
   }
 
+  // Test 14: Circular dependency detection
+  {
+    const model = makeModel({
+      relations: [
+        {
+          id: "rel_1",
+          type: "depends_on",
+          source: "ent_1",
+          target: "ent_2",
+          label: "a→b",
+        },
+        {
+          id: "rel_2",
+          type: "depends_on",
+          source: "ent_2",
+          target: "ent_1",
+          label: "b→a",
+        },
+      ],
+    });
+    const { validation } = await validationAgent({ input, worldModel: model });
+    assert(
+      hasIssue(validation.issues, "CIRCULAR_DEPENDENCY"),
+      "Detects circular dependency (A→B→A)",
+    );
+  }
+
+  // Test 15: No false positive on non-dependency cycles (uses is fine)
+  {
+    const model = makeModel({
+      relations: [
+        {
+          id: "rel_1",
+          type: "uses",
+          source: "ent_1",
+          target: "ent_2",
+          label: "a uses b",
+        },
+        {
+          id: "rel_2",
+          type: "uses",
+          source: "ent_2",
+          target: "ent_1",
+          label: "b uses a",
+        },
+      ],
+    });
+    const { validation } = await validationAgent({ input, worldModel: model });
+    assert(
+      !hasIssue(validation.issues, "CIRCULAR_DEPENDENCY"),
+      "No false positive: mutual 'uses' is not a circular dependency",
+    );
+  }
+
   console.log(`\n═══ ${passed}/${passed + failed} passed ═══\n`);
   if (failed > 0) process.exit(1);
 }

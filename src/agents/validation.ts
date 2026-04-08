@@ -133,6 +133,45 @@ export function validationAgent(stageInput: {
     }
   }
 
+  // Check for circular dependencies (A depends_on B, B depends_on A)
+  const depTypes = new Set(["depends_on", "part_of", "contains", "inherits"]);
+  const depEdges = worldModel.relations.filter((r) => depTypes.has(r.type));
+  const visited = new Set<string>();
+  const inStack = new Set<string>();
+
+  function detectCycle(entityId: string, path: string[]): boolean {
+    if (inStack.has(entityId)) {
+      const cycleStart = path.indexOf(entityId);
+      const cycle = path.slice(cycleStart);
+      const cycleNames = cycle.map(
+        (id) => worldModel.entities.find((e) => e.id === id)?.name ?? id,
+      );
+      issues.push({
+        type: "warning",
+        code: "CIRCULAR_DEPENDENCY",
+        message: `Circular dependency detected: ${cycleNames.join(" → ")} → ${cycleNames[0]}`,
+        path: `relations`,
+      });
+      return true;
+    }
+    if (visited.has(entityId)) return false;
+    visited.add(entityId);
+    inStack.add(entityId);
+    for (const edge of depEdges) {
+      if (edge.source === entityId) {
+        detectCycle(edge.target, [...path, entityId]);
+      }
+    }
+    inStack.delete(entityId);
+    return false;
+  }
+
+  for (const entity of worldModel.entities) {
+    if (!visited.has(entity.id)) {
+      detectCycle(entity.id, []);
+    }
+  }
+
   // Completeness checks
   if (worldModel.entities.length === 0) {
     issues.push({
