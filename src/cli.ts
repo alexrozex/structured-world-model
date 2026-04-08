@@ -406,6 +406,7 @@ program
                   : chalk.red;
             console.error(sc(`  Quality: ${v.score}/100`));
           }
+          console.error(chalk.gray(`  Summary: ${summarize(finalModel)}`));
           console.error(chalk.gray(`\n  Total: ${result.totalDurationMs}ms`));
         }
 
