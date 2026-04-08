@@ -122,11 +122,17 @@ export function toMermaid(model: WorldModelType): string {
 
   // Sanitize ID for Mermaid (no special chars)
   const mermaidId = (id: string) => id.replace(/[^a-zA-Z0-9_]/g, "_");
+  const mermaidEscape = (s: string) =>
+    s
+      .replace(/"/g, "'")
+      .replace(/`/g, "'")
+      .replace(/[[\]{}()<>]/g, "")
+      .replace(/\n/g, " ");
 
   // Add entity nodes with shape based on type
   for (const e of model.entities) {
     const mid = mermaidId(e.id);
-    const label = e.name.replace(/"/g, "'");
+    const label = mermaidEscape(e.name);
     switch (e.type) {
       case "actor":
         lines.push(`  ${mid}(["\`**${label}**\nactor\`"])`);
@@ -183,9 +189,12 @@ export function toDot(model: WorldModelType): string {
     resource: "#ffeeba",
   };
 
+  const dotEscape = (s: string) =>
+    s.replace(/\\/g, "\\\\").replace(/"/g, '\\"').replace(/\n/g, " ");
+
   for (const e of model.entities) {
     const color = typeColors[e.type] ?? "#f0f0f0";
-    const label = `${e.name}\\n(${e.type})`;
+    const label = `${dotEscape(e.name)}\\n(${e.type})`;
     lines.push(`  "${e.id}" [label="${label}", fillcolor="${color}"];`);
   }
 
