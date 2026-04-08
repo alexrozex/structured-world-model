@@ -364,7 +364,7 @@ program
   .description(
     "Structured World Model — turn anything into a structured world model",
   )
-  .version("0.1.0");
+  .version("1.0.0");
 
 // ─── model ────────────────────────────────────────────────────
 program
