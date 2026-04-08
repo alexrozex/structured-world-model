@@ -40,7 +40,21 @@ RULES:
 - Every extraction must be JUSTIFIED by the input — no hallucination
 - Set confidence lower (0.3-0.7) since these are inferences, not direct extractions
 - In extraction_notes, explain WHY each new element was inferred
-- Output ONLY valid JSON matching the extraction schema`;
+
+Output ONLY valid JSON with this EXACT structure (no other text):
+{
+  "entities": [{ "name": "string", "type": "actor|object|system|concept|location|event|group|resource", "description": "string", "tags": ["string"] }],
+  "relations": [{ "source": "entity name", "target": "entity name", "type": "has|is_a|part_of|depends_on|produces|consumes|controls|communicates_with|located_in|triggers|inherits|contains|uses|flows_to|opposes|enables|transforms", "label": "string" }],
+  "processes": [{ "name": "string", "description": "string", "steps": [{ "order": 1, "action": "string", "actor": "entity name" }], "participants": ["entity name"], "outcomes": ["string"] }],
+  "constraints": [{ "name": "string", "type": "invariant|rule|boundary|dependency|capacity|temporal|authorization", "description": "string", "scope": ["entity name"], "severity": "hard|soft" }],
+  "model_name": "string",
+  "model_description": "string",
+  "source_summary": "string",
+  "confidence": 0.5,
+  "extraction_notes": ["string"]
+}
+
+If you find NOTHING new, return: {"entities":[],"relations":[],"processes":[],"constraints":[],"model_name":"","model_description":"","source_summary":"No new elements found","confidence":0.0,"extraction_notes":["Second pass found no implicit elements"]}`;
 
 function summarizeModelForPrompt(model: WorldModelType): string {
   const entities = model.entities

@@ -1,17 +1,31 @@
-const BASE_SCHEMA = `You must output ONLY valid JSON with this structure:
+const BASE_SCHEMA = `Output ONLY valid JSON with this EXACT structure — no other text before or after:
 {
-  "entities": [{ "name", "type" (actor|object|system|concept|location|event|group|resource), "description", "properties"?, "tags"? }],
-  "relations": [{ "source" (entity name), "target" (entity name), "type" (has|is_a|part_of|depends_on|produces|consumes|controls|communicates_with|located_in|triggers|inherits|contains|uses|flows_to|opposes|enables|transforms), "label", "bidirectional"? }],
-  "processes": [{ "name", "description", "trigger"?, "steps": [{ "order", "action", "actor"?, "inputs"?, "outputs"? }], "participants" (entity names), "outcomes" }],
-  "constraints": [{ "name", "type" (invariant|rule|boundary|dependency|capacity|temporal|authorization), "description", "scope" (entity names), "severity" (hard|soft) }],
-  "model_name", "model_description", "source_summary", "confidence" (0-1), "extraction_notes": []
+  "entities": [
+    { "name": "string", "type": "actor|object|system|concept|location|event|group|resource", "description": "string", "properties": {}, "tags": ["string"] }
+  ],
+  "relations": [
+    { "source": "entity name string", "target": "entity name string", "type": "has|is_a|part_of|depends_on|produces|consumes|controls|communicates_with|located_in|triggers|inherits|contains|uses|flows_to|opposes|enables|transforms", "label": "string", "bidirectional": false }
+  ],
+  "processes": [
+    { "name": "string", "description": "string", "trigger": "string", "steps": [{ "order": 1, "action": "string", "actor": "entity name", "inputs": ["entity name"], "outputs": ["entity name"] }], "participants": ["entity name"], "outcomes": ["string"] }
+  ],
+  "constraints": [
+    { "name": "string", "type": "invariant|rule|boundary|dependency|capacity|temporal|authorization", "description": "string", "scope": ["entity name"], "severity": "hard|soft" }
+  ],
+  "model_name": "string",
+  "model_description": "string",
+  "source_summary": "string",
+  "confidence": 0.9,
+  "extraction_notes": ["string"]
 }
+
+IMPORTANT: Every field shown as an array MUST be an array (even if empty: []). Every field shown as a string MUST be a string. Do not use any other types.
 
 RULES:
 - Entity names in relations/processes MUST exactly match entity names
 - Extract EVERYTHING — be thorough, not selective
 - Infer implicit entities and relations
-- Output ONLY valid JSON — no commentary outside the JSON`;
+- Output ONLY valid JSON — no commentary, no markdown, no explanation outside the JSON`;
 
 export const PROMPTS: Record<string, string> = {
   text: `You are a world-model extraction agent. Analyze the given text and extract a complete structured world model.
@@ -29,7 +43,7 @@ ${BASE_SCHEMA}`,
 
 Focus on:
 - Modules, classes, functions, and services as entities
-- Import/export dependencies as relations
+- Import/export dependencies as relations — TRACE IMPORT CHAINS: if module A imports from module B and calls B's functions, that's a "uses" relation
 - Data flow between components (who produces what, who consumes what)
 - API endpoints, routes, handlers as processes with steps
 - Type definitions and interfaces as concept entities
@@ -38,6 +52,10 @@ Focus on:
 - Error handling patterns as boundary constraints
 - Authentication/authorization as authorization constraints
 - External service integrations as system entities
+- CLI commands / entry points as actor entities — trace which systems each command invokes by following the imports in its action handler
+- Utility modules that are imported by multiple files — these are shared systems, create "uses" relations from each consumer
+
+CRITICAL: Follow import chains to establish relations. If file A imports function X from file B, and function X operates on type T from file C, then A uses B and B depends_on C. Do not create orphan entities — every system entity should have at least one "uses" or "depends_on" relation.
 
 Infer the ARCHITECTURE, not just list files. Model how data flows through the system.
 

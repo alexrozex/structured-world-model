@@ -59,6 +59,24 @@ export async function buildWorldModel(
     });
     totalMs += passMs;
 
+    // Skip if delta extraction is empty (second pass found nothing or failed)
+    const hasContent =
+      deltaExtraction.entities.length > 0 ||
+      deltaExtraction.relations.length > 0 ||
+      deltaExtraction.processes.length > 0 ||
+      deltaExtraction.constraints.length > 0;
+
+    if (!hasContent) {
+      callbacks.onStageStart?.(`pass-${pass}-skip`);
+      callbacks.onStageEnd?.(`pass-${pass}-skip`, 0);
+      allStages.push({
+        stage: `pass-${pass}-skip`,
+        data: "empty delta — nothing new found",
+        durationMs: 0,
+      });
+      continue;
+    }
+
     // Structure the delta
     callbacks.onStageStart?.(`pass-${pass}-structuring`);
     const structStart = Date.now();
