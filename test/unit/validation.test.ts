@@ -743,6 +743,49 @@ async function run() {
     );
   }
 
+  // Test 34: Missing trigger
+  {
+    const model = makeModel({
+      processes: [
+        {
+          id: "proc_1",
+          name: "Flow",
+          description: "test",
+          steps: [{ order: 1, action: "do" }],
+          participants: ["ent_1"],
+          outcomes: ["done"],
+        },
+      ],
+    });
+    const { validation } = await validationAgent({ input, worldModel: model });
+    assert(
+      hasIssue(validation.issues, "MISSING_TRIGGER"),
+      "Detects process with no trigger",
+    );
+  }
+
+  // Test 35: Process with trigger — no false positive
+  {
+    const model = makeModel({
+      processes: [
+        {
+          id: "proc_1",
+          name: "Login",
+          description: "Login flow",
+          trigger: "User clicks login",
+          steps: [{ order: 1, action: "Enter creds", actor: "ent_1" }],
+          participants: ["ent_1", "ent_2"],
+          outcomes: ["Session"],
+        },
+      ],
+    });
+    const { validation } = await validationAgent({ input, worldModel: model });
+    assert(
+      !hasIssue(validation.issues, "MISSING_TRIGGER"),
+      "No false positive when trigger exists",
+    );
+  }
+
   console.log(`\n═══ ${passed}/${passed + failed} passed ═══\n`);
   if (failed > 0) process.exit(1);
 }

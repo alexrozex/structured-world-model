@@ -78,6 +78,15 @@ export function validationAgent(stageInput: {
       });
     }
 
+    if (!proc.trigger) {
+      issues.push({
+        type: "info",
+        code: "MISSING_TRIGGER",
+        message: `Process "${proc.name}" has no trigger — when does it start?`,
+        path: `processes.${proc.id}.trigger`,
+      });
+    }
+
     // Check step ordering
     if (proc.steps.length > 1) {
       const orders = proc.steps.map((s) => s.order);
