@@ -450,6 +450,49 @@ async function run() {
     );
   }
 
+  // Test 19: Weak description
+  {
+    const model = makeModel({
+      entities: [
+        { id: "ent_1", name: "User", type: "actor", description: "" },
+        { id: "ent_2", name: "DB", type: "system", description: "hi" },
+      ],
+      relations: [
+        {
+          id: "rel_1",
+          type: "uses",
+          source: "ent_1",
+          target: "ent_2",
+          label: "x",
+        },
+      ],
+    });
+    const { validation } = await validationAgent({ input, worldModel: model });
+    assert(
+      hasIssue(validation.issues, "WEAK_DESCRIPTION"),
+      "Detects weak/empty descriptions",
+    );
+    const weakCount = validation.issues.filter(
+      (i) => i.code === "WEAK_DESCRIPTION",
+    ).length;
+    assert(
+      weakCount === 2,
+      "Flags both empty and trivially short descriptions",
+    );
+  }
+
+  // Test 20: Good descriptions — no false positive
+  {
+    const { validation } = await validationAgent({
+      input,
+      worldModel: makeModel(),
+    });
+    assert(
+      !hasIssue(validation.issues, "WEAK_DESCRIPTION"),
+      "No false positive on adequate descriptions",
+    );
+  }
+
   console.log(`\n═══ ${passed}/${passed + failed} passed ═══\n`);
   if (failed > 0) process.exit(1);
 }

@@ -141,6 +141,18 @@ export function validationAgent(stageInput: {
     }
   }
 
+  // Check for weak entity descriptions
+  for (const entity of worldModel.entities) {
+    if (!entity.description || entity.description.trim().length < 5) {
+      issues.push({
+        type: "warning",
+        code: "WEAK_DESCRIPTION",
+        message: `Entity "${entity.name}" has a missing or trivially short description`,
+        path: `entities.${entity.id}.description`,
+      });
+    }
+  }
+
   // Check for duplicate entity names
   const nameCount = new Map<string, number>();
   for (const entity of worldModel.entities) {
