@@ -152,7 +152,20 @@ async function readInputAsync(
   }
 }
 
-function readModel(path: string): WorldModelType {
+async function readModel(path: string): Promise<WorldModelType> {
+  if (path === "-" || (!process.stdin.isTTY && !existsSync(resolve(path)))) {
+    const raw =
+      path === "-"
+        ? await readStdin()
+        : (() => {
+            throw new Error(`File not found: ${resolve(path)}`);
+          })();
+    try {
+      return JSON.parse(raw) as WorldModelType;
+    } catch {
+      throw new Error("Invalid JSON from stdin — is this a world model?");
+    }
+  }
   const resolved = resolve(path);
   if (!existsSync(resolved)) {
     throw new Error(`File not found: ${resolved}`);
@@ -349,7 +362,7 @@ program
       opts: Record<string, string | boolean | undefined>,
     ) => {
       try {
-        const existing = readModel(modelPath);
+        const existing = await readModel(modelPath);
         const raw = readInput(inputArg, opts.file as string | undefined);
         const sourceType =
           (opts.type as PipelineInput["sourceType"]) || detectSourceType(raw);
@@ -418,14 +431,14 @@ program
   .option("-o, --output <path>", "Write merged model to file")
   .option("--format <format>", "Output format: json, yaml", "json")
   .action(
-    (
+    async (
       pathA: string,
       pathB: string,
       opts: Record<string, string | undefined>,
     ) => {
       try {
-        const a = readModel(pathA);
-        const b = readModel(pathB);
+        const a = await readModel(pathA);
+        const b = await readModel(pathB);
         const merged = mergeWorldModels(a, b);
         const output = formatOutput(merged, opts.format ?? "json", true);
 
@@ -460,10 +473,10 @@ program
   .description("Diff two world models")
   .argument("<before>", "Path to before world model JSON")
   .argument("<after>", "Path to after world model JSON")
-  .action((beforePath: string, afterPath: string) => {
+  .action(async (beforePath: string, afterPath: string) => {
     try {
-      const before = readModel(beforePath);
-      const after = readModel(afterPath);
+      const before = await readModel(beforePath);
+      const after = await readModel(afterPath);
       const diff = diffWorldModels(before, after);
 
       console.log(chalk.blue("■ World Model Diff\n"));
@@ -524,9 +537,12 @@ program
   .option("--stats", "Show detailed statistics")
   .option("--format <format>", "Export format: mermaid, dot")
   .action(
-    (modelPath: string, opts: Record<string, string | boolean | undefined>) => {
+    async (
+      modelPath: string,
+      opts: Record<string, string | boolean | undefined>,
+    ) => {
       try {
-        const model = readModel(modelPath);
+        const model = await readModel(modelPath);
 
         if (opts.format) {
           console.log(formatOutput(model, opts.format as string, true));
@@ -614,7 +630,7 @@ program
   .argument("<file>", "Path to world model JSON")
   .action(async (file: string) => {
     try {
-      const model = readModel(file);
+      const model = await readModel(file);
 
       console.log(chalk.blue("■ Validating world model"));
       console.log(
@@ -677,7 +693,7 @@ program
       opts: Record<string, boolean | undefined>,
     ) => {
       try {
-        const model = readModel(modelPath);
+        const model = await readModel(modelPath);
         const result = await queryWorldModel(model, question);
 
         if (opts.json) {
@@ -709,13 +725,16 @@ program
   .argument("<modelB>", "Path to second world model JSON")
   .option("-o, --output <path>", "Write result to file")
   .action(
-    (
+    async (
       pathA: string,
       pathB: string,
       opts: Record<string, string | undefined>,
     ) => {
       try {
-        const result = intersection(readModel(pathA), readModel(pathB));
+        const result = intersection(
+          await readModel(pathA),
+          await readModel(pathB),
+        );
         const output = JSON.stringify(result, null, 2);
         if (opts.output) {
           writeFileSync(resolve(opts.output), output, "utf-8");
@@ -747,13 +766,16 @@ program
   .argument("<modelB>", "Path to model to subtract")
   .option("-o, --output <path>", "Write result to file")
   .action(
-    (
+    async (
       pathA: string,
       pathB: string,
       opts: Record<string, string | undefined>,
     ) => {
       try {
-        const result = difference(readModel(pathA), readModel(pathB));
+        const result = difference(
+          await readModel(pathA),
+          await readModel(pathB),
+        );
         const output = JSON.stringify(result, null, 2);
         if (opts.output) {
           writeFileSync(resolve(opts.output), output, "utf-8");
@@ -785,13 +807,16 @@ program
   .argument("<lens>", "Path to lens model to overlay")
   .option("-o, --output <path>", "Write result to file")
   .action(
-    (
+    async (
       basePath: string,
       lensPath: string,
       opts: Record<string, string | undefined>,
     ) => {
       try {
-        const result = overlay(readModel(basePath), readModel(lensPath));
+        const result = overlay(
+          await readModel(basePath),
+          await readModel(lensPath),
+        );
         const output = JSON.stringify(result, null, 2);
         if (opts.output) {
           writeFileSync(resolve(opts.output), output, "utf-8");
@@ -826,45 +851,49 @@ program
     "claude-md",
   )
   .option("-o, --output <path>", "Write to file")
-  .action((modelPath: string, opts: Record<string, string | undefined>) => {
-    try {
-      const model = readModel(modelPath);
-      let output: string;
+  .action(
+    async (modelPath: string, opts: Record<string, string | undefined>) => {
+      try {
+        const model = await readModel(modelPath);
+        let output: string;
 
-      switch (opts.as) {
-        case "claude-md":
-          output = toClaudeMd(model);
-          break;
-        case "system-prompt":
-          output = toSystemPrompt(model);
-          break;
-        case "mcp":
-          output = JSON.stringify(toMcpSchema(model), null, 2);
-          break;
-        default:
+        switch (opts.as) {
+          case "claude-md":
+            output = toClaudeMd(model);
+            break;
+          case "system-prompt":
+            output = toSystemPrompt(model);
+            break;
+          case "mcp":
+            output = JSON.stringify(toMcpSchema(model), null, 2);
+            break;
+          default:
+            console.error(
+              chalk.red(
+                `Unknown export format: ${opts.as}. Use: claude-md, system-prompt, mcp`,
+              ),
+            );
+            process.exit(1);
+        }
+
+        if (opts.output) {
+          writeFileSync(resolve(opts.output), output, "utf-8");
           console.error(
-            chalk.red(
-              `Unknown export format: ${opts.as}. Use: claude-md, system-prompt, mcp`,
-            ),
+            chalk.green(`✓ Exported as ${opts.as} to ${opts.output}`),
           );
-          process.exit(1);
-      }
-
-      if (opts.output) {
-        writeFileSync(resolve(opts.output), output, "utf-8");
+        } else {
+          console.log(output);
+        }
+      } catch (err) {
         console.error(
-          chalk.green(`✓ Exported as ${opts.as} to ${opts.output}`),
+          chalk.red(
+            `Error: ${err instanceof Error ? err.message : String(err)}`,
+          ),
         );
-      } else {
-        console.log(output);
+        process.exit(1);
       }
-    } catch (err) {
-      console.error(
-        chalk.red(`Error: ${err instanceof Error ? err.message : String(err)}`),
-      );
-      process.exit(1);
-    }
-  });
+    },
+  );
 
 // ─── timeline: snapshot ───────────────────────────────────────
 program
@@ -877,45 +906,49 @@ program
     "timeline.json",
   )
   .option("-l, --label <label>", "Label for this snapshot")
-  .action((modelPath: string, opts: Record<string, string | undefined>) => {
-    try {
-      const model = readModel(modelPath);
-      const tlPath = resolve(opts.timeline ?? "timeline.json");
-
-      let timeline: Timeline;
+  .action(
+    async (modelPath: string, opts: Record<string, string | undefined>) => {
       try {
-        const raw = readFileSync(tlPath, "utf-8");
-        timeline = JSON.parse(raw) as Timeline;
-      } catch {
-        timeline = createTimeline(model.name);
-        console.error(chalk.gray(`  Creating new timeline: ${tlPath}`));
-      }
+        const model = await readModel(modelPath);
+        const tlPath = resolve(opts.timeline ?? "timeline.json");
 
-      timeline = addSnapshot(timeline, model, opts.label);
-      writeFileSync(tlPath, JSON.stringify(timeline, null, 2), "utf-8");
+        let timeline: Timeline;
+        try {
+          const raw = readFileSync(tlPath, "utf-8");
+          timeline = JSON.parse(raw) as Timeline;
+        } catch {
+          timeline = createTimeline(model.name);
+          console.error(chalk.gray(`  Creating new timeline: ${tlPath}`));
+        }
 
-      const snap = timeline.snapshots[timeline.snapshots.length - 1];
-      console.error(chalk.green(`✓ Snapshot ${snap.id} added to ${tlPath}`));
-      console.error(
-        chalk.gray(
-          `  ${snap.stats.entities} entities, ${snap.stats.relations} relations`,
-        ),
-      );
-      if (snap.diff_from_previous) {
+        timeline = addSnapshot(timeline, model, opts.label);
+        writeFileSync(tlPath, JSON.stringify(timeline, null, 2), "utf-8");
+
+        const snap = timeline.snapshots[timeline.snapshots.length - 1];
+        console.error(chalk.green(`✓ Snapshot ${snap.id} added to ${tlPath}`));
         console.error(
-          chalk.gray(`  Changes: ${snap.diff_from_previous.summary}`),
+          chalk.gray(
+            `  ${snap.stats.entities} entities, ${snap.stats.relations} relations`,
+          ),
         );
+        if (snap.diff_from_previous) {
+          console.error(
+            chalk.gray(`  Changes: ${snap.diff_from_previous.summary}`),
+          );
+        }
+        console.error(
+          chalk.gray(`  Total snapshots: ${timeline.snapshots.length}`),
+        );
+      } catch (err) {
+        console.error(
+          chalk.red(
+            `Error: ${err instanceof Error ? err.message : String(err)}`,
+          ),
+        );
+        process.exit(1);
       }
-      console.error(
-        chalk.gray(`  Total snapshots: ${timeline.snapshots.length}`),
-      );
-    } catch (err) {
-      console.error(
-        chalk.red(`Error: ${err instanceof Error ? err.message : String(err)}`),
-      );
-      process.exit(1);
-    }
-  });
+    },
+  );
 
 // ─── timeline: history ────────────────────────────────────────
 program
@@ -923,7 +956,7 @@ program
   .description("Show timeline evolution or entity history")
   .argument("<timeline>", "Path to timeline JSON")
   .option("-e, --entity <name>", "Track a specific entity across snapshots")
-  .action((tlPath: string, opts: Record<string, string | undefined>) => {
+  .action(async (tlPath: string, opts: Record<string, string | undefined>) => {
     try {
       const raw = readFileSync(resolve(tlPath), "utf-8");
       const timeline = JSON.parse(raw) as Timeline;
@@ -980,7 +1013,7 @@ program
         console.error(chalk.red(`File not found: ${resolved}`));
         process.exit(1);
       }
-      const model = readModel(modelPath);
+      const model = await readModel(modelPath);
       console.error(chalk.blue(`■ SWM MCP Server`));
       console.error(chalk.gray(`  Model: ${model.name}`));
       console.error(
@@ -1021,9 +1054,9 @@ program
   .command("summary")
   .description("One-line natural language summary of a world model (no LLM)")
   .argument("<model>", "Path to world model JSON")
-  .action((modelPath: string) => {
+  .action(async (modelPath: string) => {
     try {
-      const model = readModel(modelPath);
+      const model = await readModel(modelPath);
       console.log(summarize(model));
     } catch (err) {
       console.error(
@@ -1044,9 +1077,12 @@ program
   )
   .option("--json", "Output as JSON array")
   .action(
-    (modelPath: string, opts: Record<string, string | boolean | undefined>) => {
+    async (
+      modelPath: string,
+      opts: Record<string, string | boolean | undefined>,
+    ) => {
       try {
-        const model = readModel(modelPath);
+        const model = await readModel(modelPath);
         let entities = model.entities;
         if (opts.type) {
           entities = entities.filter((e) => e.type === opts.type);
@@ -1090,9 +1126,12 @@ program
   )
   .option("--json", "Output as JSON array")
   .action(
-    (modelPath: string, opts: Record<string, string | boolean | undefined>) => {
+    async (
+      modelPath: string,
+      opts: Record<string, string | boolean | undefined>,
+    ) => {
       try {
-        const model = readModel(modelPath);
+        const model = await readModel(modelPath);
         let relations = model.relations;
         if (opts.type) {
           relations = relations.filter((r) => r.type === opts.type);
@@ -1136,14 +1175,14 @@ program
   .argument("<target>", "Path to target model (what's being measured)")
   .option("--json", "Output as JSON")
   .action(
-    (
+    async (
       refPath: string,
       tgtPath: string,
       opts: Record<string, boolean | undefined>,
     ) => {
       try {
-        const ref = readModel(refPath);
-        const tgt = readModel(tgtPath);
+        const ref = await readModel(refPath);
+        const tgt = await readModel(tgtPath);
         const result = coverageFn(ref, tgt);
 
         if (opts.json) {
@@ -1225,49 +1264,54 @@ program
   .description("List all processes with their steps")
   .argument("<model>", "Path to world model JSON")
   .option("--json", "Output as JSON array")
-  .action((modelPath: string, opts: Record<string, boolean | undefined>) => {
-    try {
-      const model = readModel(modelPath);
-      if (opts.json) {
-        console.log(JSON.stringify(model.processes, null, 2));
-        return;
-      }
-      if (model.processes.length === 0) {
-        console.log(chalk.gray("  No processes in this model."));
-        return;
-      }
-      for (const proc of model.processes) {
-        console.log(chalk.bold(`  ${proc.name}`));
-        console.log(chalk.gray(`  ${proc.description}`));
-        if (proc.trigger) console.log(chalk.gray(`  Trigger: ${proc.trigger}`));
-        console.log("");
-        for (const step of proc.steps) {
-          const actor = step.actor
-            ? (model.entities.find((e) => e.id === step.actor)?.name ?? "?")
-            : "system";
-          console.log(
-            `    ${step.order}. ${chalk.cyan(actor)}: ${step.action}`,
-          );
+  .action(
+    async (modelPath: string, opts: Record<string, boolean | undefined>) => {
+      try {
+        const model = await readModel(modelPath);
+        if (opts.json) {
+          console.log(JSON.stringify(model.processes, null, 2));
+          return;
         }
-        if (proc.outcomes.length > 0) {
-          console.log(
-            chalk.gray(`\n    Outcomes: ${proc.outcomes.join(", ")}`),
-          );
+        if (model.processes.length === 0) {
+          console.log(chalk.gray("  No processes in this model."));
+          return;
         }
-        console.log("");
+        for (const proc of model.processes) {
+          console.log(chalk.bold(`  ${proc.name}`));
+          console.log(chalk.gray(`  ${proc.description}`));
+          if (proc.trigger)
+            console.log(chalk.gray(`  Trigger: ${proc.trigger}`));
+          console.log("");
+          for (const step of proc.steps) {
+            const actor = step.actor
+              ? (model.entities.find((e) => e.id === step.actor)?.name ?? "?")
+              : "system";
+            console.log(
+              `    ${step.order}. ${chalk.cyan(actor)}: ${step.action}`,
+            );
+          }
+          if (proc.outcomes.length > 0) {
+            console.log(
+              chalk.gray(`\n    Outcomes: ${proc.outcomes.join(", ")}`),
+            );
+          }
+          console.log("");
+        }
+        console.error(
+          chalk.gray(
+            `  ${model.processes.length} processes, ${model.processes.reduce((a, p) => a + p.steps.length, 0)} total steps`,
+          ),
+        );
+      } catch (err) {
+        console.error(
+          chalk.red(
+            `Error: ${err instanceof Error ? err.message : String(err)}`,
+          ),
+        );
+        process.exit(1);
       }
-      console.error(
-        chalk.gray(
-          `  ${model.processes.length} processes, ${model.processes.reduce((a, p) => a + p.steps.length, 0)} total steps`,
-        ),
-      );
-    } catch (err) {
-      console.error(
-        chalk.red(`Error: ${err instanceof Error ? err.message : String(err)}`),
-      );
-      process.exit(1);
-    }
-  });
+    },
+  );
 
 // ─── subgraph ─────────────────────────────────────────────────
 program
@@ -1283,13 +1327,13 @@ program
     "json",
   )
   .action(
-    (
+    async (
       modelPath: string,
       entityName: string,
       opts: Record<string, string | undefined>,
     ) => {
       try {
-        const model = readModel(modelPath);
+        const model = await readModel(modelPath);
         const entity = findEntity(model, entityName);
         if (!entity) {
           console.error(chalk.red(`Entity "${entityName}" not found.`));
@@ -1339,7 +1383,7 @@ program
       opts: Record<string, string | boolean | undefined>,
     ) => {
       try {
-        const model = readModel(modelPath);
+        const model = await readModel(modelPath);
         const { fixWorldModel } = await import("./utils/fix.js");
         const { model: fixed, fixes } = fixWorldModel(model);
 
@@ -1393,9 +1437,12 @@ program
   .option("-s, --severity <severity>", "Filter by severity: hard or soft")
   .option("--json", "Output as JSON array")
   .action(
-    (modelPath: string, opts: Record<string, string | boolean | undefined>) => {
+    async (
+      modelPath: string,
+      opts: Record<string, string | boolean | undefined>,
+    ) => {
       try {
-        const model = readModel(modelPath);
+        const model = await readModel(modelPath);
         let constraints = model.constraints;
         if (opts.severity) {
           constraints = constraints.filter((c) => c.severity === opts.severity);
@@ -1445,9 +1492,9 @@ program
   .description("Full-text search across all elements of a world model")
   .argument("<model>", "Path to world model JSON")
   .argument("<query>", "Search term (case-insensitive)")
-  .action((modelPath: string, query: string) => {
+  .action(async (modelPath: string, query: string) => {
     try {
-      const model = readModel(modelPath);
+      const model = await readModel(modelPath);
       const q = query.toLowerCase();
       let found = 0;
 
@@ -1538,58 +1585,64 @@ program
   .description("Find natural clusters (connected components) in a world model")
   .argument("<model>", "Path to world model JSON")
   .option("--json", "Output as JSON array")
-  .action((modelPath: string, opts: Record<string, boolean | undefined>) => {
-    try {
-      const model = readModel(modelPath);
-      const clusters = findClusters(model);
+  .action(
+    async (modelPath: string, opts: Record<string, boolean | undefined>) => {
+      try {
+        const model = await readModel(modelPath);
+        const clusters = findClusters(model);
 
-      if (opts.json) {
-        console.log(
-          JSON.stringify(
-            clusters.map((c) => ({
-              name: c.name,
-              entities: c.entities.map((e) => e.name),
-              internalRelations: c.internalRelations,
-              externalRelations: c.externalRelations,
-            })),
-            null,
-            2,
-          ),
-        );
-        return;
-      }
-
-      if (clusters.length === 0) {
-        console.log(chalk.gray("  No entities to cluster."));
-        return;
-      }
-
-      console.log(
-        chalk.blue(
-          `■ ${clusters.length} cluster${clusters.length > 1 ? "s" : ""} found\n`,
-        ),
-      );
-      for (const cluster of clusters) {
-        console.log(
-          chalk.bold(`  ${cluster.name} (${cluster.entities.length} entities)`),
-        );
-        console.log(
-          chalk.gray(
-            `    Internal relations: ${cluster.internalRelations} | External: ${cluster.externalRelations}`,
-          ),
-        );
-        for (const e of cluster.entities) {
-          console.log(`    - [${e.type}] ${e.name}`);
+        if (opts.json) {
+          console.log(
+            JSON.stringify(
+              clusters.map((c) => ({
+                name: c.name,
+                entities: c.entities.map((e) => e.name),
+                internalRelations: c.internalRelations,
+                externalRelations: c.externalRelations,
+              })),
+              null,
+              2,
+            ),
+          );
+          return;
         }
-        console.log("");
+
+        if (clusters.length === 0) {
+          console.log(chalk.gray("  No entities to cluster."));
+          return;
+        }
+
+        console.log(
+          chalk.blue(
+            `■ ${clusters.length} cluster${clusters.length > 1 ? "s" : ""} found\n`,
+          ),
+        );
+        for (const cluster of clusters) {
+          console.log(
+            chalk.bold(
+              `  ${cluster.name} (${cluster.entities.length} entities)`,
+            ),
+          );
+          console.log(
+            chalk.gray(
+              `    Internal relations: ${cluster.internalRelations} | External: ${cluster.externalRelations}`,
+            ),
+          );
+          for (const e of cluster.entities) {
+            console.log(`    - [${e.type}] ${e.name}`);
+          }
+          console.log("");
+        }
+      } catch (err) {
+        console.error(
+          chalk.red(
+            `Error: ${err instanceof Error ? err.message : String(err)}`,
+          ),
+        );
+        process.exit(1);
       }
-    } catch (err) {
-      console.error(
-        chalk.red(`Error: ${err instanceof Error ? err.message : String(err)}`),
-      );
-      process.exit(1);
-    }
-  });
+    },
+  );
 
 // ─── transform ────────────────────────────────────────────────
 program
@@ -1605,7 +1658,7 @@ program
       opts: Record<string, string | undefined>,
     ) => {
       try {
-        const model = readModel(modelPath);
+        const model = await readModel(modelPath);
         console.error(chalk.blue("■ Transforming world model"));
         console.error(chalk.gray(`  Instruction: ${instruction}\n`));
 
