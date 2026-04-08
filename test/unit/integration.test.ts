@@ -13,12 +13,14 @@ import { toMcpSchema } from "../../src/export/mcp-schema.js";
 import { mergeWorldModels, diffWorldModels } from "../../src/utils/merge.js";
 import { coverage } from "../../src/utils/coverage.js";
 import { intersection, difference, overlay } from "../../src/utils/algebra.js";
+import { compare } from "../../src/utils/compare.js";
 import {
   findEntity,
   findDependents,
   pathsBetween,
   subgraph,
   findClusters,
+  analyzeImpact,
   summarize,
   getStats,
   toMermaid,
@@ -334,6 +336,76 @@ async function run() {
   assert(
     history[0].event === "appeared",
     "10. Timeline: Customer appeared in v1",
+  );
+
+  // ─── 11. Impact analysis ──────────────────────────
+  const paymentGw = findEntity(worldModel, "Payment Gateway")!;
+  const impact = analyzeImpact(worldModel, paymentGw.id)!;
+  assert(impact !== null, "11. Impact: returns result");
+  assert(
+    impact.brokenRelations.length >= 1,
+    "11. Impact: Payment Gateway has broken relations",
+  );
+  assert(
+    impact.severity === "medium" ||
+      impact.severity === "high" ||
+      impact.severity === "critical",
+    "11. Impact: non-trivial severity",
+  );
+
+  // ─── 12. Compare ──────────────────────────────────
+  // Create a variant with a type conflict
+  const variant = await structuringAgent({
+    input: { raw: "test", sourceType: "text" },
+    extraction: {
+      ...extraction,
+      entities: extraction.entities.map((e) =>
+        e.name === "Customer" ? { ...e, type: "system" } : e,
+      ),
+    },
+  });
+  const cmp = compare(worldModel, variant.worldModel);
+  assert(
+    cmp.conflicts.length >= 1,
+    "12. Compare: detects Customer type conflict",
+  );
+  assert(
+    cmp.conflicts.some((c) => c.kind === "entity_type"),
+    "12. Compare: entity_type conflict",
+  );
+
+  // ─── 13. Fix with dirty model ─────────────────────
+  const dirty = {
+    ...worldModel,
+    entities: [
+      ...worldModel.entities,
+      {
+        id: "ent_orphan",
+        name: "Orphan",
+        type: "object" as const,
+        description: "nobody references me",
+      },
+    ],
+    relations: [
+      ...worldModel.relations,
+      {
+        id: "rel_self",
+        type: "uses" as const,
+        source: paymentGw.id,
+        target: paymentGw.id,
+        label: "self",
+      },
+    ],
+  };
+  const { model: cleaned, fixes: fixList } = fixWorldModel(dirty);
+  assert(fixList.length >= 1, "13. Fix: found issues");
+  assert(
+    !cleaned.entities.some((e) => e.name === "Orphan"),
+    "13. Fix: orphan removed",
+  );
+  assert(
+    !cleaned.relations.some((r) => r.source === r.target),
+    "13. Fix: self-relation removed",
   );
 
   console.log(`\n═══ ${passed}/${passed + failed} passed ═══\n`);
