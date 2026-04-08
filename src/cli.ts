@@ -20,6 +20,13 @@ import { intersection, difference, overlay } from "./utils/algebra.js";
 import { toClaudeMd } from "./export/claude-md.js";
 import { toSystemPrompt } from "./export/system-prompt.js";
 import { toMcpSchema } from "./export/mcp-schema.js";
+import {
+  createTimeline,
+  addSnapshot,
+  entityHistory,
+  timelineSummary,
+} from "./utils/timeline.js";
+import type { Timeline } from "./utils/timeline.js";
 import type { PipelineInput } from "./pipeline/index.js";
 import type { WorldModelType } from "./schema/index.js";
 
@@ -719,6 +726,106 @@ program
         );
       } else {
         console.log(output);
+      }
+    } catch (err) {
+      console.error(
+        chalk.red(`Error: ${err instanceof Error ? err.message : String(err)}`),
+      );
+      process.exit(1);
+    }
+  });
+
+// ─── timeline: snapshot ───────────────────────────────────────
+program
+  .command("snapshot")
+  .description("Add a world model as a snapshot to a timeline")
+  .argument("<model>", "Path to world model JSON")
+  .option(
+    "--timeline <path>",
+    "Path to timeline JSON (created if missing)",
+    "timeline.json",
+  )
+  .option("-l, --label <label>", "Label for this snapshot")
+  .action((modelPath: string, opts: Record<string, string | undefined>) => {
+    try {
+      const model = readModel(modelPath);
+      const tlPath = resolve(opts.timeline ?? "timeline.json");
+
+      let timeline: Timeline;
+      try {
+        const raw = readFileSync(tlPath, "utf-8");
+        timeline = JSON.parse(raw) as Timeline;
+      } catch {
+        timeline = createTimeline(model.name);
+        console.error(chalk.gray(`  Creating new timeline: ${tlPath}`));
+      }
+
+      timeline = addSnapshot(timeline, model, opts.label);
+      writeFileSync(tlPath, JSON.stringify(timeline, null, 2), "utf-8");
+
+      const snap = timeline.snapshots[timeline.snapshots.length - 1];
+      console.error(chalk.green(`✓ Snapshot ${snap.id} added to ${tlPath}`));
+      console.error(
+        chalk.gray(
+          `  ${snap.stats.entities} entities, ${snap.stats.relations} relations`,
+        ),
+      );
+      if (snap.diff_from_previous) {
+        console.error(
+          chalk.gray(`  Changes: ${snap.diff_from_previous.summary}`),
+        );
+      }
+      console.error(
+        chalk.gray(`  Total snapshots: ${timeline.snapshots.length}`),
+      );
+    } catch (err) {
+      console.error(
+        chalk.red(`Error: ${err instanceof Error ? err.message : String(err)}`),
+      );
+      process.exit(1);
+    }
+  });
+
+// ─── timeline: history ────────────────────────────────────────
+program
+  .command("history")
+  .description("Show timeline evolution or entity history")
+  .argument("<timeline>", "Path to timeline JSON")
+  .option("-e, --entity <name>", "Track a specific entity across snapshots")
+  .action((tlPath: string, opts: Record<string, string | undefined>) => {
+    try {
+      const raw = readFileSync(resolve(tlPath), "utf-8");
+      const timeline = JSON.parse(raw) as Timeline;
+
+      if (opts.entity) {
+        const history = entityHistory(timeline, opts.entity);
+        if (history.length === 0) {
+          console.log(
+            chalk.yellow(`Entity "${opts.entity}" not found in any snapshot.`),
+          );
+          return;
+        }
+        console.log(
+          chalk.blue(
+            `■ History of "${opts.entity}" across ${timeline.snapshots.length} snapshots\n`,
+          ),
+        );
+        for (const entry of history) {
+          const icon =
+            entry.event === "appeared"
+              ? chalk.green("+")
+              : entry.event === "disappeared"
+                ? chalk.red("-")
+                : entry.event === "modified"
+                  ? chalk.yellow("~")
+                  : chalk.gray("=");
+          const label = entry.label ? ` (${entry.label})` : "";
+          console.log(`  ${icon} ${entry.timestamp}${label}: ${entry.event}`);
+          if (entry.description)
+            console.log(chalk.gray(`    ${entry.description}`));
+        }
+      } else {
+        console.log(timelineSummary(timeline));
       }
     } catch (err) {
       console.error(

@@ -30,3 +30,12 @@ export { intersection, difference, overlay } from "./utils/algebra.js";
 export { toClaudeMd } from "./export/claude-md.js";
 export { toSystemPrompt } from "./export/system-prompt.js";
 export { toMcpSchema } from "./export/mcp-schema.js";
+
+// Timeline
+export {
+  createTimeline,
+  addSnapshot,
+  entityHistory,
+  timelineSummary,
+} from "./utils/timeline.js";
+export type { Timeline, Snapshot } from "./utils/timeline.js";
