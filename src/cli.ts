@@ -163,6 +163,10 @@ program
     "-m, --model <model>",
     "Claude model to use (e.g. claude-opus-4-20250514, claude-haiku-4-5-20251001)",
   )
+  .option(
+    "--fix",
+    "Auto-fix validation issues before outputting (remove orphans, dangling refs, duplicates)",
+  )
   .action(
     async (
       inputArg: string | undefined,
@@ -203,8 +207,19 @@ program
           passes,
           model: opts.model as string | undefined,
         });
+
+        let finalModel = result.worldModel;
+        if (opts.fix) {
+          const { fixWorldModel } = await import("./utils/fix.js");
+          const { model: fixed, fixes } = fixWorldModel(finalModel);
+          finalModel = fixed;
+          if (!opts.quiet && fixes.length > 0) {
+            console.error(chalk.yellow(`\n  Auto-fixed: ${fixes.join(", ")}`));
+          }
+        }
+
         const output = formatOutput(
-          result.worldModel,
+          finalModel,
           (opts.format as string) ?? "json",
           (opts.pretty as boolean) ?? true,
         );
