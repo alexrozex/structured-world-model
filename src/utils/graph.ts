@@ -328,6 +328,101 @@ export interface Cluster {
  * on strongly-connected subgraphs. Entities that are densely interconnected
  * get grouped together.
  */
+export interface ImpactAnalysis {
+  entity: Entity;
+  brokenRelations: Relation[];
+  affectedProcesses: Array<{
+    process: WorldModelType["processes"][number];
+    role: string;
+  }>;
+  affectedConstraints: WorldModelType["constraints"][number][];
+  dependents: Entity[];
+  severity: "low" | "medium" | "high" | "critical";
+  summary: string;
+}
+
+/**
+ * Analyze the impact of removing an entity from the model.
+ * "What breaks if we remove X?"
+ */
+export function analyzeImpact(
+  model: WorldModelType,
+  entityId: string,
+): ImpactAnalysis | null {
+  const entity = model.entities.find((e) => e.id === entityId);
+  if (!entity) return null;
+
+  // Relations that would break
+  const brokenRelations = model.relations.filter(
+    (r) => r.source === entityId || r.target === entityId,
+  );
+
+  // Processes that would lose a participant or step actor
+  const affectedProcesses = model.processes
+    .filter(
+      (p) =>
+        p.participants.includes(entityId) ||
+        p.steps.some((s) => s.actor === entityId),
+    )
+    .map((p) => {
+      const isActor = p.steps.some((s) => s.actor === entityId);
+      return {
+        process: p,
+        role: isActor ? "step actor" : "participant",
+      };
+    });
+
+  // Constraints that scope this entity
+  const affectedConstraints = model.constraints.filter((c) =>
+    c.scope.includes(entityId),
+  );
+
+  // Entities that depend on this one (via depends_on, part_of, etc.)
+  const depTypes = new Set(["depends_on", "part_of", "uses", "consumes"]);
+  const dependents = model.relations
+    .filter((r) => r.target === entityId && depTypes.has(r.type))
+    .map((r) => model.entities.find((e) => e.id === r.source)!)
+    .filter(Boolean);
+
+  // Compute severity
+  const score =
+    brokenRelations.length * 2 +
+    affectedProcesses.length * 3 +
+    affectedConstraints.filter((c) => c.severity === "hard").length * 5 +
+    dependents.length * 2;
+
+  const severity: ImpactAnalysis["severity"] =
+    score >= 15
+      ? "critical"
+      : score >= 8
+        ? "high"
+        : score >= 3
+          ? "medium"
+          : "low";
+
+  // Summary
+  const parts: string[] = [`Removing ${entity.name} (${entity.type})`];
+  if (brokenRelations.length > 0)
+    parts.push(`breaks ${brokenRelations.length} relations`);
+  if (dependents.length > 0)
+    parts.push(`${dependents.length} entities depend on it`);
+  if (affectedProcesses.length > 0)
+    parts.push(`disrupts ${affectedProcesses.length} processes`);
+  if (affectedConstraints.length > 0)
+    parts.push(`invalidates ${affectedConstraints.length} constraints`);
+  parts.push(`Severity: ${severity}.`);
+
+  return {
+    entity,
+    brokenRelations,
+    affectedProcesses,
+    affectedConstraints,
+    dependents,
+    severity,
+    summary: parts.join(". ") + ".",
+  };
+}
+
 export function findClusters(model: WorldModelType): Cluster[] {
   if (model.entities.length === 0) return [];
 

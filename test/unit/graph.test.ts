@@ -12,6 +12,7 @@ import {
   summarize,
   subgraph,
   findClusters,
+  analyzeImpact,
 } from "../../src/utils/graph.js";
 import type { WorldModelType } from "../../src/schema/index.js";
 
@@ -382,6 +383,55 @@ function run() {
     assert(
       clusters[0].externalRelations === 0,
       "clusters: 0 external when fully connected",
+    );
+  }
+
+  // ─── analyzeImpact ───────────────────────────────────
+
+  // API is most connected — removing it should be high/critical
+  {
+    const result = analyzeImpact(model, "ent_2")!;
+    assert(result !== null, "impact: returns result for valid entity");
+    assert(
+      result.brokenRelations.length >= 3,
+      "impact: API has 3+ broken relations",
+    );
+    assert(
+      result.affectedProcesses.length >= 1,
+      "impact: API affects at least 1 process",
+    );
+    assert(
+      result.severity === "high" || result.severity === "critical",
+      "impact: API removal is high/critical severity",
+    );
+    assert(
+      result.summary.includes("API"),
+      "impact: summary mentions entity name",
+    );
+  }
+
+  // Leaf entity — low impact
+  {
+    const result = analyzeImpact(model, "ent_1")!; // User — only 1 outgoing relation
+    assert(
+      result.severity === "low" || result.severity === "medium",
+      "impact: leaf entity is low/medium severity",
+    );
+  }
+
+  // Nonexistent entity
+  {
+    const result = analyzeImpact(model, "ent_nonexistent");
+    assert(result === null, "impact: returns null for nonexistent entity");
+  }
+
+  // Dependents detected
+  {
+    const result = analyzeImpact(model, "ent_3")!; // Database — API depends_on it
+    assert(result.dependents.length >= 1, "impact: Database has dependents");
+    assert(
+      result.dependents.some((d) => d.name === "API"),
+      "impact: API depends on Database",
     );
   }
 

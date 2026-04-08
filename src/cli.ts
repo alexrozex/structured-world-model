@@ -18,6 +18,7 @@ import {
   summarize,
   subgraph,
   findClusters,
+  analyzeImpact,
 } from "./utils/graph.js";
 import { queryWorldModel } from "./agents/query.js";
 import { intersection, difference, overlay } from "./utils/algebra.js";
@@ -1919,5 +1920,101 @@ program
     );
     console.log(g("  Use swm <command> --help for detailed options\n"));
   });
+
+// ─── impact ───────────────────────────────────────────────────
+program
+  .command("impact")
+  .description("Analyze what breaks if an entity is removed")
+  .argument("<model>", "Path to world model JSON")
+  .argument("<entity>", "Entity name to analyze")
+  .option("--json", "Output as JSON")
+  .action(
+    async (
+      modelPath: string,
+      entityName: string,
+      opts: Record<string, boolean | undefined>,
+    ) => {
+      try {
+        const model = await readModel(modelPath);
+        const entity = findEntity(model, entityName);
+        if (!entity) {
+          console.error(chalk.red(`Entity "${entityName}" not found.`));
+          process.exit(1);
+        }
+
+        const result = analyzeImpact(model, entity.id);
+        if (!result) {
+          console.error(chalk.red("Analysis failed."));
+          process.exit(1);
+        }
+
+        if (opts.json) {
+          console.log(JSON.stringify(result, null, 2));
+          return;
+        }
+
+        const sevColor =
+          result.severity === "critical"
+            ? chalk.red
+            : result.severity === "high"
+              ? chalk.red
+              : result.severity === "medium"
+                ? chalk.yellow
+                : chalk.green;
+        console.log(
+          chalk.blue(`■ Impact Analysis: removing "${entity.name}"\n`),
+        );
+        console.log(sevColor(`  Severity: ${result.severity.toUpperCase()}\n`));
+
+        if (result.brokenRelations.length > 0) {
+          console.log(
+            chalk.gray(
+              `  Broken relations (${result.brokenRelations.length}):`,
+            ),
+          );
+          for (const r of result.brokenRelations) {
+            const src =
+              model.entities.find((e) => e.id === r.source)?.name ?? r.source;
+            const tgt =
+              model.entities.find((e) => e.id === r.target)?.name ?? r.target;
+            console.log(`    ${src} —[${r.type}]→ ${tgt}`);
+          }
+        }
+        if (result.dependents.length > 0) {
+          console.log(
+            chalk.gray(`\n  Dependents (${result.dependents.length}):`),
+          );
+          for (const d of result.dependents)
+            console.log(`    ${d.name} (${d.type})`);
+        }
+        if (result.affectedProcesses.length > 0) {
+          console.log(
+            chalk.gray(
+              `\n  Affected processes (${result.affectedProcesses.length}):`,
+            ),
+          );
+          for (const ap of result.affectedProcesses)
+            console.log(`    ${ap.process.name} (${ap.role})`);
+        }
+        if (result.affectedConstraints.length > 0) {
+          console.log(
+            chalk.gray(
+              `\n  Affected constraints (${result.affectedConstraints.length}):`,
+            ),
+          );
+          for (const c of result.affectedConstraints)
+            console.log(`    [${c.severity}] ${c.name}`);
+        }
+        console.log(chalk.gray(`\n  ${result.summary}`));
+      } catch (err) {
+        console.error(
+          chalk.red(
+            `Error: ${err instanceof Error ? err.message : String(err)}`,
+          ),
+        );
+        process.exit(1);
+      }
+    },
+  );
 
 program.parse();

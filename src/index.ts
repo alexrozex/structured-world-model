@@ -21,7 +21,9 @@ export {
   summarize,
   subgraph,
   findClusters,
+  analyzeImpact,
 } from "./utils/graph.js";
+export type { ImpactAnalysis } from "./utils/graph.js";
 export type { Cluster } from "./utils/graph.js";
 
 // Merge & diff
