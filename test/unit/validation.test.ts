@@ -540,6 +540,67 @@ async function run() {
     );
   }
 
+  // Test 23: Score — clean model gets high score
+  {
+    const { validation } = await validationAgent({
+      input,
+      worldModel: makeModel(),
+    });
+    assert(validation.score !== undefined, "Score: present on result");
+    assert(validation.score! >= 80, "Score: clean model >= 80");
+  }
+
+  // Test 24: Score — empty model gets low score
+  {
+    const model = makeModel({
+      entities: [],
+      relations: [],
+      processes: [],
+      constraints: [],
+    });
+    const { validation } = await validationAgent({ input, worldModel: model });
+    assert(validation.score! <= 50, "Score: empty model <= 50");
+  }
+
+  // Test 25: Score — many errors reduce score
+  {
+    const model = makeModel({
+      relations: [
+        {
+          id: "r1",
+          type: "uses",
+          source: "ent_bad1",
+          target: "ent_bad2",
+          label: "x",
+        },
+        {
+          id: "r2",
+          type: "uses",
+          source: "ent_bad3",
+          target: "ent_bad4",
+          label: "y",
+        },
+      ],
+    });
+    const { validation } = await validationAgent({ input, worldModel: model });
+    assert(
+      validation.score! < 70,
+      "Score: dangling errors reduce score significantly",
+    );
+  }
+
+  // Test 26: Score — clamped to 0-100
+  {
+    const { validation } = await validationAgent({
+      input,
+      worldModel: makeModel(),
+    });
+    assert(
+      validation.score! >= 0 && validation.score! <= 100,
+      "Score: within 0-100 range",
+    );
+  }
+
   console.log(`\n═══ ${passed}/${passed + failed} passed ═══\n`);
   if (failed > 0) process.exit(1);
 }
