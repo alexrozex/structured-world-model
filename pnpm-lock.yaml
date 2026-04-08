@@ -8,6 +8,25 @@ importers:
 
   .: {}
 
+  packages/bridge:
+    dependencies:
+      '@swm/compiler':
+        specifier: workspace:*
+        version: link:../compiler
+      '@swm/core':
+        specifier: workspace:*
+        version: link:../core
+      '@swm/provenance':
+        specifier: workspace:*
+        version: link:../provenance
+    devDependencies:
+      '@types/node':
+        specifier: ^25.5.0
+        version: 25.5.2
+      typescript:
+        specifier: ^6.0.2
+        version: 6.0.2
+
   packages/compiler:
     dependencies:
       '@anthropic-ai/sdk':

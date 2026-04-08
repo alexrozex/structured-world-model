@@ -3,6 +3,12 @@ export type { SWMOptions } from "./swm.js";
 export { Pipeline } from "./pipeline/index.js";
 export type { PipelineInput, PipelineResult } from "./pipeline/index.js";
 export type { WorldModelType, ValidationResultType } from "./schema/index.js";
+export type {
+  EntityType,
+  RelationType,
+  ProcessType,
+  ConstraintType,
+} from "./schema/index.js";
 
 // Agents
 export { refineWorldModel } from "./agents/refinement.js";
