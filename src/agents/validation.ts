@@ -224,6 +224,25 @@ export function validationAgent(stageInput: {
     });
   }
 
+  // Check for low type diversity (one type dominates > 80% of entities)
+  if (worldModel.entities.length >= 5) {
+    const typeCounts = new Map<string, number>();
+    for (const e of worldModel.entities) {
+      typeCounts.set(e.type, (typeCounts.get(e.type) ?? 0) + 1);
+    }
+    for (const [type, count] of typeCounts) {
+      const pct = count / worldModel.entities.length;
+      if (pct > 0.8) {
+        issues.push({
+          type: "warning",
+          code: "LOW_TYPE_DIVERSITY",
+          message: `${Math.round(pct * 100)}% of entities are type "${type}" (${count}/${worldModel.entities.length}) — may indicate poor type classification`,
+          path: "entities",
+        });
+      }
+    }
+  }
+
   const hasErrors = issues.some((i) => i.type === "error");
 
   const validation: ValidationResultType = {

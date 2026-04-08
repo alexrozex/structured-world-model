@@ -493,6 +493,53 @@ async function run() {
     );
   }
 
+  // Test 21: Low type diversity
+  {
+    const model = makeModel({
+      entities: [
+        { id: "e1", name: "A", type: "object", description: "Object A" },
+        { id: "e2", name: "B", type: "object", description: "Object B" },
+        { id: "e3", name: "C", type: "object", description: "Object C" },
+        { id: "e4", name: "D", type: "object", description: "Object D" },
+        { id: "e5", name: "E", type: "object", description: "Object E" },
+      ],
+      relations: [
+        { id: "r1", type: "uses", source: "e1", target: "e2", label: "x" },
+      ],
+    });
+    const { validation } = await validationAgent({ input, worldModel: model });
+    assert(
+      hasIssue(validation.issues, "LOW_TYPE_DIVERSITY"),
+      "Detects low type diversity (100% object)",
+    );
+  }
+
+  // Test 22: Good type diversity — no false positive
+  {
+    const model = makeModel({
+      entities: [
+        { id: "e1", name: "User", type: "actor", description: "A user" },
+        { id: "e2", name: "API", type: "system", description: "API server" },
+        { id: "e3", name: "DB", type: "system", description: "Database" },
+        {
+          id: "e4",
+          name: "Auth",
+          type: "concept",
+          description: "Authentication",
+        },
+        { id: "e5", name: "Token", type: "object", description: "Auth token" },
+      ],
+      relations: [
+        { id: "r1", type: "uses", source: "e1", target: "e2", label: "x" },
+      ],
+    });
+    const { validation } = await validationAgent({ input, worldModel: model });
+    assert(
+      !hasIssue(validation.issues, "LOW_TYPE_DIVERSITY"),
+      "No false positive on diverse types",
+    );
+  }
+
   console.log(`\n═══ ${passed}/${passed + failed} passed ═══\n`);
   if (failed > 0) process.exit(1);
 }
