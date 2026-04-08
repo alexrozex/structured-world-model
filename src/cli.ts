@@ -238,6 +238,10 @@ program
     "--fix",
     "Auto-fix validation issues before outputting (remove orphans, dangling refs, duplicates)",
   )
+  .option(
+    "--min-score <n>",
+    "Exit non-zero if quality score is below this threshold (0-100)",
+  )
   .action(
     async (
       inputArg: string | undefined,
@@ -335,6 +339,21 @@ program
             console.error(sc(`  Quality: ${v.score}/100`));
           }
           console.error(chalk.gray(`\n  Total: ${result.totalDurationMs}ms`));
+        }
+
+        // Quality gate
+        const minScore = opts.minScore
+          ? parseInt(opts.minScore as string, 10)
+          : undefined;
+        if (minScore !== undefined && result.validation.score !== undefined) {
+          if (result.validation.score < minScore) {
+            console.error(
+              chalk.red(
+                `\n  Quality gate FAILED: score ${result.validation.score} < threshold ${minScore}`,
+              ),
+            );
+            process.exit(1);
+          }
         }
       } catch (err) {
         console.error(
