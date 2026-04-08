@@ -80,7 +80,12 @@ Focus on:
 - CLI commands / entry points as actor entities — trace which systems each command invokes by following the imports in its action handler
 - Utility modules that are imported by multiple files — these are shared systems, create "uses" relations from each consumer
 
-CRITICAL: Follow import chains to establish relations. If file A imports function X from file B, and function X operates on type T from file C, then A uses B and B depends_on C. Do not create orphan entities — every system entity should have at least one "uses" or "depends_on" relation.
+CRITICAL RULES:
+- Follow import chains to establish relations. If file A imports function X from file B, and function X operates on type T from file C, then A uses B and B depends_on C
+- Do NOT create entities for local variables, function parameters, intermediate values, or internal state. Only extract architectural components (modules, services, agents, data types, external systems)
+- Do NOT create orphan entities — every entity should have at least one relation
+- Name entities after the COMPONENT they represent, not the variable name (e.g., "Extraction Agent" not "extractionAgent", "Pipeline" not "pipeline instance")
+- Prefer fewer, well-connected entities over many disconnected ones
 
 Infer the ARCHITECTURE, not just list files. Model how data flows through the system.
 
