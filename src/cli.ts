@@ -243,6 +243,7 @@ program
     "json",
   )
   .option("--pretty", "Pretty-print JSON output", true)
+  .option("--full", "Output full result (model + validation + score + timings)")
   .option("--quiet", "Suppress progress output")
   .option(
     "-p, --passes <n>",
@@ -332,11 +333,21 @@ program
           };
         }
 
-        const output = formatOutput(
-          finalModel,
-          (opts.format as string) ?? "json",
-          (opts.pretty as boolean) ?? true,
-        );
+        let output: string;
+        if (opts.full) {
+          const fullResult = {
+            worldModel: finalModel,
+            validation: result.validation,
+            totalDurationMs: result.totalDurationMs,
+          };
+          output = JSON.stringify(fullResult, null, 2);
+        } else {
+          output = formatOutput(
+            finalModel,
+            (opts.format as string) ?? "json",
+            (opts.pretty as boolean) ?? true,
+          );
+        }
 
         if (opts.output) {
           writeFileSync(resolve(opts.output as string), output, "utf-8");
