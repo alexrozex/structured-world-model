@@ -158,6 +158,48 @@ const GRAPH_PATTERNS: Array<{
     },
   },
   {
+    // "list all actors" / "show all systems" / "show actors" / "what actors are there"
+    pattern: /(?:list|show|what)\s+(?:all\s+)?(\w+?)s?(?:\s|$|\?)/i,
+    handler: (model, match) => {
+      const typeQuery = match[1].toLowerCase();
+      const validTypes = [
+        "actor",
+        "object",
+        "system",
+        "concept",
+        "location",
+        "event",
+        "group",
+        "resource",
+      ];
+      const matchedType = validTypes.find(
+        (t) =>
+          t === typeQuery ||
+          t + "s" === typeQuery + "s" ||
+          typeQuery.startsWith(t),
+      );
+      if (!matchedType) return null;
+
+      const filtered = model.entities.filter((e) => e.type === matchedType);
+      if (filtered.length === 0) {
+        return {
+          answer: `No ${matchedType} entities in this model.`,
+          method: "graph" as const,
+          entities_referenced: [],
+          confidence: 1,
+        };
+      }
+
+      const lines = filtered.map((e) => `- **${e.name}**: ${e.description}`);
+      return {
+        answer: `${filtered.length} ${matchedType}${filtered.length > 1 ? "s" : ""}:\n${lines.join("\n")}`,
+        method: "graph" as const,
+        entities_referenced: filtered.map((e) => e.name),
+        confidence: 1,
+      };
+    },
+  },
+  {
     // "how many entities" / "stats" / "summary"
     pattern: /(?:how\s+many|stats|statistics|summary|overview)\b/i,
     handler: (model) => {

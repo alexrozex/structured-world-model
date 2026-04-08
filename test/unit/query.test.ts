@@ -212,6 +212,21 @@ async function run() {
     );
   }
 
+  // "list all systems"
+  {
+    const r = await queryWorldModel(model, "list all systems");
+    assert(r.method === "graph", "list type: uses graph method");
+    assert(r.answer.includes("API"), "list type: includes API");
+    assert(r.answer.includes("Database"), "list type: includes Database");
+  }
+
+  // "show actors"
+  {
+    const r = await queryWorldModel(model, "show actors");
+    assert(r.method === "graph", "show actors: uses graph method");
+    assert(r.answer.includes("User"), "show actors: includes User");
+  }
+
   console.log(`\n═══ ${passed}/${passed + failed} passed ═══\n`);
   if (failed > 0) process.exit(1);
 }
