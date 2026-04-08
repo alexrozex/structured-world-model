@@ -578,6 +578,8 @@ program
           `\n  Stats: ${validation.stats.entities} entities, ${validation.stats.relations} relations, ${validation.stats.processes} processes, ${validation.stats.constraints} constraints`,
         ),
       );
+
+      if (!validation.valid) process.exit(1);
     } catch (err) {
       console.error(
         chalk.red(`Error: ${err instanceof Error ? err.message : String(err)}`),
