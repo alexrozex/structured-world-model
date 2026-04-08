@@ -1741,4 +1741,114 @@ program
     }
   });
 
+// ─── help ─────────────────────────────────────────────────────
+program
+  .command("help")
+  .description("Show grouped command reference")
+  .action(() => {
+    const g = chalk.gray;
+    const b = chalk.bold;
+    const c = chalk.cyan;
+    console.log(b("\n  Structured World Model — Command Reference\n"));
+    console.log(b("  Build"));
+    console.log(
+      `    ${c("model")} [input]         Build a world model from text, file, URL, or stdin`,
+    );
+    console.log(
+      `    ${c("refine")} <model> [input] Incrementally refine with new input`,
+    );
+    console.log(
+      `    ${c("transform")} <model> <instruction>  Apply natural language transformation`,
+    );
+    console.log("");
+    console.log(b("  Inspect"));
+    console.log(
+      `    ${c("inspect")} <model>        Stats, entity lookup, graph export`,
+    );
+    console.log(
+      `    ${c("summary")} <model>        One-line natural language summary`,
+    );
+    console.log(
+      `    ${c("entities")} <model>       List entities (filterable by type)`,
+    );
+    console.log(
+      `    ${c("relations")} <model>      List relations (filterable by type)`,
+    );
+    console.log(`    ${c("processes")} <model>      List processes with steps`);
+    console.log(
+      `    ${c("constraints")} <model>    List constraints with scoped entities`,
+    );
+    console.log(
+      `    ${c("search")} <model> <query> Full-text search across all elements`,
+    );
+    console.log(
+      `    ${c("clusters")} <model>       Find natural entity groups`,
+    );
+    console.log(
+      `    ${c("subgraph")} <model> <entity>  Extract neighborhood around an entity`,
+    );
+    console.log(
+      `    ${c("validate")} <model>       Full integrity check (exits 1 on errors)`,
+    );
+    console.log(
+      `    ${c("fix")} <model>            Auto-fix validation issues`,
+    );
+    console.log(
+      `    ${c("stats")} <models...>      Multi-model comparison table`,
+    );
+    console.log(
+      `    ${c("schema")}                 Output WorldModel JSON Schema`,
+    );
+    console.log("");
+    console.log(b("  Compose"));
+    console.log(
+      `    ${c("merge")} <a> <b>          Union two models (dedup entities)`,
+    );
+    console.log(
+      `    ${c("diff")} <before> <after>  What changed between two models`,
+    );
+    console.log(
+      `    ${c("intersect")} <a> <b>      Entities shared by both models`,
+    );
+    console.log(
+      `    ${c("subtract")} <a> <b>       Entities in A but not in B`,
+    );
+    console.log(
+      `    ${c("overlay")} <base> <lens>  Apply constraints/relations from lens onto base`,
+    );
+    console.log(
+      `    ${c("coverage")} <ref> <target>  How much of ref is covered by target`,
+    );
+    console.log("");
+    console.log(b("  Track"));
+    console.log(
+      `    ${c("snapshot")} <model>       Add to timeline (auto-diffs from previous)`,
+    );
+    console.log(
+      `    ${c("history")} <timeline>     Show evolution or entity history`,
+    );
+    console.log("");
+    console.log(b("  Export"));
+    console.log(
+      `    ${c("export")} <model> --as <fmt>  Export as claude-md, system-prompt, or mcp`,
+    );
+    console.log("");
+    console.log(b("  Serve"));
+    console.log(
+      `    ${c("serve")} <model>          Start MCP server with live queryable tools`,
+    );
+    console.log("");
+    console.log(b("  Query"));
+    console.log(
+      `    ${c("query")} <model> <question>  Ask questions (graph + LLM inference)`,
+    );
+    console.log("");
+    console.log(
+      g(
+        "  All commands accepting <model> support - for stdin: cat m.json | swm summary -",
+      ),
+    );
+    console.log(g("  Use swm <command> --help for detailed options\n"));
+  });
+
 program.parse();
