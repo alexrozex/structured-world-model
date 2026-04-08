@@ -5,6 +5,7 @@ import { structuringAgent } from "./agents/structuring.js";
 import { validationAgent } from "./agents/validation.js";
 import { secondPassAgent } from "./agents/second-pass.js";
 import { mergeWorldModels } from "./utils/merge.js";
+import { setDefaultModel } from "./utils/llm.js";
 import type { WorldModelType } from "./schema/index.js";
 
 export interface SWMOptions {
@@ -12,12 +13,15 @@ export interface SWMOptions {
   onStageEnd?: (name: string, durationMs: number) => void;
   /** Number of extraction passes (1 = standard, 2+ = deeper). Default 1. Max 3. */
   passes?: number;
+  /** Claude model to use. Default: claude-sonnet-4-20250514 */
+  model?: string;
 }
 
 export async function buildWorldModel(
   input: PipelineInput,
   options?: SWMOptions,
 ): Promise<PipelineResult> {
+  if (options?.model) setDefaultModel(options.model);
   const passes = Math.min(Math.max(options?.passes ?? 1, 1), 3);
   const callbacks = {
     onStageStart: options?.onStageStart,

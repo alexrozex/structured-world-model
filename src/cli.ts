@@ -156,6 +156,10 @@ program
     "Number of extraction passes (1=standard, 2-3=deeper)",
     "1",
   )
+  .option(
+    "-m, --model <model>",
+    "Claude model to use (e.g. claude-opus-4-20250514, claude-haiku-4-5-20251001)",
+  )
   .action(
     async (
       inputArg: string | undefined,
@@ -194,6 +198,7 @@ program
         const result = await buildWorldModel(input, {
           ...stageCallbacks(opts.quiet as boolean),
           passes,
+          model: opts.model as string | undefined,
         });
         const output = formatOutput(
           result.worldModel,

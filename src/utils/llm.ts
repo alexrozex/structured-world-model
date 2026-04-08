@@ -1,12 +1,21 @@
 import Anthropic from "@anthropic-ai/sdk";
 
 let client: Anthropic | null = null;
+let defaultModel = "claude-sonnet-4-20250514";
 
 export function getClient(): Anthropic {
   if (!client) {
     client = new Anthropic();
   }
   return client;
+}
+
+export function setDefaultModel(model: string): void {
+  defaultModel = model;
+}
+
+export function getDefaultModel(): string {
+  return defaultModel;
 }
 
 export interface AgentMessage {
@@ -110,7 +119,7 @@ export async function callAgent(
   return withRetry(
     async () => {
       const apiCall = llm.messages.create({
-        model: options?.model ?? "claude-sonnet-4-20250514",
+        model: options?.model ?? defaultModel,
         max_tokens: options?.maxTokens ?? 8192,
         system: systemPrompt,
         messages: [{ role: "user", content: userMessage }],
