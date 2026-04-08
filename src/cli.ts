@@ -15,6 +15,11 @@ import {
   toDot,
   getStats,
 } from "./utils/graph.js";
+import { queryWorldModel } from "./agents/query.js";
+import { intersection, difference, overlay } from "./utils/algebra.js";
+import { toClaudeMd } from "./export/claude-md.js";
+import { toSystemPrompt } from "./export/system-prompt.js";
+import { toMcpSchema } from "./export/mcp-schema.js";
 import type { PipelineInput } from "./pipeline/index.js";
 import type { WorldModelType } from "./schema/index.js";
 
@@ -98,6 +103,11 @@ program
   )
   .option("--pretty", "Pretty-print JSON output", true)
   .option("--quiet", "Suppress progress output")
+  .option(
+    "-p, --passes <n>",
+    "Number of extraction passes (1=standard, 2-3=deeper)",
+    "1",
+  )
   .action(
     async (
       inputArg: string | undefined,
@@ -127,10 +137,11 @@ program
           );
         }
 
-        const result = await buildWorldModel(
-          input,
-          stageCallbacks(opts.quiet as boolean),
-        );
+        const passes = parseInt((opts.passes as string) ?? "1", 10) || 1;
+        const result = await buildWorldModel(input, {
+          ...stageCallbacks(opts.quiet as boolean),
+          passes,
+        });
         const output = formatOutput(
           result.worldModel,
           (opts.format as string) ?? "json",
@@ -506,6 +517,209 @@ program
           `\n  Stats: ${validation.stats.entities} entities, ${validation.stats.relations} relations, ${validation.stats.processes} processes, ${validation.stats.constraints} constraints`,
         ),
       );
+    } catch (err) {
+      console.error(
+        chalk.red(`Error: ${err instanceof Error ? err.message : String(err)}`),
+      );
+      process.exit(1);
+    }
+  });
+
+// ─── query ────────────────────────────────────────────────────
+program
+  .command("query")
+  .description("Ask a question about a world model")
+  .argument("<model>", "Path to world model JSON")
+  .argument("<question>", "Natural language question")
+  .option("--json", "Output result as JSON")
+  .action(
+    async (
+      modelPath: string,
+      question: string,
+      opts: Record<string, boolean | undefined>,
+    ) => {
+      try {
+        const model = readModel(modelPath);
+        const result = await queryWorldModel(model, question);
+
+        if (opts.json) {
+          console.log(JSON.stringify(result, null, 2));
+        } else {
+          console.log(result.answer);
+          console.error(
+            chalk.gray(
+              `\n  Method: ${result.method} | Confidence: ${result.confidence} | Entities: ${result.entities_referenced.join(", ") || "none"}`,
+            ),
+          );
+        }
+      } catch (err) {
+        console.error(
+          chalk.red(
+            `Error: ${err instanceof Error ? err.message : String(err)}`,
+          ),
+        );
+        process.exit(1);
+      }
+    },
+  );
+
+// ─── algebra: intersect ───────────────────────────────────────
+program
+  .command("intersect")
+  .description("Compute the intersection of two world models (shared entities)")
+  .argument("<modelA>", "Path to first world model JSON")
+  .argument("<modelB>", "Path to second world model JSON")
+  .option("-o, --output <path>", "Write result to file")
+  .action(
+    (
+      pathA: string,
+      pathB: string,
+      opts: Record<string, string | undefined>,
+    ) => {
+      try {
+        const result = intersection(readModel(pathA), readModel(pathB));
+        const output = JSON.stringify(result, null, 2);
+        if (opts.output) {
+          writeFileSync(resolve(opts.output), output, "utf-8");
+          console.error(chalk.green(`✓ Written to ${opts.output}`));
+        } else {
+          console.log(output);
+        }
+        console.error(
+          chalk.gray(
+            `  ${result.entities.length} shared entities, ${result.relations.length} shared relations`,
+          ),
+        );
+      } catch (err) {
+        console.error(
+          chalk.red(
+            `Error: ${err instanceof Error ? err.message : String(err)}`,
+          ),
+        );
+        process.exit(1);
+      }
+    },
+  );
+
+// ─── algebra: subtract ───────────────────────────────────────
+program
+  .command("subtract")
+  .description("Compute A \\ B — entities in A that are not in B")
+  .argument("<modelA>", "Path to base world model JSON")
+  .argument("<modelB>", "Path to model to subtract")
+  .option("-o, --output <path>", "Write result to file")
+  .action(
+    (
+      pathA: string,
+      pathB: string,
+      opts: Record<string, string | undefined>,
+    ) => {
+      try {
+        const result = difference(readModel(pathA), readModel(pathB));
+        const output = JSON.stringify(result, null, 2);
+        if (opts.output) {
+          writeFileSync(resolve(opts.output), output, "utf-8");
+          console.error(chalk.green(`✓ Written to ${opts.output}`));
+        } else {
+          console.log(output);
+        }
+        console.error(
+          chalk.gray(`  ${result.entities.length} unique entities remaining`),
+        );
+      } catch (err) {
+        console.error(
+          chalk.red(
+            `Error: ${err instanceof Error ? err.message : String(err)}`,
+          ),
+        );
+        process.exit(1);
+      }
+    },
+  );
+
+// ─── algebra: overlay ────────────────────────────────────────
+program
+  .command("overlay")
+  .description(
+    "Apply a lens model on top of a base model (constraints, relations overlay)",
+  )
+  .argument("<base>", "Path to base world model JSON")
+  .argument("<lens>", "Path to lens model to overlay")
+  .option("-o, --output <path>", "Write result to file")
+  .action(
+    (
+      basePath: string,
+      lensPath: string,
+      opts: Record<string, string | undefined>,
+    ) => {
+      try {
+        const result = overlay(readModel(basePath), readModel(lensPath));
+        const output = JSON.stringify(result, null, 2);
+        if (opts.output) {
+          writeFileSync(resolve(opts.output), output, "utf-8");
+          console.error(chalk.green(`✓ Written to ${opts.output}`));
+        } else {
+          console.log(output);
+        }
+        console.error(
+          chalk.gray(
+            `  ${result.entities.length} entities, ${result.constraints.length} constraints after overlay`,
+          ),
+        );
+      } catch (err) {
+        console.error(
+          chalk.red(
+            `Error: ${err instanceof Error ? err.message : String(err)}`,
+          ),
+        );
+        process.exit(1);
+      }
+    },
+  );
+
+// ─── export ──────────────────────────────────────────────────
+program
+  .command("export")
+  .description("Export a world model as AI-consumable context")
+  .argument("<model>", "Path to world model JSON")
+  .option(
+    "--as <format>",
+    "Export format: claude-md, system-prompt, mcp",
+    "claude-md",
+  )
+  .option("-o, --output <path>", "Write to file")
+  .action((modelPath: string, opts: Record<string, string | undefined>) => {
+    try {
+      const model = readModel(modelPath);
+      let output: string;
+
+      switch (opts.as) {
+        case "claude-md":
+          output = toClaudeMd(model);
+          break;
+        case "system-prompt":
+          output = toSystemPrompt(model);
+          break;
+        case "mcp":
+          output = JSON.stringify(toMcpSchema(model), null, 2);
+          break;
+        default:
+          console.error(
+            chalk.red(
+              `Unknown export format: ${opts.as}. Use: claude-md, system-prompt, mcp`,
+            ),
+          );
+          process.exit(1);
+      }
+
+      if (opts.output) {
+        writeFileSync(resolve(opts.output), output, "utf-8");
+        console.error(
+          chalk.green(`✓ Exported as ${opts.as} to ${opts.output}`),
+        );
+      } else {
+        console.log(output);
+      }
     } catch (err) {
       console.error(
         chalk.red(`Error: ${err instanceof Error ? err.message : String(err)}`),
