@@ -325,6 +325,15 @@ program
               console.error(`    ${icon} ${issue.message}`);
             }
           }
+          if (v.score !== undefined) {
+            const sc =
+              v.score >= 80
+                ? chalk.green
+                : v.score >= 50
+                  ? chalk.yellow
+                  : chalk.red;
+            console.error(sc(`  Quality: ${v.score}/100`));
+          }
           console.error(chalk.gray(`\n  Total: ${result.totalDurationMs}ms`));
         }
       } catch (err) {
@@ -1723,24 +1732,32 @@ program
       const pad = (s: string, n: number) =>
         s.length >= n ? s.slice(0, n) : s + " ".repeat(n - s.length);
 
+      const { validationAgent: va } = await import("./agents/validation.js");
+
       console.log(chalk.blue("■ World Model Dashboard\n"));
       console.log(
         chalk.gray(
-          `  ${pad("Model", 30)} ${pad("Ent", 6)} ${pad("Rel", 6)} ${pad("Proc", 6)} ${pad("Cstr", 6)} ${pad("Conf", 6)}`,
+          `  ${pad("Model", 30)} ${pad("Ent", 6)} ${pad("Rel", 6)} ${pad("Proc", 6)} ${pad("Cstr", 6)} ${pad("Conf", 6)} ${pad("Score", 6)}`,
         ),
       );
-      console.log(chalk.gray("  " + "─".repeat(66)));
+      console.log(chalk.gray("  " + "─".repeat(72)));
 
       for (const p of modelPaths) {
         const model = await readModel(p);
+        const { validation } = await va({
+          input: { raw: "", sourceType: "text" },
+          worldModel: model,
+        });
         const name =
           model.name.length > 28 ? model.name.slice(0, 27) + "…" : model.name;
         const conf =
           model.metadata?.confidence !== undefined
             ? `${Math.round(model.metadata.confidence * 100)}%`
             : "—";
+        const scoreStr =
+          validation.score !== undefined ? `${validation.score}` : "—";
         console.log(
-          `  ${pad(name, 30)} ${pad(String(model.entities.length), 6)} ${pad(String(model.relations.length), 6)} ${pad(String(model.processes.length), 6)} ${pad(String(model.constraints.length), 6)} ${pad(conf, 6)}`,
+          `  ${pad(name, 30)} ${pad(String(model.entities.length), 6)} ${pad(String(model.relations.length), 6)} ${pad(String(model.processes.length), 6)} ${pad(String(model.constraints.length), 6)} ${pad(conf, 6)} ${pad(scoreStr, 6)}`,
         );
       }
     } catch (err) {
