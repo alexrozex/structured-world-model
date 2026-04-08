@@ -2419,7 +2419,7 @@ program
   .option("--api-key <key>", "Anthropic API key")
   .action(async (intent: string, opts: Record<string, unknown>) => {
     try {
-      const { MotherCompiler } = await import("@swm/compiler");
+      const { MotherCompiler } = await import("@swm/compiler" as string);
       const compiler = new MotherCompiler();
 
       console.error(chalk.blue("■ Ada Semantic Compiler"));
@@ -2436,7 +2436,7 @@ program
 
       const result = await compiler.compile(intent, {
         apiKey: opts.apiKey as string | undefined,
-        onStageStart: (stage) => {
+        onStageStart: (stage: string) => {
           console.error(chalk.yellow(`  ▸ ${stage}...`));
         },
       });
@@ -2479,7 +2479,7 @@ program
         raw = intent;
       }
 
-      const { buildEnrichedModel } = await import("@swm/bridge");
+      const { buildEnrichedModel } = await import("@swm/bridge" as string);
 
       console.error(chalk.blue("■ SWM Unified Pipeline"));
       console.error(chalk.gray("  Phase 1: SWM extraction..."));
@@ -2491,7 +2491,7 @@ program
           passes: parseInt(opts.passes as string) || 1,
           extractionModel: opts.model as string | undefined,
           apiKey: opts.apiKey as string | undefined,
-          onStageStart: (stage) => {
+          onStageStart: (stage: string) => {
             console.error(chalk.yellow(`  ▸ Ada ${stage}...`));
           },
         },
@@ -2532,7 +2532,7 @@ program
   .option("-d, --dir <path>", "Directory to scan", ".")
   .action(async (opts: Record<string, unknown>) => {
     try {
-      const { analyzeCodebase } = await import("@swm/compiler");
+      const { analyzeCodebase } = await import("@swm/compiler" as string);
       const dir = resolve(opts.dir as string);
 
       console.error(chalk.blue("■ Codebase Scan (CTX)"));
@@ -2579,7 +2579,7 @@ program
         );
         console.error(chalk.green("  Listening on stdio...\n"));
 
-        const { startUnifiedServer } = await import("@swm/mcp-server");
+        const { startUnifiedServer } = await import("@swm/mcp-server" as string);
         await startUnifiedServer({
           worldModelPath: modelPath,
           enableAda: hasAda,
