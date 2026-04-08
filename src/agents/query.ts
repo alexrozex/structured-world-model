@@ -4,6 +4,7 @@ import {
   findDependents,
   pathsBetween,
   getStats,
+  analyzeImpact,
 } from "../utils/graph.js";
 import type { WorldModelType } from "../schema/index.js";
 
@@ -153,6 +154,45 @@ const GRAPH_PATTERNS: Array<{
         answer: `${applicable.length} constraint(s) apply to ${entity.name}:\n${lines.join("\n")}`,
         method: "graph",
         entities_referenced: [entity.name],
+        confidence: 1,
+      };
+    },
+  },
+  {
+    // "what breaks if I remove X" / "impact of removing X" / "what happens without X"
+    pattern:
+      /(?:what\s+(?:breaks|happens)|impact\s+of\s+removing|what\s+if\s+(?:we|I)\s+remove)\s+(?:if\s+(?:we|I)\s+remove\s+)?(?:the\s+)?(.+?)(?:\?|$)/i,
+    handler: (model, match) => {
+      const entity = findEntity(model, match[1].trim());
+      if (!entity) return null;
+
+      const result = analyzeImpact(model, entity.id);
+      if (!result) return null;
+
+      const lines = [result.summary];
+      if (result.dependents.length > 0) {
+        lines.push(
+          `Dependents: ${result.dependents.map((d) => d.name).join(", ")}`,
+        );
+      }
+      if (result.affectedProcesses.length > 0) {
+        lines.push(
+          `Affected processes: ${result.affectedProcesses.map((a) => a.process.name).join(", ")}`,
+        );
+      }
+      if (result.affectedConstraints.length > 0) {
+        lines.push(
+          `Affected constraints: ${result.affectedConstraints.map((c) => `[${c.severity}] ${c.name}`).join(", ")}`,
+        );
+      }
+
+      return {
+        answer: lines.join("\n"),
+        method: "graph" as const,
+        entities_referenced: [
+          entity.name,
+          ...result.dependents.map((d) => d.name),
+        ],
         confidence: 1,
       };
     },

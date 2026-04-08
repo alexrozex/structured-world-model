@@ -250,6 +250,27 @@ async function run() {
     );
   }
 
+  // "what breaks if I remove API Server"
+  {
+    const r = await queryWorldModel(
+      model,
+      "what breaks if I remove API Server?",
+    );
+    assert(r.method === "graph", "impact query: uses graph method");
+    assert(r.answer.includes("Severity"), "impact query: includes severity");
+    assert(
+      r.answer.includes("breaks"),
+      "impact query: mentions broken relations",
+    );
+  }
+
+  // "impact of removing Database"
+  {
+    const r = await queryWorldModel(model, "impact of removing Database?");
+    assert(r.method === "graph", "impact of: uses graph method");
+    assert(r.answer.includes("Database"), "impact of: mentions entity");
+  }
+
   console.log(`\n═══ ${passed}/${passed + failed} passed ═══\n`);
   if (failed > 0) process.exit(1);
 }
