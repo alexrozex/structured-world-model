@@ -196,6 +196,61 @@ function run() {
     assert(issues.length > 0, "Garbled: reports issues");
   }
 
+  // Test 13: source_context is preserved when present
+  {
+    const { extraction, issues } = validateExtraction({
+      entities: [
+        {
+          name: "PaymentService",
+          type: "system",
+          description: "Handles payments",
+          source_context:
+            "The PaymentService processes all credit card transactions.",
+        },
+      ],
+    });
+    assert(
+      extraction.entities.length === 1,
+      "source_context: entity preserved",
+    );
+    assert(issues.length === 0, "source_context: no issues");
+    assert(
+      extraction.entities[0].source_context ===
+        "The PaymentService processes all credit card transactions.",
+      "source_context: value preserved verbatim",
+    );
+  }
+
+  // Test 14: source_context is optional — entity without it still valid
+  {
+    const { extraction } = validateExtraction({
+      entities: [{ name: "User", type: "actor", description: "A user" }],
+    });
+    assert(
+      extraction.entities[0].source_context === undefined,
+      "source_context: absent when not provided",
+    );
+  }
+
+  // Test 15: source_context is omitted from schema when undefined (not coerced to empty string)
+  {
+    const { extraction } = validateExtraction({
+      entities: [
+        {
+          name: "Database",
+          type: "system",
+          description: "Stores data",
+          source_context: undefined,
+        },
+      ],
+    });
+    assert(
+      !("source_context" in extraction.entities[0]) ||
+        extraction.entities[0].source_context === undefined,
+      "source_context: undefined stays undefined",
+    );
+  }
+
   console.log(`\n═══ ${passed}/${passed + failed} passed ═══\n`);
   if (failed > 0) process.exit(1);
 }

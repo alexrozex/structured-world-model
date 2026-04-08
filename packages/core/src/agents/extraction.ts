@@ -12,6 +12,8 @@ export interface RawExtraction {
     properties?: Record<string, unknown>;
     tags?: string[];
     confidence?: number;
+    /** Verbatim excerpt or paraphrase from the input that this entity was extracted from. */
+    source_context?: string;
   }>;
   relations: Array<{
     source: string;
@@ -58,6 +60,7 @@ You must extract:
    - description: what it is and why it matters in context
    - properties: any measurable/specific attributes
    - tags: categorization labels
+   - source_context: a short verbatim excerpt or close paraphrase (1-2 sentences) from the input that is the primary evidence for this entity's existence
 
 2. **Relations** — every connection between entities. For each:
    - source: name of source entity (must match an entity name exactly)
@@ -135,6 +138,12 @@ function mergeRawExtractions(extractions: RawExtraction[]): RawExtraction {
         }
         if (e.tags) {
           existing.tags = [...new Set([...(existing.tags ?? []), ...e.tags])];
+        }
+        // Accumulate source_context snippets from multiple chunks
+        if (e.source_context) {
+          existing.source_context = existing.source_context
+            ? `${existing.source_context} | ${e.source_context}`
+            : e.source_context;
         }
       }
     }

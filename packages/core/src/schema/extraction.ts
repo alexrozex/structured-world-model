@@ -14,6 +14,12 @@ const RawEntitySchema = z.object({
   properties: z.record(z.string(), z.unknown()).optional(),
   tags: z.array(z.string()).optional(),
   confidence: z.number().min(0).max(1).optional(),
+  source_context: z
+    .string()
+    .optional()
+    .describe(
+      "Verbatim excerpt or paraphrase of the input that this entity was extracted from",
+    ),
 });
 
 const RawRelationSchema = z.object({
