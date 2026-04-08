@@ -196,10 +196,25 @@ function mergeRawExtractions(extractions: RawExtraction[]): RawExtraction {
   return merged;
 }
 
-function validateAndCoerce(raw: unknown): RawExtraction {
+class EmptyExtractionError extends Error {
+  constructor(issues: string[]) {
+    super(`Extraction produced empty result: ${issues.join("; ")}`);
+    this.name = "EmptyExtractionError";
+  }
+}
+
+function validateAndCoerce(raw: unknown, throwOnEmpty = false): RawExtraction {
   const { extraction, issues } = validateExtraction(raw);
   if (issues.length > 0) {
     process.stderr.write(`  [validation] ${issues.join("; ")}\n`);
+  }
+  // If extraction is completely empty and we should retry, throw
+  if (
+    throwOnEmpty &&
+    extraction.entities.length === 0 &&
+    extraction.relations.length === 0
+  ) {
+    throw new EmptyExtractionError(issues);
   }
   // Cast validated extraction to RawExtraction (shapes are compatible)
   return extraction as unknown as RawExtraction;
@@ -221,12 +236,41 @@ export async function extractionAgent(
   const sourcePrompt = getPromptForSourceType(input.sourceType);
 
   if (chunks.length === 1) {
-    // Single chunk — direct extraction with source-specific prompt
+    // Single chunk — direct extraction with source-specific prompt, retry on empty
     const userMessage = `Analyze the following ${input.sourceType} input and extract a complete world model.\n\n---\n\n${input.raw}`;
+    const MAX_EMPTY_RETRIES = 2;
+    for (let attempt = 0; attempt <= MAX_EMPTY_RETRIES; attempt++) {
+      const rawResult = await callAgentJSON<unknown>(
+        sourcePrompt,
+        userMessage,
+        {
+          maxTokens: 16384,
+        },
+      );
+      try {
+        return {
+          input,
+          extraction: validateAndCoerce(rawResult, attempt < MAX_EMPTY_RETRIES),
+        };
+      } catch (err) {
+        if (
+          err instanceof EmptyExtractionError &&
+          attempt < MAX_EMPTY_RETRIES
+        ) {
+          process.stderr.write(
+            `  [retry] empty extraction, attempt ${attempt + 1}/${MAX_EMPTY_RETRIES}...\n`,
+          );
+          continue;
+        }
+        // Final attempt — accept whatever we got (coerced empty)
+        return { input, extraction: validateAndCoerce(rawResult, false) };
+      }
+    }
+    // Shouldn't reach here, but satisfy TypeScript
     const rawResult = await callAgentJSON<unknown>(sourcePrompt, userMessage, {
       maxTokens: 16384,
     });
-    return { input, extraction: validateAndCoerce(rawResult) };
+    return { input, extraction: validateAndCoerce(rawResult, false) };
   }
 
   // Multi-chunk — extract per chunk with source-specific prompt, then merge
