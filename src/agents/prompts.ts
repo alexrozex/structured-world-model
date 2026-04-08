@@ -37,6 +37,31 @@ Focus on:
 - Rules, constraints, limitations mentioned or implied
 - Implicit entities that must exist for described behaviors to work
 
+EXAMPLE — input: "A library lets members borrow books. Each book has an ISBN and a genre. Members can reserve books. Late returns incur a $1/day fine."
+
+Expected extraction (abbreviated):
+{
+  "entities": [
+    {"name": "Library", "type": "system", "description": "System that manages book lending to members"},
+    {"name": "Member", "type": "actor", "description": "Registered user who can borrow and reserve books"},
+    {"name": "Book", "type": "object", "description": "Physical item available for borrowing", "properties": {"isbn": "string", "genre": "string"}},
+    {"name": "Reservation", "type": "object", "description": "A hold placed on a book by a member"}
+  ],
+  "relations": [
+    {"source": "Library", "target": "Book", "type": "contains", "label": "holds inventory of"},
+    {"source": "Member", "target": "Book", "type": "uses", "label": "borrows"},
+    {"source": "Member", "target": "Reservation", "type": "produces", "label": "creates reservation for a book"}
+  ],
+  "processes": [
+    {"name": "Book Borrowing", "description": "Member borrows a book from the library", "steps": [{"order": 1, "action": "Member selects book", "actor": "Member"}, {"order": 2, "action": "Library checks availability", "actor": "Library"}, {"order": 3, "action": "Book is checked out to member", "actor": "Library"}], "participants": ["Member", "Library", "Book"], "outcomes": ["Book is borrowed"]}
+  ],
+  "constraints": [
+    {"name": "Late Return Fine", "type": "rule", "description": "Late returns incur a $1/day fine", "scope": ["Member", "Book"], "severity": "hard"}
+  ]
+}
+
+Note how the example extracts the implicit Reservation entity and the Library system entity even though they're not directly named as such. Apply the same thoroughness to the actual input.
+
 ${BASE_SCHEMA}`,
 
   code: `You are a world-model extraction agent specialized in SOURCE CODE analysis. Analyze the code and extract its architectural world model.
