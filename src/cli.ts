@@ -1438,4 +1438,97 @@ program
     },
   );
 
+// ─── search ───────────────────────────────────────────────────
+program
+  .command("search")
+  .description("Full-text search across all elements of a world model")
+  .argument("<model>", "Path to world model JSON")
+  .argument("<query>", "Search term (case-insensitive)")
+  .action((modelPath: string, query: string) => {
+    try {
+      const model = readModel(modelPath);
+      const q = query.toLowerCase();
+      let found = 0;
+
+      const matchingEntities = model.entities.filter(
+        (e) =>
+          e.name.toLowerCase().includes(q) ||
+          e.description.toLowerCase().includes(q),
+      );
+      if (matchingEntities.length > 0) {
+        console.log(chalk.blue(`\n  Entities (${matchingEntities.length}):`));
+        for (const e of matchingEntities) {
+          console.log(
+            `    [${e.type}] ${chalk.bold(e.name)}: ${e.description}`,
+          );
+        }
+        found += matchingEntities.length;
+      }
+
+      const matchingRelations = model.relations.filter((r) => {
+        const src = model.entities.find((e) => e.id === r.source)?.name ?? "";
+        const tgt = model.entities.find((e) => e.id === r.target)?.name ?? "";
+        return (
+          r.label.toLowerCase().includes(q) ||
+          r.type.includes(q) ||
+          src.toLowerCase().includes(q) ||
+          tgt.toLowerCase().includes(q)
+        );
+      });
+      if (matchingRelations.length > 0) {
+        console.log(chalk.blue(`\n  Relations (${matchingRelations.length}):`));
+        for (const r of matchingRelations) {
+          const src =
+            model.entities.find((e) => e.id === r.source)?.name ?? r.source;
+          const tgt =
+            model.entities.find((e) => e.id === r.target)?.name ?? r.target;
+          console.log(`    ${src} —[${r.type}]→ ${tgt}: ${r.label}`);
+        }
+        found += matchingRelations.length;
+      }
+
+      const matchingProcesses = model.processes.filter(
+        (p) =>
+          p.name.toLowerCase().includes(q) ||
+          p.description.toLowerCase().includes(q) ||
+          p.steps.some((s) => s.action.toLowerCase().includes(q)),
+      );
+      if (matchingProcesses.length > 0) {
+        console.log(chalk.blue(`\n  Processes (${matchingProcesses.length}):`));
+        for (const p of matchingProcesses) {
+          console.log(`    ${chalk.bold(p.name)}: ${p.description}`);
+        }
+        found += matchingProcesses.length;
+      }
+
+      const matchingConstraints = model.constraints.filter(
+        (c) =>
+          c.name.toLowerCase().includes(q) ||
+          c.description.toLowerCase().includes(q),
+      );
+      if (matchingConstraints.length > 0) {
+        console.log(
+          chalk.blue(`\n  Constraints (${matchingConstraints.length}):`),
+        );
+        for (const c of matchingConstraints) {
+          console.log(
+            `    [${c.severity}] ${chalk.bold(c.name)}: ${c.description}`,
+          );
+        }
+        found += matchingConstraints.length;
+      }
+
+      if (found === 0) {
+        console.log(chalk.gray(`  No matches for "${query}".`));
+      } else {
+        console.error(chalk.gray(`\n  ${found} matches for "${query}"`));
+      }
+    } catch (err) {
+      console.error(
+        chalk.red(`Error: ${err instanceof Error ? err.message : String(err)}`),
+      );
+      process.exit(1);
+    }
+  });
+
 program.parse();
