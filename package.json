@@ -9,7 +9,10 @@
   "scripts": {
     "build": "tsc",
     "dev": "tsx src/cli.ts",
-    "start": "node dist/cli.js"
+    "start": "node dist/cli.js",
+    "test": "tsx test/run-unit.ts",
+    "test:e2e": "tsx test/proof.ts",
+    "typecheck": "tsc --noEmit"
   },
   "keywords": [
     "world-model",

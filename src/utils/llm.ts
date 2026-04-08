@@ -23,10 +23,11 @@ export interface CallOptions {
 
 const DEFAULT_RETRIES = 3;
 const BASE_DELAY_MS = 1000;
+const DEFAULT_TIMEOUT_MS = 120_000; // 2 minutes
+const MAX_INPUT_TOKENS_WARNING = 150_000;
 
 function isRetryable(err: unknown): boolean {
   if (err instanceof Anthropic.APIError) {
-    // Rate limit, server errors, overloaded
     return err.status === 429 || err.status >= 500;
   }
   if (err instanceof Error) {
@@ -34,7 +35,8 @@ function isRetryable(err: unknown): boolean {
     return (
       msg.includes("timeout") ||
       msg.includes("econnreset") ||
-      msg.includes("socket")
+      msg.includes("socket") ||
+      msg.includes("aborted")
     );
   }
   return false;
@@ -67,22 +69,54 @@ async function withRetry<T>(
   throw lastErr;
 }
 
+/**
+ * Wrap a promise with a timeout. Rejects with a clear error if the timeout fires.
+ */
+function withTimeout<T>(
+  promise: Promise<T>,
+  ms: number,
+  label: string,
+): Promise<T> {
+  return new Promise<T>((resolve, reject) => {
+    const timer = setTimeout(() => {
+      reject(new Error(`${label} timed out after ${ms}ms`));
+    }, ms);
+
+    promise.then(
+      (val) => {
+        clearTimeout(timer);
+        resolve(val);
+      },
+      (err) => {
+        clearTimeout(timer);
+        reject(err);
+      },
+    );
+  });
+}
+
 export async function callAgent(
   systemPrompt: string,
   userMessage: string,
   options?: CallOptions,
 ): Promise<string> {
+  if (!systemPrompt) throw new Error("callAgent: systemPrompt is required");
+  if (!userMessage) throw new Error("callAgent: userMessage is required");
+
   const llm = getClient();
   const retries = options?.retries ?? DEFAULT_RETRIES;
+  const timeoutMs = options?.timeoutMs ?? DEFAULT_TIMEOUT_MS;
 
   return withRetry(
     async () => {
-      const response = await llm.messages.create({
+      const apiCall = llm.messages.create({
         model: options?.model ?? "claude-sonnet-4-20250514",
         max_tokens: options?.maxTokens ?? 8192,
         system: systemPrompt,
         messages: [{ role: "user", content: userMessage }],
       });
+
+      const response = await withTimeout(apiCall, timeoutMs, "LLM call");
 
       const textBlock = response.content.find((b) => b.type === "text");
       if (!textBlock || textBlock.type !== "text") {
@@ -101,14 +135,12 @@ export async function callAgentJSON<T>(
   options?: CallOptions,
 ): Promise<T> {
   const retries = options?.retries ?? DEFAULT_RETRIES;
-  let lastParseErr: Error | null = null;
 
-  // Retry JSON parsing failures too — LLM sometimes returns malformed JSON on first try
   return withRetry(
     async () => {
       const raw = await callAgent(systemPrompt, userMessage, {
         ...options,
-        retries: 0, // inner call doesn't retry — outer loop handles it
+        retries: 0,
       });
 
       // Extract JSON from markdown code fences if present
@@ -118,10 +150,9 @@ export async function callAgentJSON<T>(
       try {
         return JSON.parse(jsonStr) as T;
       } catch {
-        lastParseErr = new Error(
+        throw new Error(
           `Failed to parse LLM response as JSON (${raw.length} chars):\n${raw.slice(0, 800)}`,
         );
-        throw lastParseErr;
       }
     },
     retries,
@@ -134,4 +165,24 @@ export async function callAgentJSON<T>(
  */
 export function estimateTokens(text: string): number {
   return Math.ceil(text.length / 4);
+}
+
+/**
+ * Check input size and warn if it's very large.
+ * Returns { safe: boolean, tokens: number, warning?: string }
+ */
+export function checkInputSize(text: string): {
+  safe: boolean;
+  tokens: number;
+  warning?: string;
+} {
+  const tokens = estimateTokens(text);
+  if (tokens > MAX_INPUT_TOKENS_WARNING) {
+    return {
+      safe: false,
+      tokens,
+      warning: `Input is ~${tokens.toLocaleString()} tokens (${text.length.toLocaleString()} chars). This exceeds the ${MAX_INPUT_TOKENS_WARNING.toLocaleString()} token warning threshold. The input will be chunked automatically.`,
+    };
+  }
+  return { safe: true, tokens };
 }

@@ -1,7 +1,8 @@
-import { callAgentJSON, estimateTokens } from "../utils/llm.js";
+import { callAgentJSON, checkInputSize } from "../utils/llm.js";
 import type { PipelineInput } from "../pipeline/index.js";
 import { chunkInput } from "./chunker.js";
 import { getPromptForSourceType } from "./prompts.js";
+import { validateExtraction } from "../schema/extraction.js";
 
 export interface RawExtraction {
   entities: Array<{
@@ -194,23 +195,37 @@ function mergeRawExtractions(extractions: RawExtraction[]): RawExtraction {
   return merged;
 }
 
+function validateAndCoerce(raw: unknown): RawExtraction {
+  const { extraction, issues } = validateExtraction(raw);
+  if (issues.length > 0) {
+    process.stderr.write(`  [validation] ${issues.join("; ")}\n`);
+  }
+  // Cast validated extraction to RawExtraction (shapes are compatible)
+  return extraction as unknown as RawExtraction;
+}
+
 export async function extractionAgent(
   input: PipelineInput,
 ): Promise<{ input: PipelineInput; extraction: RawExtraction }> {
+  if (!input.raw || !input.raw.trim()) {
+    throw new Error("Cannot extract from empty input");
+  }
+
+  const sizeCheck = checkInputSize(input.raw);
+  if (sizeCheck.warning) {
+    process.stderr.write(`  [warn] ${sizeCheck.warning}\n`);
+  }
+
   const chunks = chunkInput(input.raw);
   const sourcePrompt = getPromptForSourceType(input.sourceType);
 
   if (chunks.length === 1) {
     // Single chunk — direct extraction with source-specific prompt
     const userMessage = `Analyze the following ${input.sourceType} input and extract a complete world model.\n\n---\n\n${input.raw}`;
-    const extraction = await callAgentJSON<RawExtraction>(
-      sourcePrompt,
-      userMessage,
-      {
-        maxTokens: 16384,
-      },
-    );
-    return { input, extraction };
+    const rawResult = await callAgentJSON<unknown>(sourcePrompt, userMessage, {
+      maxTokens: 16384,
+    });
+    return { input, extraction: validateAndCoerce(rawResult) };
   }
 
   // Multi-chunk — extract per chunk with source-specific prompt, then merge
@@ -224,10 +239,10 @@ export async function extractionAgent(
 
     const userMessage = `Analyze chunk ${chunk.index + 1}/${chunk.total} of a ${input.sourceType} input and extract all world model elements.\n\n---\n\n${chunk.text}`;
 
-    const extraction = await callAgentJSON<RawExtraction>(prompt, userMessage, {
+    const rawResult = await callAgentJSON<unknown>(prompt, userMessage, {
       maxTokens: 16384,
     });
-    extractions.push(extraction);
+    extractions.push(validateAndCoerce(rawResult));
   }
 
   return { input, extraction: mergeRawExtractions(extractions) };
