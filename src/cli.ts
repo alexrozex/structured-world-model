@@ -1384,4 +1384,58 @@ program
     },
   );
 
+// ─── constraints ──────────────────────────────────────────────
+program
+  .command("constraints")
+  .description("List all constraints with scoped entities")
+  .argument("<model>", "Path to world model JSON")
+  .option("-s, --severity <severity>", "Filter by severity: hard or soft")
+  .option("--json", "Output as JSON array")
+  .action(
+    (modelPath: string, opts: Record<string, string | boolean | undefined>) => {
+      try {
+        const model = readModel(modelPath);
+        let constraints = model.constraints;
+        if (opts.severity) {
+          constraints = constraints.filter((c) => c.severity === opts.severity);
+        }
+        if (opts.json) {
+          console.log(JSON.stringify(constraints, null, 2));
+          return;
+        }
+        if (constraints.length === 0) {
+          console.log(chalk.gray("  No constraints in this model."));
+          return;
+        }
+        for (const c of constraints) {
+          const icon =
+            c.severity === "hard" ? chalk.red("■") : chalk.yellow("□");
+          const scopeNames = c.scope
+            .map((id) => model.entities.find((e) => e.id === id)?.name ?? id)
+            .join(", ");
+          console.log(
+            `  ${icon} ${chalk.bold(c.name)} ${chalk.gray(`[${c.severity}]`)}`,
+          );
+          console.log(chalk.white(`    ${c.description}`));
+          if (scopeNames)
+            console.log(chalk.gray(`    Applies to: ${scopeNames}`));
+        }
+        const hard = constraints.filter((c) => c.severity === "hard").length;
+        const soft = constraints.filter((c) => c.severity === "soft").length;
+        console.error(
+          chalk.gray(
+            `\n  ${constraints.length} constraints (${hard} hard, ${soft} soft)`,
+          ),
+        );
+      } catch (err) {
+        console.error(
+          chalk.red(
+            `Error: ${err instanceof Error ? err.message : String(err)}`,
+          ),
+        );
+        process.exit(1);
+      }
+    },
+  );
+
 program.parse();
