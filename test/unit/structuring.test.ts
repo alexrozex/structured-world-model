@@ -336,6 +336,38 @@ async function run() {
     );
   }
 
+  // Test 13: Duplicate entities in extraction get merged
+  {
+    const ext = makeExtraction({
+      entities: [
+        { name: "Stripe API", type: "system", description: "Short desc" },
+        {
+          name: "Stripe API",
+          type: "system",
+          description:
+            "A much longer and more detailed description of the Stripe API",
+        },
+        {
+          name: "stripe api",
+          type: "object",
+          description: "Lowercase variant",
+        },
+      ],
+      relations: [],
+      processes: [],
+      constraints: [],
+    });
+    const { worldModel } = await structuringAgent({ input, extraction: ext });
+    assert(
+      worldModel.entities.length === 1,
+      "Dedup: 3 variants of same name produce 1 entity",
+    );
+    assert(
+      worldModel.entities[0].description.includes("much longer"),
+      "Dedup: keeps the longest description",
+    );
+  }
+
   console.log(`\n═══ ${passed}/${passed + failed} passed ═══\n`);
   if (failed > 0) process.exit(1);
 }

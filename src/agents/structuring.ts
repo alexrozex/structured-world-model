@@ -121,20 +121,50 @@ export function structuringAgent(stageInput: {
   const entityOriginalNames = new Map<string, string>(); // normalized name → original name
   const normalizeForLookup = (name: string) => name.toLowerCase().trim();
 
-  const entities = extraction.entities.map((e) => {
-    const id = genId("ent");
+  // Deduplicate entities by normalized name during initial build
+  const entities: Array<{
+    id: string;
+    name: string;
+    type: WorldModelType["entities"][number]["type"];
+    description: string;
+    properties?: Record<string, unknown>;
+    tags?: string[];
+  }> = [];
+
+  for (const e of extraction.entities) {
     const key = normalizeForLookup(e.name);
-    entityIdMap.set(key, id);
-    entityOriginalNames.set(key, e.name);
-    return {
-      id,
-      name: e.name,
-      type: normalizeEntityType(e.type),
-      description: e.description,
-      properties: e.properties,
-      tags: e.tags,
-    };
-  });
+    if (entityIdMap.has(key)) {
+      // Duplicate — merge into existing entity
+      const existingId = entityIdMap.get(key)!;
+      const existing = entities.find((ent) => ent.id === existingId);
+      if (existing) {
+        // Keep the longer description
+        if (e.description.length > existing.description.length) {
+          existing.description = e.description;
+        }
+        // Merge properties
+        if (e.properties) {
+          existing.properties = { ...existing.properties, ...e.properties };
+        }
+        // Merge tags
+        if (e.tags) {
+          existing.tags = [...new Set([...(existing.tags ?? []), ...e.tags])];
+        }
+      }
+    } else {
+      const id = genId("ent");
+      entityIdMap.set(key, id);
+      entityOriginalNames.set(key, e.name);
+      entities.push({
+        id,
+        name: e.name,
+        type: normalizeEntityType(e.type),
+        description: e.description,
+        properties: e.properties,
+        tags: e.tags,
+      });
+    }
+  }
 
   const resolveEntityId = (name: string): string => {
     const key = normalizeForLookup(name);
