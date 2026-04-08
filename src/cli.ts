@@ -205,7 +205,7 @@ function expandDirectories(paths: string[]): string[] {
 async function readInputAsync(
   inputArg?: string,
   filePaths?: string | string[],
-): Promise<{ raw: string; detectedUrl?: string }> {
+): Promise<{ raw: string; detectedUrl?: string; fileCount?: number }> {
   // Expand directories into file lists
   if (filePaths) {
     const paths = Array.isArray(filePaths) ? filePaths : [filePaths];
@@ -223,7 +223,7 @@ async function readInputAsync(
       const content = readFileSync(resolved, "utf-8");
       parts.push(`// === ${fp} ===\n${content}`);
     }
-    return { raw: parts.join("\n\n") };
+    return { raw: parts.join("\n\n"), fileCount: filePaths.length };
   }
 
   // Single file path (extract from array if needed)
@@ -421,7 +421,7 @@ program
       opts: Record<string, string | boolean | undefined>,
     ) => {
       try {
-        const { raw, detectedUrl } = await readInputAsync(
+        const { raw, detectedUrl, fileCount } = await readInputAsync(
           inputArg,
           opts.file as string | string[] | undefined,
         );
@@ -451,8 +451,11 @@ program
 
         if (!opts.quiet) {
           console.error(chalk.blue("■ Structured World Model"));
+          const filesInfo = fileCount ? ` from ${fileCount} files` : "";
           console.error(
-            chalk.gray(`  Source: ${sourceType} (${raw.length} chars)\n`),
+            chalk.gray(
+              `  Source: ${sourceType} (${raw.length.toLocaleString()} chars${filesInfo})\n`,
+            ),
           );
         }
 
