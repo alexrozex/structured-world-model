@@ -1995,7 +1995,10 @@ program
       `    ${c("fix")} <model>            Auto-fix validation issues`,
     );
     console.log(
-      `    ${c("stats")} <models...>      Multi-model comparison table`,
+      `    ${c("impact")} <model> <entity>  What breaks if you remove an entity`,
+    );
+    console.log(
+      `    ${c("stats")} <models...>      Multi-model comparison table with scores`,
     );
     console.log(
       `    ${c("schema")}                 Output WorldModel JSON Schema`,
@@ -2007,6 +2010,9 @@ program
     );
     console.log(
       `    ${c("diff")} <before> <after>  What changed between two models`,
+    );
+    console.log(
+      `    ${c("compare")} <a> <b>        Find semantic conflicts (type/severity disagreements)`,
     );
     console.log(
       `    ${c("intersect")} <a> <b>      Entities shared by both models`,
@@ -2033,15 +2039,18 @@ program
     console.log(
       `    ${c("export")} <model> --as <fmt>  Export as claude-md, system-prompt, or mcp`,
     );
+    console.log(
+      `    ${c("mcp-config")} <model>     Generate MCP client config snippet`,
+    );
     console.log("");
     console.log(b("  Serve"));
     console.log(
-      `    ${c("serve")} <model>          Start MCP server with live queryable tools`,
+      `    ${c("serve")} <model>          Start MCP server with 9 live queryable tools`,
     );
     console.log("");
     console.log(b("  Query"));
     console.log(
-      `    ${c("query")} <model> <question>  Ask questions (graph + LLM inference)`,
+      `    ${c("query")} <model> <question>  Natural language queries (10 graph patterns + LLM)`,
     );
     console.log("");
     console.log(
