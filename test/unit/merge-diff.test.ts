@@ -228,6 +228,33 @@ function run() {
     );
   }
 
+  // Test 13: Confidence boost on merge (cross-validated entities)
+  {
+    const a = makeModel("A", [{ id: "ent_1", name: "User" }]);
+    a.entities[0].confidence = 0.6;
+    const b = makeModel("B", [{ id: "ent_2", name: "User" }]);
+    b.entities[0].confidence = 0.7;
+    const merged = mergeWorldModels(a, b);
+    const user = merged.entities.find((e) => e.name === "User");
+    assert(user !== undefined, "Confidence merge: entity exists");
+    assert(
+      user!.confidence !== undefined && user!.confidence > 0.7,
+      "Confidence merge: boosted above either input",
+    );
+    assert(user!.confidence! <= 1, "Confidence merge: capped at 1");
+  }
+
+  // Test 14: Unique entities keep original confidence
+  {
+    const a = makeModel("A", [{ id: "ent_1", name: "User" }]);
+    a.entities[0].confidence = 0.4;
+    const b = makeModel("B", [{ id: "ent_2", name: "Admin" }]);
+    b.entities[0].confidence = 0.9;
+    const merged = mergeWorldModels(a, b);
+    const admin = merged.entities.find((e) => e.name === "Admin");
+    assert(admin?.confidence === 0.9, "Confidence unique: Admin keeps 0.9");
+  }
+
   console.log(`\n═══ ${passed}/${passed + failed} passed ═══\n`);
   if (failed > 0) process.exit(1);
 }

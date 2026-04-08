@@ -39,6 +39,10 @@ export function mergeWorldModels(
       if (e.description.length > existing.description.length) {
         existing.description = e.description;
       }
+      // Boost confidence for cross-validated entities (appears in both models)
+      const existingConf = existing.confidence ?? 0.5;
+      const newConf = e.confidence ?? 0.5;
+      existing.confidence = Math.min(1, (existingConf + newConf) / 2 + 0.1);
     } else {
       const newId = genId("ent");
       oldIdToNewId.set(e.id, newId);
