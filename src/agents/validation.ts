@@ -243,6 +243,29 @@ export function validationAgent(stageInput: {
     }
   }
 
+  // Check metadata confidence
+  if (
+    worldModel.metadata?.confidence !== undefined &&
+    worldModel.metadata.confidence < 0.3
+  ) {
+    issues.push({
+      type: "warning",
+      code: "LOW_CONFIDENCE",
+      message: `Model confidence is ${Math.round(worldModel.metadata.confidence * 100)}% — extraction may be unreliable`,
+      path: "metadata.confidence",
+    });
+  }
+
+  // Check for missing metadata
+  if (!worldModel.metadata) {
+    issues.push({
+      type: "warning",
+      code: "MISSING_METADATA",
+      message: "Model has no metadata — source type and confidence unknown",
+      path: "metadata",
+    });
+  }
+
   const hasErrors = issues.some((i) => i.type === "error");
 
   // Compute quality score (0-100)

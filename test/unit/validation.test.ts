@@ -601,6 +601,47 @@ async function run() {
     );
   }
 
+  // Test 27: Low confidence warning
+  {
+    const model = makeModel();
+    model.metadata = {
+      source_type: "text",
+      source_summary: "test",
+      confidence: 0.2,
+    };
+    const { validation } = await validationAgent({ input, worldModel: model });
+    assert(
+      hasIssue(validation.issues, "LOW_CONFIDENCE"),
+      "Detects low confidence (20%)",
+    );
+  }
+
+  // Test 28: Normal confidence — no false positive
+  {
+    const model = makeModel();
+    model.metadata = {
+      source_type: "text",
+      source_summary: "test",
+      confidence: 0.8,
+    };
+    const { validation } = await validationAgent({ input, worldModel: model });
+    assert(
+      !hasIssue(validation.issues, "LOW_CONFIDENCE"),
+      "No false positive on 80% confidence",
+    );
+  }
+
+  // Test 29: Missing metadata warning
+  {
+    const model = makeModel();
+    delete (model as Record<string, unknown>).metadata;
+    const { validation } = await validationAgent({ input, worldModel: model });
+    assert(
+      hasIssue(validation.issues, "MISSING_METADATA"),
+      "Detects missing metadata",
+    );
+  }
+
   console.log(`\n═══ ${passed}/${passed + failed} passed ═══\n`);
   if (failed > 0) process.exit(1);
 }
