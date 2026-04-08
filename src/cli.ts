@@ -2066,4 +2066,59 @@ program
     },
   );
 
+// ─── mcp-config ───────────────────────────────────────────────
+program
+  .command("mcp-config")
+  .description(
+    "Generate MCP client config snippet for Claude Desktop / VS Code",
+  )
+  .argument("<model>", "Path to world model JSON")
+  .action(async (modelPath: string) => {
+    try {
+      const absModel = resolve(modelPath);
+      if (!existsSync(absModel)) {
+        console.error(chalk.red(`File not found: ${absModel}`));
+        process.exit(1);
+      }
+      const model = await readModel(modelPath);
+      const serverName = `swm-${model.name
+        .toLowerCase()
+        .replace(/[^a-z0-9]/g, "-")
+        .replace(/-+/g, "-")}`;
+
+      const config = {
+        mcpServers: {
+          [serverName]: {
+            command: "npx",
+            args: ["tsx", resolve("src/cli.ts"), "serve", absModel],
+          },
+        },
+      };
+
+      console.log(chalk.blue(`■ MCP Configuration for "${model.name}"\n`));
+      console.log(
+        chalk.gray(
+          "  Add to claude_desktop_config.json or .vscode/mcp.json:\n",
+        ),
+      );
+      console.log(JSON.stringify(config, null, 2));
+      console.log(chalk.gray(`\n  Server: ${serverName}`));
+      console.log(
+        chalk.gray(
+          `  Tools: get_entity, get_relations, find_path, get_process, check_constraint, query, get_stats, get_diagram, analyze_impact`,
+        ),
+      );
+      console.log(
+        chalk.gray(
+          `  Model: ${model.entities.length} entities, ${model.relations.length} relations`,
+        ),
+      );
+    } catch (err) {
+      console.error(
+        chalk.red(`Error: ${err instanceof Error ? err.message : String(err)}`),
+      );
+      process.exit(1);
+    }
+  });
+
 program.parse();
