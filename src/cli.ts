@@ -2017,4 +2017,53 @@ program
     },
   );
 
+// ─── compare ──────────────────────────────────────────────────
+program
+  .command("compare")
+  .description("Find semantic conflicts between two models of the same domain")
+  .argument("<modelA>", "Path to first world model JSON")
+  .argument("<modelB>", "Path to second world model JSON")
+  .option("--json", "Output as JSON")
+  .action(
+    async (
+      pathA: string,
+      pathB: string,
+      opts: Record<string, boolean | undefined>,
+    ) => {
+      try {
+        const a = await readModel(pathA);
+        const b = await readModel(pathB);
+        const { compare } = await import("./utils/compare.js");
+        const result = compare(a, b);
+
+        if (opts.json) {
+          console.log(JSON.stringify(result, null, 2));
+          return;
+        }
+
+        console.log(
+          chalk.blue(`■ Semantic Comparison: ${a.name} vs ${b.name}\n`),
+        );
+        console.log(`  ${result.summary}\n`);
+
+        if (result.conflicts.length > 0) {
+          for (const c of result.conflicts) {
+            console.log(
+              chalk.yellow(`  ✗ ${c.kind.replace(/_/g, " ")}: ${c.element}`),
+            );
+            console.log(chalk.gray(`    ${a.name}: ${c.modelA}`));
+            console.log(chalk.gray(`    ${b.name}: ${c.modelB}`));
+          }
+        }
+      } catch (err) {
+        console.error(
+          chalk.red(
+            `Error: ${err instanceof Error ? err.message : String(err)}`,
+          ),
+        );
+        process.exit(1);
+      }
+    },
+  );
+
 program.parse();

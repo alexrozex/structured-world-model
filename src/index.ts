@@ -30,6 +30,10 @@ export type { Cluster } from "./utils/graph.js";
 export { mergeWorldModels, diffWorldModels } from "./utils/merge.js";
 export type { WorldModelDiff } from "./utils/merge.js";
 
+// Compare
+export { compare } from "./utils/compare.js";
+export type { CompareResult, Conflict } from "./utils/compare.js";
+
 // Algebra
 export { intersection, difference, overlay } from "./utils/algebra.js";
 
