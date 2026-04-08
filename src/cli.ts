@@ -34,17 +34,74 @@ import type { Timeline } from "./utils/timeline.js";
 import type { PipelineInput } from "./pipeline/index.js";
 import type { WorldModelType } from "./schema/index.js";
 
-function detectSourceType(raw: string): PipelineInput["sourceType"] {
-  if (raw.startsWith("http://") || raw.startsWith("https://")) return "url";
-  if (
-    raw.includes("function ") ||
-    raw.includes("class ") ||
-    raw.includes("import ") ||
-    raw.includes("def ") ||
-    raw.includes("fn ")
-  )
-    return "code";
-  if (raw.includes("?") && raw.includes(":")) return "conversation";
+function detectSourceType(
+  raw: string,
+  filePath?: string,
+): PipelineInput["sourceType"] {
+  // Check file extension first
+  if (filePath) {
+    const ext = filePath.split(".").pop()?.toLowerCase();
+    const codeExts = new Set([
+      "ts",
+      "tsx",
+      "js",
+      "jsx",
+      "py",
+      "rb",
+      "go",
+      "rs",
+      "java",
+      "c",
+      "cpp",
+      "cs",
+      "swift",
+      "kt",
+    ]);
+    if (codeExts.has(ext ?? "")) return "code";
+    if (
+      ext === "json" ||
+      ext === "yaml" ||
+      ext === "yml" ||
+      ext === "xml" ||
+      ext === "csv" ||
+      ext === "toml"
+    )
+      return "document";
+    if (ext === "md" || ext === "txt" || ext === "rst") return "text";
+  }
+
+  const trimmed = raw.trimStart();
+
+  // URL
+  if (/^https?:\/\//i.test(trimmed)) return "url";
+
+  // JSON
+  if (trimmed.startsWith("{") || trimmed.startsWith("[")) {
+    try {
+      JSON.parse(raw);
+      return "document";
+    } catch {
+      /* not valid JSON, continue */
+    }
+  }
+
+  // Code heuristics (multiple signals needed to avoid false positives)
+  const codeSignals = [
+    /\bfunction\s+\w+\s*\(/.test(raw),
+    /\bclass\s+\w+/.test(raw),
+    /^import\s+/m.test(raw),
+    /^from\s+\S+\s+import/m.test(raw),
+    /\bdef\s+\w+\s*\(/.test(raw),
+    /\bfn\s+\w+\s*\(/.test(raw),
+    /^(const|let|var)\s+\w+\s*=/m.test(raw),
+    /=>\s*\{/.test(raw),
+  ];
+  if (codeSignals.filter(Boolean).length >= 2) return "code";
+
+  // Conversation (speaker patterns: "Name:", "Speaker 1:", "Q:", "A:")
+  if (/^[A-Z][a-z]+\s*:/m.test(raw) && /\n[A-Z][a-z]+\s*:/m.test(raw))
+    return "conversation";
+
   return "text";
 }
 
@@ -184,7 +241,9 @@ program
 
         const sourceType =
           (opts.type as PipelineInput["sourceType"]) ||
-          (detectedUrl ? "url" : detectSourceType(raw));
+          (detectedUrl
+            ? "url"
+            : detectSourceType(raw, (opts.file as string) ?? inputArg));
         const input: PipelineInput = {
           raw,
           sourceType,
