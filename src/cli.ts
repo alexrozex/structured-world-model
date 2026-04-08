@@ -1703,4 +1703,42 @@ program
     },
   );
 
+// ─── stats ────────────────────────────────────────────────────
+program
+  .command("stats")
+  .description("Quick dashboard comparing one or more world models")
+  .argument("<models...>", "Paths to world model JSON files")
+  .action(async (modelPaths: string[]) => {
+    try {
+      const pad = (s: string, n: number) =>
+        s.length >= n ? s.slice(0, n) : s + " ".repeat(n - s.length);
+
+      console.log(chalk.blue("■ World Model Dashboard\n"));
+      console.log(
+        chalk.gray(
+          `  ${pad("Model", 30)} ${pad("Ent", 6)} ${pad("Rel", 6)} ${pad("Proc", 6)} ${pad("Cstr", 6)} ${pad("Conf", 6)}`,
+        ),
+      );
+      console.log(chalk.gray("  " + "─".repeat(66)));
+
+      for (const p of modelPaths) {
+        const model = await readModel(p);
+        const name =
+          model.name.length > 28 ? model.name.slice(0, 27) + "…" : model.name;
+        const conf =
+          model.metadata?.confidence !== undefined
+            ? `${Math.round(model.metadata.confidence * 100)}%`
+            : "—";
+        console.log(
+          `  ${pad(name, 30)} ${pad(String(model.entities.length), 6)} ${pad(String(model.relations.length), 6)} ${pad(String(model.processes.length), 6)} ${pad(String(model.constraints.length), 6)} ${pad(conf, 6)}`,
+        );
+      }
+    } catch (err) {
+      console.error(
+        chalk.red(`Error: ${err instanceof Error ? err.message : String(err)}`),
+      );
+      process.exit(1);
+    }
+  });
+
 program.parse();
