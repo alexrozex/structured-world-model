@@ -1,8 +1,14 @@
 #!/usr/bin/env node
 
 import { program } from "commander";
-import { readFileSync, writeFileSync, existsSync } from "node:fs";
-import { resolve } from "node:path";
+import {
+  readFileSync,
+  writeFileSync,
+  existsSync,
+  readdirSync,
+  statSync,
+} from "node:fs";
+import { resolve, join } from "node:path";
 import chalk from "chalk";
 import { stringify as yamlStringify } from "yaml";
 import { buildWorldModel } from "./swm.js";
@@ -176,9 +182,6 @@ const DOC_EXTS = new Set([
 const ALL_EXTS = new Set([...CODE_EXTS, ...DOC_EXTS]);
 
 function expandDirectories(paths: string[]): string[] {
-  const { readdirSync, statSync } =
-    require("node:fs") as typeof import("node:fs");
-  const { join } = require("node:path") as typeof import("node:path");
   const result: string[] = [];
   for (const p of paths) {
     const resolved = resolve(p);
