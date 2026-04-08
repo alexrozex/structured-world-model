@@ -18,6 +18,66 @@ export function fixWorldModel(model: WorldModelType): FixResult {
 
   const entityIds = () => new Set(entities.map((e) => e.id));
 
+  // Fix 0: Merge duplicate entities FIRST (before orphan removal eats them)
+  {
+    const normalize = (n: string) => n.toLowerCase().trim();
+    const nameGroups = new Map<string, typeof entities>();
+    for (const e of entities) {
+      const key = normalize(e.name);
+      const group = nameGroups.get(key) ?? [];
+      group.push(e);
+      nameGroups.set(key, group);
+    }
+
+    let mergedCount = 0;
+    const idRemap = new Map<string, string>();
+    const deduped: typeof entities = [];
+
+    for (const group of nameGroups.values()) {
+      if (group.length === 1) {
+        deduped.push(group[0]);
+        continue;
+      }
+      const keeper = group.reduce((a, b) =>
+        (b.description?.length ?? 0) > (a.description?.length ?? 0) ? b : a,
+      );
+      for (const e of group) {
+        if (e.id !== keeper.id) {
+          idRemap.set(e.id, keeper.id);
+          if (e.properties)
+            keeper.properties = { ...keeper.properties, ...e.properties };
+          if (e.tags)
+            keeper.tags = [...new Set([...(keeper.tags ?? []), ...e.tags])];
+        }
+      }
+      deduped.push(keeper);
+      mergedCount += group.length - 1;
+    }
+
+    if (mergedCount > 0) {
+      entities = deduped;
+      const remap = (id: string) => idRemap.get(id) ?? id;
+      relations = relations.map((r) => ({
+        ...r,
+        source: remap(r.source),
+        target: remap(r.target),
+      }));
+      processes = processes.map((p) => ({
+        ...p,
+        participants: p.participants.map(remap),
+        steps: p.steps.map((s) => ({
+          ...s,
+          actor: s.actor ? remap(s.actor) : undefined,
+        })),
+      }));
+      constraints = constraints.map((c) => ({
+        ...c,
+        scope: c.scope.map(remap),
+      }));
+      fixes.push(`Merged ${mergedCount} duplicate entities`);
+    }
+  }
+
   // Fix 1: Remove relations with dangling source or target
   {
     const ids = entityIds();

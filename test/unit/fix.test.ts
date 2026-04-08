@@ -315,6 +315,49 @@ function run() {
     );
   }
 
+  // Duplicate entities merged
+  {
+    const { model, fixes } = fixWorldModel(
+      makeModel({
+        entities: [
+          { id: "ent_1", name: "User", type: "actor", description: "A user" },
+          {
+            id: "ent_2",
+            name: "user",
+            type: "actor",
+            description: "A detailed user description that is longer",
+          },
+          { id: "ent_3", name: "DB", type: "system", description: "Database" },
+        ],
+        relations: [
+          {
+            id: "rel_1",
+            type: "uses",
+            source: "ent_2",
+            target: "ent_3",
+            label: "queries",
+          },
+        ],
+        processes: [],
+        constraints: [],
+      }),
+    );
+    assert(model.entities.length === 2, "Entity dedup: merged 2 Users into 1");
+    const user = model.entities.find((e) => e.name.toLowerCase() === "user");
+    assert(
+      user!.description.includes("detailed"),
+      "Entity dedup: kept longer description",
+    );
+    assert(
+      model.relations[0].source === user!.id,
+      "Entity dedup: relation remapped to keeper",
+    );
+    assert(
+      fixes.some((f) => f.includes("Merged")),
+      "Entity dedup: fix reported",
+    );
+  }
+
   console.log(`\n═══ ${passed}/${passed + failed} passed ═══\n`);
   if (failed > 0) process.exit(1);
 }
