@@ -15,6 +15,7 @@ import {
   toMermaid,
   toDot,
   getStats,
+  summarize,
 } from "./utils/graph.js";
 import { queryWorldModel } from "./agents/query.js";
 import { intersection, difference, overlay } from "./utils/algebra.js";
@@ -934,6 +935,23 @@ program
   .action(async () => {
     const { getWorldModelJsonSchema } = await import("./schema/json-schema.js");
     console.log(JSON.stringify(getWorldModelJsonSchema(), null, 2));
+  });
+
+// ─── summary ──────────────────────────────────────────────────
+program
+  .command("summary")
+  .description("One-line natural language summary of a world model (no LLM)")
+  .argument("<model>", "Path to world model JSON")
+  .action((modelPath: string) => {
+    try {
+      const model = readModel(modelPath);
+      console.log(summarize(model));
+    } catch (err) {
+      console.error(
+        chalk.red(`Error: ${err instanceof Error ? err.message : String(err)}`),
+      );
+      process.exit(1);
+    }
   });
 
 program.parse();

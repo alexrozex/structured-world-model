@@ -253,3 +253,56 @@ export function getStats(model: WorldModelType) {
     confidence: model.metadata?.confidence,
   };
 }
+
+/**
+ * Generate a natural-language summary of a world model. No LLM — pure graph analysis.
+ */
+export function summarize(model: WorldModelType): string {
+  const stats = getStats(model);
+  const parts: string[] = [];
+
+  // What is it
+  parts.push(model.description || model.name);
+
+  // Scale
+  const typeParts: string[] = [];
+  for (const [type, count] of Object.entries(stats.entities.byType)) {
+    typeParts.push(`${count} ${type}${count > 1 ? "s" : ""}`);
+  }
+  parts.push(
+    `${stats.entities.total} entities (${typeParts.join(", ")}), ${stats.relations.total} relations.`,
+  );
+
+  // Center of gravity
+  if (stats.mostConnected.length > 0) {
+    const top = stats.mostConnected.slice(0, 3).map((mc) => mc.entity);
+    parts.push(`Centered around ${top.join(", ")}.`);
+  }
+
+  // Processes
+  if (stats.processes.total > 0) {
+    const procNames = model.processes.map((p) => p.name).slice(0, 3);
+    parts.push(
+      `${stats.processes.total} process${stats.processes.total > 1 ? "es" : ""}: ${procNames.join(", ")}${model.processes.length > 3 ? ", ..." : ""}.`,
+    );
+  }
+
+  // Constraints
+  if (stats.constraints.total > 0) {
+    const cParts: string[] = [];
+    if (stats.constraints.hard > 0)
+      cParts.push(`${stats.constraints.hard} hard`);
+    if (stats.constraints.soft > 0)
+      cParts.push(`${stats.constraints.soft} soft`);
+    parts.push(
+      `${stats.constraints.total} constraints (${cParts.join(", ")}).`,
+    );
+  }
+
+  // Confidence
+  if (stats.confidence !== undefined) {
+    parts.push(`Confidence: ${Math.round(stats.confidence * 100)}%.`);
+  }
+
+  return parts.join(" ");
+}

@@ -17,6 +17,7 @@ export {
   toMermaid,
   toDot,
   getStats,
+  summarize,
 } from "./utils/graph.js";
 
 // Merge & diff

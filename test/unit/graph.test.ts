@@ -9,6 +9,7 @@ import {
   toMermaid,
   toDot,
   getStats,
+  summarize,
 } from "../../src/utils/graph.js";
 import type { WorldModelType } from "../../src/schema/index.js";
 
@@ -221,6 +222,18 @@ function run() {
       "getStats: API is most connected",
     );
     assert(stats.confidence === 0.9, "getStats: correct confidence");
+  }
+
+  // ─── summarize ───────────────────────────────────────
+
+  {
+    const s = summarize(model);
+    assert(s.includes("4 entities"), "summarize: includes entity count");
+    assert(s.includes("4 relations"), "summarize: includes relation count");
+    assert(s.includes("API"), "summarize: includes most connected entity");
+    assert(s.includes("Request"), "summarize: includes process name");
+    assert(s.includes("2 constraints"), "summarize: includes constraint count");
+    assert(s.includes("90%"), "summarize: includes confidence percentage");
   }
 
   console.log(`\n═══ ${passed}/${passed + failed} passed ═══\n`);
