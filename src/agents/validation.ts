@@ -77,6 +77,30 @@ export function validationAgent(stageInput: {
         path: `processes.${proc.id}.steps`,
       });
     }
+
+    // Check step ordering
+    if (proc.steps.length > 1) {
+      const orders = proc.steps.map((s) => s.order);
+      const hasDuplicates = new Set(orders).size !== orders.length;
+      if (hasDuplicates) {
+        issues.push({
+          type: "warning",
+          code: "DUPLICATE_STEP_ORDER",
+          message: `Process "${proc.name}" has duplicate step order numbers: [${orders.join(", ")}]`,
+          path: `processes.${proc.id}.steps`,
+        });
+      }
+      const sorted = [...orders].sort((a, b) => a - b);
+      const isMonotonic = orders.every((o, i) => o === sorted[i]);
+      if (!isMonotonic) {
+        issues.push({
+          type: "warning",
+          code: "UNORDERED_STEPS",
+          message: `Process "${proc.name}" steps are not in ascending order: [${orders.join(", ")}]`,
+          path: `processes.${proc.id}.steps`,
+        });
+      }
+    }
   }
 
   // Check constraints reference valid entities

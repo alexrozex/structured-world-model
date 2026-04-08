@@ -371,6 +371,85 @@ async function run() {
     );
   }
 
+  // Test 16: Duplicate step order
+  {
+    const model = makeModel({
+      processes: [
+        {
+          id: "proc_1",
+          name: "Flow",
+          description: "test",
+          steps: [
+            { order: 1, action: "a" },
+            { order: 1, action: "b" },
+            { order: 2, action: "c" },
+          ],
+          participants: ["ent_1"],
+          outcomes: ["done"],
+        },
+      ],
+    });
+    const { validation } = await validationAgent({ input, worldModel: model });
+    assert(
+      hasIssue(validation.issues, "DUPLICATE_STEP_ORDER"),
+      "Detects duplicate step order numbers",
+    );
+  }
+
+  // Test 17: Unordered steps
+  {
+    const model = makeModel({
+      processes: [
+        {
+          id: "proc_1",
+          name: "Flow",
+          description: "test",
+          steps: [
+            { order: 3, action: "a" },
+            { order: 1, action: "b" },
+            { order: 2, action: "c" },
+          ],
+          participants: ["ent_1"],
+          outcomes: ["done"],
+        },
+      ],
+    });
+    const { validation } = await validationAgent({ input, worldModel: model });
+    assert(
+      hasIssue(validation.issues, "UNORDERED_STEPS"),
+      "Detects out-of-order steps",
+    );
+  }
+
+  // Test 18: Correctly ordered steps — no false positive
+  {
+    const model = makeModel({
+      processes: [
+        {
+          id: "proc_1",
+          name: "Flow",
+          description: "test",
+          steps: [
+            { order: 1, action: "a" },
+            { order: 2, action: "b" },
+            { order: 3, action: "c" },
+          ],
+          participants: ["ent_1"],
+          outcomes: ["done"],
+        },
+      ],
+    });
+    const { validation } = await validationAgent({ input, worldModel: model });
+    assert(
+      !hasIssue(validation.issues, "UNORDERED_STEPS"),
+      "No false positive on correctly ordered steps",
+    );
+    assert(
+      !hasIssue(validation.issues, "DUPLICATE_STEP_ORDER"),
+      "No false positive on unique step orders",
+    );
+  }
+
   console.log(`\n═══ ${passed}/${passed + failed} passed ═══\n`);
   if (failed > 0) process.exit(1);
 }
