@@ -708,6 +708,29 @@ program
           chalk.green(`  + ${diff.constraints.added.length} constraints added`),
         );
       }
+
+      // Score comparison
+      const { validationAgent: va } = await import("./agents/validation.js");
+      const { validation: vBefore } = await va({
+        input: { raw: "", sourceType: "text" },
+        worldModel: before,
+      });
+      const { validation: vAfter } = await va({
+        input: { raw: "", sourceType: "text" },
+        worldModel: after,
+      });
+      if (vBefore.score !== undefined && vAfter.score !== undefined) {
+        const delta = vAfter.score - vBefore.score;
+        const arrow =
+          delta > 0
+            ? chalk.green(`+${delta}`)
+            : delta < 0
+              ? chalk.red(`${delta}`)
+              : chalk.gray("±0");
+        console.log(
+          `\n  Quality: ${vBefore.score} → ${vAfter.score} (${arrow})`,
+        );
+      }
     } catch (err) {
       console.error(
         chalk.red(`Error: ${err instanceof Error ? err.message : String(err)}`),
