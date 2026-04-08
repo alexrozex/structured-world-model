@@ -14,6 +14,107 @@ export function structuringAgent(stageInput: {
 }): Promise<StructuringOutput> {
   const { input, extraction } = stageInput;
 
+  // Normalize entity types the LLM may return outside the enum
+  const VALID_ENTITY_TYPES = new Set([
+    "actor",
+    "object",
+    "system",
+    "concept",
+    "location",
+    "event",
+    "group",
+    "resource",
+  ]);
+  const ENTITY_TYPE_ALIASES: Record<string, string> = {
+    person: "actor",
+    user: "actor",
+    role: "actor",
+    agent: "actor",
+    organization: "group",
+    org: "group",
+    team: "group",
+    company: "group",
+    place: "location",
+    area: "location",
+    region: "location",
+    service: "system",
+    platform: "system",
+    tool: "system",
+    application: "system",
+    app: "system",
+    idea: "concept",
+    principle: "concept",
+    pattern: "concept",
+    category: "concept",
+    item: "object",
+    thing: "object",
+    product: "object",
+    data: "resource",
+    asset: "resource",
+    file: "resource",
+    document: "resource",
+    incident: "event",
+    action: "event",
+    occurrence: "event",
+  };
+  function normalizeEntityType(
+    raw: string,
+  ): WorldModelType["entities"][number]["type"] {
+    const lower = raw.toLowerCase().trim();
+    if (VALID_ENTITY_TYPES.has(lower))
+      return lower as WorldModelType["entities"][number]["type"];
+    return (ENTITY_TYPE_ALIASES[lower] ??
+      "object") as WorldModelType["entities"][number]["type"];
+  }
+
+  // Normalize relation types
+  const VALID_RELATION_TYPES = new Set([
+    "has",
+    "is_a",
+    "part_of",
+    "depends_on",
+    "produces",
+    "consumes",
+    "controls",
+    "communicates_with",
+    "located_in",
+    "triggers",
+    "inherits",
+    "contains",
+    "uses",
+    "flows_to",
+    "opposes",
+    "enables",
+    "transforms",
+  ]);
+  function normalizeRelationType(
+    raw: string,
+  ): WorldModelType["relations"][number]["type"] {
+    const lower = raw.toLowerCase().trim().replace(/ /g, "_");
+    if (VALID_RELATION_TYPES.has(lower))
+      return lower as WorldModelType["relations"][number]["type"];
+    return "uses" as WorldModelType["relations"][number]["type"];
+  }
+
+  // Normalize constraint types
+  const VALID_CONSTRAINT_TYPES = new Set([
+    "invariant",
+    "rule",
+    "boundary",
+    "dependency",
+    "capacity",
+    "temporal",
+    "authorization",
+  ]);
+  function normalizeConstraintType(
+    raw: string,
+  ): WorldModelType["constraints"][number]["type"] {
+    const lower = raw.toLowerCase().trim().replace(/ /g, "_");
+    if (VALID_CONSTRAINT_TYPES.has(lower))
+      return lower as WorldModelType["constraints"][number]["type"];
+    return "rule" as WorldModelType["constraints"][number]["type"];
+  }
+
   // Build entity name → ID map
   const entityIdMap = new Map<string, string>();
   const entities = extraction.entities.map((e) => {
@@ -22,7 +123,7 @@ export function structuringAgent(stageInput: {
     return {
       id,
       name: e.name,
-      type: e.type as WorldModelType["entities"][number]["type"],
+      type: normalizeEntityType(e.type),
       description: e.description,
       properties: e.properties,
       tags: e.tags,
@@ -48,7 +149,7 @@ export function structuringAgent(stageInput: {
 
   const relations = extraction.relations.map((r) => ({
     id: genId("rel"),
-    type: r.type as WorldModelType["relations"][number]["type"],
+    type: normalizeRelationType(r.type),
     source: resolveEntityId(r.source),
     target: resolveEntityId(r.target),
     label: r.label,
@@ -60,8 +161,8 @@ export function structuringAgent(stageInput: {
     name: p.name,
     description: p.description,
     trigger: p.trigger,
-    steps: p.steps.map((s) => ({
-      order: s.order,
+    steps: p.steps.map((s, idx) => ({
+      order: s.order ?? idx + 1,
       action: s.action,
       actor: s.actor ? resolveEntityId(s.actor) : undefined,
       input: s.inputs?.map(resolveEntityId),
@@ -74,7 +175,7 @@ export function structuringAgent(stageInput: {
   const constraints = extraction.constraints.map((c) => ({
     id: genId("cstr"),
     name: c.name,
-    type: c.type as WorldModelType["constraints"][number]["type"],
+    type: normalizeConstraintType(c.type),
     description: c.description,
     scope: c.scope.map(resolveEntityId),
     severity: c.severity,

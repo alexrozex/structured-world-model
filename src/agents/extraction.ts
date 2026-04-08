@@ -1,5 +1,7 @@
-import { callAgentJSON } from "../utils/llm.js";
+import { callAgentJSON, estimateTokens } from "../utils/llm.js";
 import type { PipelineInput } from "../pipeline/index.js";
+import { chunkInput } from "./chunker.js";
+import { getPromptForSourceType } from "./prompts.js";
 
 export interface RawExtraction {
   entities: Array<{
@@ -90,18 +92,143 @@ RULES:
 - If the input is a conversation, model the topics, participants, decisions, and action items
 - If the input is vague, extract what you can and note gaps in extraction_notes`;
 
+const CHUNK_SYSTEM_PROMPT = `${SYSTEM_PROMPT}
+
+IMPORTANT: You are processing chunk {chunkIndex} of {chunkTotal} from a larger input.
+- Extract everything from THIS chunk
+- Use consistent entity names (the chunks will be merged later)
+- Note in extraction_notes that this is a partial extraction from chunk {chunkIndex}/{chunkTotal}`;
+
+function mergeRawExtractions(extractions: RawExtraction[]): RawExtraction {
+  const merged: RawExtraction = {
+    entities: [],
+    relations: [],
+    processes: [],
+    constraints: [],
+    model_name: extractions[0]?.model_name ?? "Untitled",
+    model_description: extractions[0]?.model_description ?? "",
+    source_summary: extractions
+      .map((e) => e.source_summary)
+      .filter(Boolean)
+      .join("; "),
+    confidence: 0,
+    extraction_notes: [],
+  };
+
+  // Deduplicate entities by normalized name
+  const entityMap = new Map<string, RawExtraction["entities"][number]>();
+  for (const ext of extractions) {
+    for (const e of ext.entities) {
+      const key = e.name.toLowerCase().trim();
+      if (!entityMap.has(key)) {
+        entityMap.set(key, e);
+      } else {
+        const existing = entityMap.get(key)!;
+        // Keep longer description, merge props/tags
+        if (e.description.length > existing.description.length) {
+          existing.description = e.description;
+        }
+        if (e.properties) {
+          existing.properties = { ...existing.properties, ...e.properties };
+        }
+        if (e.tags) {
+          existing.tags = [...new Set([...(existing.tags ?? []), ...e.tags])];
+        }
+      }
+    }
+  }
+  merged.entities = [...entityMap.values()];
+
+  // Deduplicate relations by (source, target, type)
+  const relSet = new Set<string>();
+  for (const ext of extractions) {
+    for (const r of ext.relations) {
+      const key = `${r.source.toLowerCase()}::${r.type}::${r.target.toLowerCase()}`;
+      if (!relSet.has(key)) {
+        relSet.add(key);
+        merged.relations.push(r);
+      }
+    }
+  }
+
+  // Deduplicate processes by name
+  const procSet = new Set<string>();
+  for (const ext of extractions) {
+    for (const p of ext.processes) {
+      const key = p.name.toLowerCase().trim();
+      if (!procSet.has(key)) {
+        procSet.add(key);
+        merged.processes.push(p);
+      }
+    }
+  }
+
+  // Deduplicate constraints by name
+  const cstrSet = new Set<string>();
+  for (const ext of extractions) {
+    for (const c of ext.constraints) {
+      const key = c.name.toLowerCase().trim();
+      if (!cstrSet.has(key)) {
+        cstrSet.add(key);
+        merged.constraints.push(c);
+      }
+    }
+  }
+
+  // Average confidence
+  const confidences = extractions.map((e) => e.confidence).filter((c) => c > 0);
+  merged.confidence = confidences.length
+    ? confidences.reduce((a, b) => a + b, 0) / confidences.length
+    : 0.5;
+
+  // Collect all notes
+  merged.extraction_notes = extractions.flatMap(
+    (e) => e.extraction_notes ?? [],
+  );
+  if (extractions.length > 1) {
+    merged.extraction_notes.push(
+      `Merged from ${extractions.length} chunks (${merged.entities.length} unique entities after dedup)`,
+    );
+  }
+
+  return merged;
+}
+
 export async function extractionAgent(
   input: PipelineInput,
 ): Promise<{ input: PipelineInput; extraction: RawExtraction }> {
-  const userMessage = `Analyze the following ${input.sourceType} input and extract a complete world model.\n\n---\n\n${input.raw}`;
+  const chunks = chunkInput(input.raw);
+  const sourcePrompt = getPromptForSourceType(input.sourceType);
 
-  const extraction = await callAgentJSON<RawExtraction>(
-    SYSTEM_PROMPT,
-    userMessage,
-    {
+  if (chunks.length === 1) {
+    // Single chunk — direct extraction with source-specific prompt
+    const userMessage = `Analyze the following ${input.sourceType} input and extract a complete world model.\n\n---\n\n${input.raw}`;
+    const extraction = await callAgentJSON<RawExtraction>(
+      sourcePrompt,
+      userMessage,
+      {
+        maxTokens: 16384,
+      },
+    );
+    return { input, extraction };
+  }
+
+  // Multi-chunk — extract per chunk with source-specific prompt, then merge
+  const chunkSuffix = `\n\nIMPORTANT: You are processing chunk {chunkIndex} of {chunkTotal} from a larger input.\n- Extract everything from THIS chunk\n- Use consistent entity names (chunks will be merged later)\n- Note in extraction_notes that this is a partial extraction from chunk {chunkIndex}/{chunkTotal}`;
+
+  const extractions: RawExtraction[] = [];
+  for (const chunk of chunks) {
+    const prompt = (sourcePrompt + chunkSuffix)
+      .replace(/\{chunkIndex\}/g, String(chunk.index + 1))
+      .replace(/\{chunkTotal\}/g, String(chunk.total));
+
+    const userMessage = `Analyze chunk ${chunk.index + 1}/${chunk.total} of a ${input.sourceType} input and extract all world model elements.\n\n---\n\n${chunk.text}`;
+
+    const extraction = await callAgentJSON<RawExtraction>(prompt, userMessage, {
       maxTokens: 16384,
-    },
-  );
+    });
+    extractions.push(extraction);
+  }
 
-  return { input, extraction };
+  return { input, extraction: mergeRawExtractions(extractions) };
 }
