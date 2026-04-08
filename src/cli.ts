@@ -321,12 +321,14 @@ function stageCallbacks(quiet?: boolean) {
       if (!quiet) {
         process.stderr.write(chalk.yellow(`  ▸ ${name}...`));
         stageStart = Date.now();
-        timer = setInterval(() => {
-          const elapsed = Math.round((Date.now() - stageStart) / 1000);
-          process.stderr.write(
-            `\r${chalk.yellow(`  ▸ ${name}... ${elapsed}s`)}`,
-          );
-        }, 2000);
+        if (process.stderr.isTTY) {
+          timer = setInterval(() => {
+            const elapsed = Math.round((Date.now() - stageStart) / 1000);
+            process.stderr.write(
+              `\r${chalk.yellow(`  ▸ ${name}... ${elapsed}s`)}`,
+            );
+          }, 2000);
+        }
       }
     },
     onStageEnd: (_name: string, ms: number, data?: unknown) => {
