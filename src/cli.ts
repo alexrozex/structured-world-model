@@ -28,6 +28,7 @@ import {
   entityHistory,
   timelineSummary,
 } from "./utils/timeline.js";
+import { coverage as coverageFn } from "./utils/coverage.js";
 import type { Timeline } from "./utils/timeline.js";
 import type { PipelineInput } from "./pipeline/index.js";
 import type { WorldModelType } from "./schema/index.js";
@@ -1032,6 +1033,100 @@ program
           console.error(
             chalk.gray(
               `\n  ${relations.length} relations${opts.type ? ` of type "${opts.type}"` : ""}`,
+            ),
+          );
+        }
+      } catch (err) {
+        console.error(
+          chalk.red(
+            `Error: ${err instanceof Error ? err.message : String(err)}`,
+          ),
+        );
+        process.exit(1);
+      }
+    },
+  );
+
+// ─── coverage ─────────────────────────────────────────────────
+program
+  .command("coverage")
+  .description("Measure how much of model A is covered by model B")
+  .argument(
+    "<reference>",
+    "Path to reference model (the spec / source of truth)",
+  )
+  .argument("<target>", "Path to target model (what's being measured)")
+  .option("--json", "Output as JSON")
+  .action(
+    (
+      refPath: string,
+      tgtPath: string,
+      opts: Record<string, boolean | undefined>,
+    ) => {
+      try {
+        const ref = readModel(refPath);
+        const tgt = readModel(tgtPath);
+        const result = coverageFn(ref, tgt);
+
+        if (opts.json) {
+          console.log(JSON.stringify(result, null, 2));
+          return;
+        }
+
+        const bar = (pct: number) => {
+          const filled = Math.round(pct * 20);
+          return (
+            chalk.green("█".repeat(filled)) +
+            chalk.gray("░".repeat(20 - filled))
+          );
+        };
+
+        console.log(chalk.blue(`■ Coverage: ${ref.name} → ${tgt.name}\n`));
+        console.log(
+          `  Overall:     ${bar(result.overall)} ${Math.round(result.overall * 100)}%`,
+        );
+        console.log(
+          `  Entities:    ${bar(result.entityCoverage)} ${Math.round(result.entityCoverage * 100)}%`,
+        );
+        console.log(
+          `  Relations:   ${bar(result.relationCoverage)} ${Math.round(result.relationCoverage * 100)}%`,
+        );
+        console.log(
+          `  Processes:   ${bar(result.processCoverage)} ${Math.round(result.processCoverage * 100)}%`,
+        );
+        console.log(
+          `  Constraints: ${bar(result.constraintCoverage)} ${Math.round(result.constraintCoverage * 100)}%`,
+        );
+
+        if (result.missingEntities.length > 0) {
+          console.log(
+            chalk.red(
+              `\n  Missing entities (${result.missingEntities.length}):`,
+            ),
+          );
+          for (const name of result.missingEntities)
+            console.log(chalk.red(`    - ${name}`));
+        }
+        if (result.extraEntities.length > 0) {
+          console.log(
+            chalk.yellow(
+              `\n  Extra entities in target (${result.extraEntities.length}):`,
+            ),
+          );
+          for (const name of result.extraEntities)
+            console.log(chalk.yellow(`    + ${name}`));
+        }
+        if (result.missingProcesses.length > 0) {
+          console.log(
+            chalk.red(
+              `\n  Missing processes: ${result.missingProcesses.join(", ")}`,
+            ),
+          );
+        }
+        if (result.missingConstraints.length > 0) {
+          console.log(
+            chalk.red(
+              `\n  Missing constraints: ${result.missingConstraints.join(", ")}`,
             ),
           );
         }

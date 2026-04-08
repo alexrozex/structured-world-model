@@ -27,6 +27,10 @@ export type { WorldModelDiff } from "./utils/merge.js";
 // Algebra
 export { intersection, difference, overlay } from "./utils/algebra.js";
 
+// Coverage
+export { coverage } from "./utils/coverage.js";
+export type { CoverageResult } from "./utils/coverage.js";
+
 // Export formats
 export { toClaudeMd } from "./export/claude-md.js";
 export { toSystemPrompt } from "./export/system-prompt.js";
