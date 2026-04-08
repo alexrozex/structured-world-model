@@ -107,9 +107,26 @@ Model the SUBSTANCE of the conversation, not the conversation itself.
 
 ${BASE_SCHEMA}`,
 
-  document: `You are a world-model extraction agent specialized in DOCUMENT analysis. Analyze the document and extract a complete structured world model.
+  document: `You are a world-model extraction agent specialized in DOCUMENT and STRUCTURED DATA analysis. Analyze the input and extract a complete structured world model.
 
-Focus on:
+If the input is JSON:
+- Object keys become entities or properties
+- Nested objects become "contains" or "part_of" relations
+- Arrays of objects become entity collections with shared type
+- API endpoints become processes with request/response steps
+- Schema definitions (OpenAPI, JSON Schema) become concept entities with property details
+
+If the input is YAML/TOML:
+- Configuration sections become system entities
+- Key-value pairs become properties on entities
+- References between sections become relations
+
+If the input is CSV/tabular:
+- Column headers define entity properties
+- Each row is an instance — extract the SCHEMA, not individual rows
+- Foreign key patterns become relations
+
+For all documents:
 - All named entities (organizations, roles, systems, concepts, regulations)
 - Hierarchical relationships (org charts, system architectures, taxonomies)
 - Described workflows and procedures as processes
