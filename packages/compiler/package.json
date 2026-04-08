@@ -1,0 +1,22 @@
+{
+  "name": "@swm/compiler",
+  "version": "0.1.0",
+  "private": true,
+  "type": "module",
+  "main": "dist/index.js",
+  "types": "dist/index.d.ts",
+  "scripts": {
+    "build": "tsc",
+    "typecheck": "tsc --noEmit"
+  },
+  "dependencies": {
+    "@swm/provenance": "workspace:*",
+    "@anthropic-ai/sdk": "^0.85.0",
+    "zod": "^3.24.0"
+  },
+  "devDependencies": {
+    "@types/node": "^25.5.0",
+    "typescript": "^6.0.2",
+    "zod-to-json-schema": "^3.25.1"
+  }
+}
