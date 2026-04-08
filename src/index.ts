@@ -8,6 +8,7 @@ export type { WorldModelType, ValidationResultType } from "./schema/index.js";
 export { refineWorldModel } from "./agents/refinement.js";
 export { queryWorldModel } from "./agents/query.js";
 export type { QueryResult } from "./agents/query.js";
+export { transformWorldModel } from "./agents/transform.js";
 
 // Graph operations
 export {

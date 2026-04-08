@@ -1591,4 +1591,63 @@ program
     }
   });
 
+// ─── transform ────────────────────────────────────────────────
+program
+  .command("transform")
+  .description("Apply a natural language transformation to a world model")
+  .argument("<model>", "Path to world model JSON")
+  .argument("<instruction>", "What to change (natural language)")
+  .option("-o, --output <path>", "Write transformed model to file")
+  .action(
+    async (
+      modelPath: string,
+      instruction: string,
+      opts: Record<string, string | undefined>,
+    ) => {
+      try {
+        const model = readModel(modelPath);
+        console.error(chalk.blue("■ Transforming world model"));
+        console.error(chalk.gray(`  Instruction: ${instruction}\n`));
+
+        const { transformWorldModel } = await import("./agents/transform.js");
+        const { model: transformed, changes } = await transformWorldModel(
+          model,
+          instruction,
+        );
+
+        if (changes.length === 0) {
+          console.error(chalk.yellow("  No changes applied."));
+        } else {
+          for (const c of changes) console.error(chalk.yellow(`  ✓ ${c}`));
+        }
+
+        console.error(
+          chalk.gray(
+            `\n  Before: ${model.entities.length} entities, ${model.relations.length} relations`,
+          ),
+        );
+        console.error(
+          chalk.gray(
+            `  After:  ${transformed.entities.length} entities, ${transformed.relations.length} relations`,
+          ),
+        );
+
+        const output = JSON.stringify(transformed, null, 2);
+        if (opts.output) {
+          writeFileSync(resolve(opts.output), output, "utf-8");
+          console.error(chalk.green(`\n  ✓ Written to ${opts.output}`));
+        } else {
+          console.log(output);
+        }
+      } catch (err) {
+        console.error(
+          chalk.red(
+            `Error: ${err instanceof Error ? err.message : String(err)}`,
+          ),
+        );
+        process.exit(1);
+      }
+    },
+  );
+
 program.parse();
