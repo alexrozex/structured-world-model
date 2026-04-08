@@ -843,4 +843,43 @@ program
     }
   });
 
+// ─── serve ────────────────────────────────────────────────────
+program
+  .command("serve")
+  .description(
+    "Start an MCP server that serves a world model as live, queryable tools",
+  )
+  .argument("<model>", "Path to world model JSON")
+  .action(async (modelPath: string) => {
+    try {
+      const resolved = resolve(modelPath);
+      if (!existsSync(resolved)) {
+        console.error(chalk.red(`File not found: ${resolved}`));
+        process.exit(1);
+      }
+      const model = readModel(modelPath);
+      console.error(chalk.blue(`■ SWM MCP Server`));
+      console.error(chalk.gray(`  Model: ${model.name}`));
+      console.error(
+        chalk.gray(
+          `  Entities: ${model.entities.length}, Relations: ${model.relations.length}`,
+        ),
+      );
+      console.error(
+        chalk.gray(
+          `  Tools: get_entity, get_relations, find_path, get_process, check_constraint, query, get_stats, get_diagram`,
+        ),
+      );
+      console.error(chalk.green(`  Listening on stdio...\n`));
+
+      const { startMcpServer } = await import("./serve/mcp-server.js");
+      await startMcpServer(modelPath);
+    } catch (err) {
+      console.error(
+        chalk.red(`Error: ${err instanceof Error ? err.message : String(err)}`),
+      );
+      process.exit(1);
+    }
+  });
+
 program.parse();

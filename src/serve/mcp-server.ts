@@ -1,0 +1,344 @@
+import { McpServer } from "@modelcontextprotocol/sdk/server/mcp.js";
+import { StdioServerTransport } from "@modelcontextprotocol/sdk/server/stdio.js";
+import { z } from "zod/v4";
+import { readFileSync } from "node:fs";
+import { resolve } from "node:path";
+import type { WorldModelType } from "../schema/index.js";
+import {
+  findEntity,
+  findDependents,
+  pathsBetween,
+  getStats,
+  toMermaid,
+} from "../utils/graph.js";
+import { queryWorldModel } from "../agents/query.js";
+
+/**
+ * Create and start an MCP server that serves a world model as live, queryable tools.
+ * Any AI agent that connects gets instant domain expertise.
+ */
+export async function startMcpServer(modelPath: string): Promise<void> {
+  const resolved = resolve(modelPath);
+  const raw = readFileSync(resolved, "utf-8");
+  const model: WorldModelType = JSON.parse(raw);
+
+  const entityNames = model.entities.map((e) => e.name);
+
+  const server = new McpServer({
+    name: `swm-${model.name.toLowerCase().replace(/[^a-z0-9]/g, "-")}`,
+    version: model.version ?? "0.1.0",
+  });
+
+  // ─── Tool: get_entity ───────────────────────────────────
+  server.tool(
+    "get_entity",
+    `Look up a domain entity. This world model has ${model.entities.length} entities across ${new Set(model.entities.map((e) => e.type)).size} types.`,
+    {
+      name: z
+        .string()
+        .describe(
+          `Entity name to look up. Available: ${entityNames.slice(0, 15).join(", ")}${entityNames.length > 15 ? "..." : ""}`,
+        ),
+    },
+    async ({ name }) => {
+      const entity = findEntity(model, name);
+      if (!entity) {
+        return {
+          content: [
+            {
+              type: "text" as const,
+              text: `Entity "${name}" not found. Available: ${entityNames.join(", ")}`,
+            },
+          ],
+        };
+      }
+
+      const deps = findDependents(model, entity.id);
+      const constraints = model.constraints.filter((c) =>
+        c.scope.includes(entity.id),
+      );
+      const processes = model.processes.filter((p) =>
+        p.participants.includes(entity.id),
+      );
+
+      const lines = [
+        `**${entity.name}** (${entity.type})`,
+        entity.description,
+        "",
+      ];
+
+      if (entity.properties && Object.keys(entity.properties).length > 0) {
+        lines.push(`Properties: ${JSON.stringify(entity.properties, null, 2)}`);
+      }
+      if (deps.incoming.length > 0) {
+        lines.push(
+          `\nDepended on by: ${deps.incoming.map((d) => `${d.entity.name} [${d.relation.type}]`).join(", ")}`,
+        );
+      }
+      if (deps.outgoing.length > 0) {
+        lines.push(
+          `Depends on: ${deps.outgoing.map((d) => `${d.entity.name} [${d.relation.type}]`).join(", ")}`,
+        );
+      }
+      if (processes.length > 0) {
+        lines.push(
+          `Participates in: ${processes.map((p) => p.name).join(", ")}`,
+        );
+      }
+      if (constraints.length > 0) {
+        lines.push(
+          `Constraints: ${constraints.map((c) => `[${c.severity}] ${c.name}`).join(", ")}`,
+        );
+      }
+
+      return { content: [{ type: "text" as const, text: lines.join("\n") }] };
+    },
+  );
+
+  // ─── Tool: get_relations ────────────────────────────────
+  server.tool(
+    "get_relations",
+    "Get all relations for a given entity — incoming, outgoing, or both",
+    {
+      entity: z.string().describe("Entity name"),
+      direction: z
+        .enum(["incoming", "outgoing", "both"])
+        .default("both")
+        .describe("Direction of relations"),
+    },
+    async ({ entity: name, direction }) => {
+      const entity = findEntity(model, name);
+      if (!entity) {
+        return {
+          content: [
+            { type: "text" as const, text: `Entity "${name}" not found.` },
+          ],
+        };
+      }
+
+      const deps = findDependents(model, entity.id);
+      const lines: string[] = [];
+
+      if (direction !== "outgoing" && deps.incoming.length > 0) {
+        lines.push("**Incoming:**");
+        for (const d of deps.incoming) {
+          lines.push(
+            `  ${d.entity.name} —[${d.relation.type}]→ ${entity.name}: ${d.relation.label}`,
+          );
+        }
+      }
+      if (direction !== "incoming" && deps.outgoing.length > 0) {
+        lines.push("**Outgoing:**");
+        for (const d of deps.outgoing) {
+          lines.push(
+            `  ${entity.name} —[${d.relation.type}]→ ${d.entity.name}: ${d.relation.label}`,
+          );
+        }
+      }
+
+      if (lines.length === 0) lines.push("No relations found.");
+      return { content: [{ type: "text" as const, text: lines.join("\n") }] };
+    },
+  );
+
+  // ─── Tool: find_path ────────────────────────────────────
+  server.tool(
+    "find_path",
+    "Find connection paths between two entities in the domain model",
+    {
+      from: z.string().describe("Source entity name"),
+      to: z.string().describe("Target entity name"),
+    },
+    async ({ from, to }) => {
+      const src = findEntity(model, from);
+      const tgt = findEntity(model, to);
+      if (!src)
+        return {
+          content: [
+            { type: "text" as const, text: `Entity "${from}" not found.` },
+          ],
+        };
+      if (!tgt)
+        return {
+          content: [
+            { type: "text" as const, text: `Entity "${to}" not found.` },
+          ],
+        };
+
+      const paths = pathsBetween(model, src.id, tgt.id);
+      if (paths.length === 0) {
+        return {
+          content: [
+            {
+              type: "text" as const,
+              text: `No path found from ${src.name} to ${tgt.name}.`,
+            },
+          ],
+        };
+      }
+
+      const lines = paths.map((path, i) => {
+        const hops = path
+          .map((step, j) =>
+            j === 0
+              ? step.entity.name
+              : `—[${step.relation?.type ?? "?"}]→ ${step.entity.name}`,
+          )
+          .join(" ");
+        return `Path ${i + 1}: ${hops}`;
+      });
+
+      return { content: [{ type: "text" as const, text: lines.join("\n") }] };
+    },
+  );
+
+  // ─── Tool: get_process ──────────────────────────────────
+  server.tool(
+    "get_process",
+    `Get details of a domain process. Available: ${model.processes.map((p) => p.name).join(", ")}`,
+    { name: z.string().describe("Process name") },
+    async ({ name }) => {
+      const proc = model.processes.find((p) =>
+        p.name.toLowerCase().includes(name.toLowerCase()),
+      );
+      if (!proc) {
+        return {
+          content: [
+            {
+              type: "text" as const,
+              text: `Process "${name}" not found. Available: ${model.processes.map((p) => p.name).join(", ")}`,
+            },
+          ],
+        };
+      }
+
+      const lines = [
+        `**${proc.name}**`,
+        proc.description,
+        proc.trigger ? `Trigger: ${proc.trigger}` : "",
+        "",
+        "Steps:",
+      ];
+
+      for (const step of proc.steps) {
+        const actor = step.actor
+          ? (model.entities.find((e) => e.id === step.actor)?.name ?? "?")
+          : "system";
+        lines.push(`  ${step.order}. **${actor}**: ${step.action}`);
+      }
+
+      const participants = proc.participants
+        .map((id) => model.entities.find((e) => e.id === id)?.name ?? id)
+        .join(", ");
+      lines.push(`\nParticipants: ${participants}`);
+      lines.push(`Outcomes: ${proc.outcomes.join(", ")}`);
+
+      return { content: [{ type: "text" as const, text: lines.join("\n") }] };
+    },
+  );
+
+  // ─── Tool: check_constraint ─────────────────────────────
+  server.tool(
+    "check_constraint",
+    `Check if an action violates a domain constraint. Constraints: ${model.constraints.map((c) => `[${c.severity}] ${c.name}`).join(", ")}`,
+    {
+      action: z.string().describe("Description of the action to validate"),
+    },
+    async ({ action }) => {
+      const lines = ["Checking action against all constraints:\n"];
+
+      for (const c of model.constraints) {
+        const scopeNames = c.scope
+          .map((id) => model.entities.find((e) => e.id === id)?.name ?? id)
+          .join(", ");
+        lines.push(
+          `[${c.severity.toUpperCase()}] ${c.name} (applies to: ${scopeNames})`,
+        );
+        lines.push(`  Rule: ${c.description}`);
+        lines.push("");
+      }
+
+      lines.push(`\nAction to evaluate: "${action}"`);
+      lines.push("Review each constraint above against this action.");
+
+      return { content: [{ type: "text" as const, text: lines.join("\n") }] };
+    },
+  );
+
+  // ─── Tool: query ────────────────────────────────────────
+  server.tool(
+    "query",
+    "Ask any natural language question about this domain. Uses graph analysis for structural questions, LLM inference for open-ended ones.",
+    { question: z.string().describe("Your question about the domain") },
+    async ({ question }) => {
+      const result = await queryWorldModel(model, question);
+      return {
+        content: [
+          {
+            type: "text" as const,
+            text: `${result.answer}\n\n---\nMethod: ${result.method} | Confidence: ${result.confidence}`,
+          },
+        ],
+      };
+    },
+  );
+
+  // ─── Tool: get_stats ────────────────────────────────────
+  server.tool(
+    "get_stats",
+    "Get statistical overview of the domain model",
+    {},
+    async () => {
+      const stats = getStats(model);
+      const lines = [
+        `**${model.name}**`,
+        model.description,
+        "",
+        `Entities: ${stats.entities.total} (${Object.entries(
+          stats.entities.byType,
+        )
+          .map(([t, c]) => `${c} ${t}`)
+          .join(", ")})`,
+        `Relations: ${stats.relations.total} (${Object.entries(
+          stats.relations.byType,
+        )
+          .map(([t, c]) => `${c} ${t}`)
+          .join(", ")})`,
+        `Processes: ${stats.processes.total} (${stats.processes.totalSteps} total steps)`,
+        `Constraints: ${stats.constraints.total} (${stats.constraints.hard} hard, ${stats.constraints.soft} soft)`,
+        `Confidence: ${stats.confidence}`,
+        "",
+        "Most connected entities:",
+        ...stats.mostConnected.map(
+          (mc) => `  ${mc.entity}: ${mc.connections} connections`,
+        ),
+      ];
+      return { content: [{ type: "text" as const, text: lines.join("\n") }] };
+    },
+  );
+
+  // ─── Tool: get_diagram ──────────────────────────────────
+  server.tool(
+    "get_diagram",
+    "Get a Mermaid diagram of the world model for visualization",
+    {},
+    async () => {
+      return { content: [{ type: "text" as const, text: toMermaid(model) }] };
+    },
+  );
+
+  // ─── Resource: full model ───────────────────────────────
+  server.resource("world-model", `swm://model/${model.id}`, async () => ({
+    contents: [
+      {
+        uri: `swm://model/${model.id}`,
+        text: JSON.stringify(model, null, 2),
+        mimeType: "application/json",
+      },
+    ],
+  }));
+
+  // Connect via stdio
+  const transport = new StdioServerTransport();
+  await server.connect(transport);
+}
