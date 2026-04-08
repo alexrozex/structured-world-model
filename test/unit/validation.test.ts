@@ -710,6 +710,39 @@ async function run() {
     );
   }
 
+  // Test 32: Disconnected subgraphs
+  {
+    const model = makeModel({
+      entities: [
+        { id: "e1", name: "A", type: "object", description: "A" },
+        { id: "e2", name: "B", type: "object", description: "B" },
+        { id: "e3", name: "C", type: "object", description: "C" },
+        { id: "e4", name: "D", type: "object", description: "D" },
+      ],
+      relations: [
+        { id: "r1", type: "uses", source: "e1", target: "e2", label: "x" },
+        { id: "r2", type: "uses", source: "e3", target: "e4", label: "y" },
+      ],
+    });
+    const { validation } = await validationAgent({ input, worldModel: model });
+    assert(
+      hasIssue(validation.issues, "DISCONNECTED_SUBGRAPHS"),
+      "Detects disconnected subgraphs (2 clusters)",
+    );
+  }
+
+  // Test 33: Fully connected — no false positive
+  {
+    const { validation } = await validationAgent({
+      input,
+      worldModel: makeModel(),
+    });
+    assert(
+      !hasIssue(validation.issues, "DISCONNECTED_SUBGRAPHS"),
+      "No false positive on connected model",
+    );
+  }
+
   console.log(`\n═══ ${passed}/${passed + failed} passed ═══\n`);
   if (failed > 0) process.exit(1);
 }

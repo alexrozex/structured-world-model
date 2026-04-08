@@ -301,6 +301,39 @@ export function validationAgent(stageInput: {
     }
   }
 
+  // Check for disconnected subgraphs
+  if (worldModel.entities.length >= 4 && worldModel.relations.length > 0) {
+    const adj = new Map<string, Set<string>>();
+    for (const e of worldModel.entities) adj.set(e.id, new Set());
+    for (const r of worldModel.relations) {
+      adj.get(r.source)?.add(r.target);
+      adj.get(r.target)?.add(r.source);
+    }
+    const componentVisited = new Set<string>();
+    let componentCount = 0;
+    for (const e of worldModel.entities) {
+      if (componentVisited.has(e.id)) continue;
+      componentCount++;
+      const queue = [e.id];
+      while (queue.length > 0) {
+        const id = queue.shift()!;
+        if (componentVisited.has(id)) continue;
+        componentVisited.add(id);
+        for (const n of adj.get(id) ?? []) {
+          if (!componentVisited.has(n)) queue.push(n);
+        }
+      }
+    }
+    if (componentCount > 1) {
+      issues.push({
+        type: "warning",
+        code: "DISCONNECTED_SUBGRAPHS",
+        message: `Model has ${componentCount} disconnected clusters — may indicate missing relations between components`,
+        path: "relations",
+      });
+    }
+  }
+
   const hasErrors = issues.some((i) => i.type === "error");
 
   // Compute quality score (0-100)
