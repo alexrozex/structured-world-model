@@ -281,6 +281,21 @@ function handleError(err: unknown): never {
     console.error(
       chalk.gray("  Set it with: export ANTHROPIC_API_KEY=sk-ant-..."),
     );
+  } else if (msg.includes("timed out")) {
+    console.error(chalk.red("Error: LLM call timed out."));
+    console.error(
+      chalk.gray(
+        "  The input may be too large. Try: --passes 1, or split into smaller files.",
+      ),
+    );
+  } else if (msg.includes("rate") || msg.includes("429")) {
+    console.error(chalk.red("Error: API rate limit hit."));
+    console.error(
+      chalk.gray("  Wait a moment and retry, or use a different API key."),
+    );
+  } else if (msg.includes("ENOTFOUND") || msg.includes("ECONNREFUSED")) {
+    console.error(chalk.red("Error: Cannot connect to Anthropic API."));
+    console.error(chalk.gray("  Check your internet connection."));
   } else {
     console.error(chalk.red(`Error: ${msg}`));
   }
@@ -709,7 +724,9 @@ program
           // Keep process alive
           await new Promise(() => {});
         }
-      } catch (err) { handleError(err); }
+      } catch (err) {
+        handleError(err);
+      }
     },
   );
 
@@ -786,7 +803,9 @@ program
             ),
           );
         }
-      } catch (err) { handleError(err); }
+      } catch (err) {
+        handleError(err);
+      }
     },
   );
 
@@ -824,7 +843,9 @@ program
             `  ${merged.entities.length} entities, ${merged.relations.length} relations`,
           ),
         );
-      } catch (err) { handleError(err); }
+      } catch (err) {
+        handleError(err);
+      }
     },
   );
 
@@ -901,7 +922,9 @@ program
           `\n  Quality: ${vBefore.score} → ${vAfter.score} (${arrow})`,
         );
       }
-    } catch (err) { handleError(err); }
+    } catch (err) {
+      handleError(err);
+    }
   });
 
 // ─── inspect ──────────────────────────────────────────────────
@@ -991,7 +1014,9 @@ program
             console.log(`    ${mc.entity}: ${mc.connections} connections`);
           }
         }
-      } catch (err) { handleError(err); }
+      } catch (err) {
+        handleError(err);
+      }
     },
   );
 
@@ -1062,7 +1087,9 @@ program
         );
         process.exit(1);
       }
-    } catch (err) { handleError(err); }
+    } catch (err) {
+      handleError(err);
+    }
   });
 
 // ─── query ────────────────────────────────────────────────────
@@ -1092,7 +1119,9 @@ program
             ),
           );
         }
-      } catch (err) { handleError(err); }
+      } catch (err) {
+        handleError(err);
+      }
     },
   );
 
@@ -1126,7 +1155,9 @@ program
             `  ${result.entities.length} shared entities, ${result.relations.length} shared relations`,
           ),
         );
-      } catch (err) { handleError(err); }
+      } catch (err) {
+        handleError(err);
+      }
     },
   );
 
@@ -1158,7 +1189,9 @@ program
         console.error(
           chalk.gray(`  ${result.entities.length} unique entities remaining`),
         );
-      } catch (err) { handleError(err); }
+      } catch (err) {
+        handleError(err);
+      }
     },
   );
 
@@ -1194,7 +1227,9 @@ program
             `  ${result.entities.length} entities, ${result.constraints.length} constraints after overlay`,
           ),
         );
-      } catch (err) { handleError(err); }
+      } catch (err) {
+        handleError(err);
+      }
     },
   );
 
@@ -1242,7 +1277,9 @@ program
         } else {
           console.log(output);
         }
-      } catch (err) { handleError(err); }
+      } catch (err) {
+        handleError(err);
+      }
     },
   );
 
@@ -1290,7 +1327,9 @@ program
         console.error(
           chalk.gray(`  Total snapshots: ${timeline.snapshots.length}`),
         );
-      } catch (err) { handleError(err); }
+      } catch (err) {
+        handleError(err);
+      }
     },
   );
 
@@ -1335,7 +1374,9 @@ program
       } else {
         console.log(timelineSummary(timeline));
       }
-    } catch (err) { handleError(err); }
+    } catch (err) {
+      handleError(err);
+    }
   });
 
 // ─── serve ────────────────────────────────────────────────────
@@ -1369,7 +1410,9 @@ program
 
       const { startMcpServer } = await import("./serve/mcp-server.js");
       await startMcpServer(modelPath);
-    } catch (err) { handleError(err); }
+    } catch (err) {
+      handleError(err);
+    }
   });
 
 // ─── schema ───────────────────────────────────────────────────
@@ -1392,7 +1435,9 @@ program
     try {
       const model = await readModel(modelPath);
       console.log(summarize(model));
-    } catch (err) { handleError(err); }
+    } catch (err) {
+      handleError(err);
+    }
   });
 
 // ─── entities ─────────────────────────────────────────────────
@@ -1433,7 +1478,9 @@ program
             ),
           );
         }
-      } catch (err) { handleError(err); }
+      } catch (err) {
+        handleError(err);
+      }
     },
   );
 
@@ -1475,7 +1522,9 @@ program
             ),
           );
         }
-      } catch (err) { handleError(err); }
+      } catch (err) {
+        handleError(err);
+      }
     },
   );
 
@@ -1562,7 +1611,9 @@ program
             ),
           );
         }
-      } catch (err) { handleError(err); }
+      } catch (err) {
+        handleError(err);
+      }
     },
   );
 
@@ -1610,7 +1661,9 @@ program
             `  ${model.processes.length} processes, ${model.processes.reduce((a, p) => a + p.steps.length, 0)} total steps`,
           ),
         );
-      } catch (err) { handleError(err); }
+      } catch (err) {
+        handleError(err);
+      }
     },
   );
 
@@ -1655,7 +1708,9 @@ program
             `  ${sub.entities.length} entities, ${sub.relations.length} relations within ${hops} hops of "${entity.name}"`,
           ),
         );
-      } catch (err) { handleError(err); }
+      } catch (err) {
+        handleError(err);
+      }
     },
   );
 
@@ -1712,7 +1767,9 @@ program
           "utf-8",
         );
         console.log(chalk.green(`\n  ✓ Written to ${outPath}`));
-      } catch (err) { handleError(err); }
+      } catch (err) {
+        handleError(err);
+      }
     },
   );
 
@@ -1762,7 +1819,9 @@ program
             `\n  ${constraints.length} constraints (${hard} hard, ${soft} soft)`,
           ),
         );
-      } catch (err) { handleError(err); }
+      } catch (err) {
+        handleError(err);
+      }
     },
   );
 
@@ -1851,7 +1910,9 @@ program
       } else {
         console.error(chalk.gray(`\n  ${found} matches for "${query}"`));
       }
-    } catch (err) { handleError(err); }
+    } catch (err) {
+      handleError(err);
+    }
   });
 
 // ─── clusters ─────────────────────────────────────────────────
@@ -1908,7 +1969,9 @@ program
           }
           console.log("");
         }
-      } catch (err) { handleError(err); }
+      } catch (err) {
+        handleError(err);
+      }
     },
   );
 
@@ -1960,7 +2023,9 @@ program
         } else {
           console.log(output);
         }
-      } catch (err) { handleError(err); }
+      } catch (err) {
+        handleError(err);
+      }
     },
   );
 
@@ -2002,7 +2067,9 @@ program
           `  ${pad(name, 30)} ${pad(String(model.entities.length), 6)} ${pad(String(model.relations.length), 6)} ${pad(String(model.processes.length), 6)} ${pad(String(model.constraints.length), 6)} ${pad(conf, 6)} ${pad(scoreStr, 6)}`,
         );
       }
-    } catch (err) { handleError(err); }
+    } catch (err) {
+      handleError(err);
+    }
   });
 
 // ─── help ─────────────────────────────────────────────────────
@@ -2209,7 +2276,9 @@ program
             console.log(`    [${c.severity}] ${c.name}`);
         }
         console.log(chalk.gray(`\n  ${result.summary}`));
-      } catch (err) { handleError(err); }
+      } catch (err) {
+        handleError(err);
+      }
     },
   );
 
@@ -2251,7 +2320,9 @@ program
             console.log(chalk.gray(`    ${b.name}: ${c.modelB}`));
           }
         }
-      } catch (err) { handleError(err); }
+      } catch (err) {
+        handleError(err);
+      }
     },
   );
 
@@ -2302,7 +2373,9 @@ program
           `  Model: ${model.entities.length} entities, ${model.relations.length} relations`,
         ),
       );
-    } catch (err) { handleError(err); }
+    } catch (err) {
+      handleError(err);
+    }
   });
 
 program.parse();
