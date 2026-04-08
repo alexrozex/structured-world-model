@@ -311,6 +311,10 @@ program
   )
   .option("--watch", "Watch input file and rebuild on change")
   .option(
+    "--merge-files",
+    "Extract each file separately then merge (better for multi-file input)",
+  )
+  .option(
     "-n, --name <name>",
     "Set the world model name (overrides LLM-generated name)",
   )
@@ -357,11 +361,75 @@ program
         }
 
         const passes = parseInt((opts.passes as string) ?? "1", 10) || 1;
-        let result = await buildWorldModel(input, {
+        const buildOpts = {
           ...stageCallbacks(opts.quiet as boolean),
           passes,
           model: opts.model as string | undefined,
-        });
+        };
+
+        let result: Awaited<ReturnType<typeof buildWorldModel>>;
+
+        // Multi-file merge mode: extract each file separately, then merge
+        const filePaths = opts.file;
+        if (
+          opts.mergeFiles &&
+          Array.isArray(filePaths) &&
+          filePaths.length > 1
+        ) {
+          if (!opts.quiet)
+            console.error(
+              chalk.gray(
+                `  Merge mode: extracting ${filePaths.length} files separately\n`,
+              ),
+            );
+
+          let merged: WorldModelType | null = null;
+          for (const fp of filePaths) {
+            const fileContent = readFileSync(resolve(fp as string), "utf-8");
+            const fileType =
+              (opts.type as PipelineInput["sourceType"]) ||
+              detectSourceType(fileContent, fp as string);
+            if (!opts.quiet)
+              console.error(
+                chalk.gray(
+                  `  ── ${fp} (${fileType}, ${fileContent.length} chars)`,
+                ),
+              );
+
+            const fileResult = await buildWorldModel(
+              { raw: fileContent, sourceType: fileType, name: fp as string },
+              buildOpts,
+            );
+
+            if (!merged) {
+              merged = fileResult.worldModel;
+            } else {
+              const { mergeWorldModels: mwm } =
+                await import("./utils/merge.js");
+              merged = mwm(merged, fileResult.worldModel, {
+                name: merged.name,
+                description: merged.description,
+              });
+            }
+          }
+
+          // Re-validate the merged model
+          const { validationAgent: va } =
+            await import("./agents/validation.js");
+          const { worldModel: finalMerged, validation } = await va({
+            input,
+            worldModel: merged!,
+          });
+
+          result = {
+            worldModel: finalMerged,
+            validation,
+            stages: [],
+            totalDurationMs: 0,
+          };
+        } else {
+          result = await buildWorldModel(input, buildOpts);
+        }
 
         let finalModel = result.worldModel;
         if (opts.name) {
