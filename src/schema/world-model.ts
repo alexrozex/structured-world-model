@@ -191,6 +191,14 @@ export const ValidationResult = z.object({
     processes: z.number(),
     constraints: z.number(),
   }),
+  score: z
+    .number()
+    .min(0)
+    .max(100)
+    .optional()
+    .describe(
+      "Quality score 0-100 based on completeness, integrity, and diversity",
+    ),
 });
 
 export type ValidationResult = z.infer<typeof ValidationResult>;

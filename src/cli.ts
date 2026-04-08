@@ -670,6 +670,16 @@ program
         ),
       );
 
+      if (validation.score !== undefined) {
+        const scoreColor =
+          validation.score >= 80
+            ? chalk.green
+            : validation.score >= 50
+              ? chalk.yellow
+              : chalk.red;
+        console.log(scoreColor(`  Quality score: ${validation.score}/100`));
+      }
+
       if (!validation.valid) process.exit(1);
     } catch (err) {
       console.error(

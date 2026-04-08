@@ -245,6 +245,34 @@ export function validationAgent(stageInput: {
 
   const hasErrors = issues.some((i) => i.type === "error");
 
+  // Compute quality score (0-100)
+  let score = 100;
+
+  // Penalize errors (-15 each) and warnings (-3 each)
+  const errors = issues.filter((i) => i.type === "error").length;
+  const warnings = issues.filter((i) => i.type === "warning").length;
+  score -= errors * 15;
+  score -= warnings * 3;
+
+  // Reward completeness: having all four element types
+  if (worldModel.entities.length === 0) score -= 20;
+  if (worldModel.relations.length === 0) score -= 10;
+  if (worldModel.processes.length === 0) score -= 5;
+  if (worldModel.constraints.length === 0) score -= 5;
+
+  // Reward relation density (relations / entities ratio — ideal ~1.0+)
+  if (worldModel.entities.length > 0) {
+    const density = worldModel.relations.length / worldModel.entities.length;
+    if (density < 0.5) score -= 10;
+    else if (density >= 1.0) score += 5;
+  }
+
+  // Reward confidence
+  const conf = worldModel.metadata?.confidence ?? 0.5;
+  score += Math.round((conf - 0.5) * 10); // +/-5 based on confidence
+
+  score = Math.max(0, Math.min(100, score));
+
   const validation: ValidationResultType = {
     valid: !hasErrors,
     issues,
@@ -254,6 +282,7 @@ export function validationAgent(stageInput: {
       processes: worldModel.processes.length,
       constraints: worldModel.constraints.length,
     },
+    score,
   };
 
   return Promise.resolve({ worldModel, validation });
