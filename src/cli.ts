@@ -283,6 +283,10 @@ program
     "Exit non-zero if quality score is below this threshold (0-100)",
   )
   .option("--watch", "Watch input file and rebuild on change")
+  .option(
+    "-n, --name <name>",
+    "Set the world model name (overrides LLM-generated name)",
+  )
   .action(
     async (
       inputArg: string | undefined,
@@ -332,6 +336,9 @@ program
         });
 
         let finalModel = result.worldModel;
+        if (opts.name) {
+          finalModel = { ...finalModel, name: opts.name as string };
+        }
         if (opts.fix) {
           const { fixWorldModel } = await import("./utils/fix.js");
           const { model: fixed, fixes } = fixWorldModel(finalModel);
