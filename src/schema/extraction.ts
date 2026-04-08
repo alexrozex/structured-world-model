@@ -13,6 +13,7 @@ const RawEntitySchema = z.object({
   description: z.string().default(""),
   properties: z.record(z.string(), z.unknown()).optional(),
   tags: z.array(z.string()).optional(),
+  confidence: z.number().min(0).max(1).optional(),
 });
 
 const RawRelationSchema = z.object({

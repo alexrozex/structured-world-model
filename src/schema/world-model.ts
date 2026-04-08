@@ -32,6 +32,14 @@ export const Entity = z.object({
     .describe("Arbitrary key-value attributes")
     .optional(),
   tags: z.array(z.string()).optional(),
+  confidence: z
+    .number()
+    .min(0)
+    .max(1)
+    .optional()
+    .describe(
+      "Extraction confidence for this entity (1=explicit, 0.5=inferred, 0=placeholder)",
+    ),
 });
 
 export type Entity = z.infer<typeof Entity>;

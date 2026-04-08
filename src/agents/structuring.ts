@@ -129,6 +129,7 @@ export function structuringAgent(stageInput: {
     description: string;
     properties?: Record<string, unknown>;
     tags?: string[];
+    confidence?: number;
   }> = [];
 
   for (const e of extraction.entities) {
@@ -162,6 +163,7 @@ export function structuringAgent(stageInput: {
         description: e.description,
         properties: e.properties,
         tags: e.tags,
+        confidence: e.confidence,
       });
     }
   }
@@ -181,6 +183,7 @@ export function structuringAgent(stageInput: {
       description: `Auto-created entity for unresolved reference: ${name}`,
       properties: undefined,
       tags: ["auto-created"],
+      confidence: 0.2,
     });
     return id;
   };

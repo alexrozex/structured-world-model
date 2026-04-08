@@ -11,6 +11,7 @@ export interface RawExtraction {
     description: string;
     properties?: Record<string, unknown>;
     tags?: string[];
+    confidence?: number;
   }>;
   relations: Array<{
     source: string;
