@@ -117,7 +117,7 @@ export function validationAgent(stageInput: {
     }
   }
 
-  // Check for orphan entities (no relations, not in any process)
+  // Check for orphan entities (no relations, not in any process/constraint)
   const referencedEntities = new Set<string>();
   for (const rel of worldModel.relations) {
     referencedEntities.add(rel.source);
@@ -125,6 +125,11 @@ export function validationAgent(stageInput: {
   }
   for (const proc of worldModel.processes) {
     for (const p of proc.participants) referencedEntities.add(p);
+    for (const s of proc.steps) {
+      if (s.actor) referencedEntities.add(s.actor);
+      for (const inp of s.input ?? []) referencedEntities.add(inp);
+      for (const out of s.output ?? []) referencedEntities.add(out);
+    }
   }
   for (const constraint of worldModel.constraints) {
     for (const s of constraint.scope) referencedEntities.add(s);

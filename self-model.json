@@ -1,902 +1,1526 @@
 {
-  "id": "wm_b02fc79aeccb",
-  "name": "Structured World Model (SWM) System Architecture",
-  "description": "Complete architecture of a TypeScript system for extracting, structuring, and manipulating world models from arbitrary input using LLM-based agents and graph operations",
+  "id": "wm_54bd62dde0f9",
+  "name": "SWM Architecture",
+  "description": "Structured World Model extraction system architecture with multi-agent pipeline, validation, and rich tooling ecosystem",
   "version": "0.1.0",
-  "created_at": "2026-04-08T07:29:23.090Z",
+  "created_at": "2026-04-08T13:03:49.370Z",
   "entities": [
     {
-      "id": "ent_40c32987712e",
+      "id": "ent_4bf6d106e4b2",
       "name": "Chunker Agent",
-      "type": "actor",
-      "description": "Agent responsible for splitting large text inputs into manageable chunks that fit within LLM context limits",
+      "type": "system",
+      "description": "Splits large input text into smaller chunks that fit within LLM context limits",
       "properties": {
-        "max_chunk_tokens": 80000,
-        "overlap_chars": 500
-      }
+        "maxTokens": 80000,
+        "overlapChars": 500
+      },
+      "tags": [
+        "agent",
+        "preprocessing"
+      ]
     },
     {
-      "id": "ent_2b6eba2d4618",
+      "id": "ent_fd6889e0e859",
       "name": "Extraction Agent",
-      "type": "actor",
-      "description": "Core agent that analyzes input and extracts structured world models using LLM calls"
+      "type": "system",
+      "description": "Analyzes input and extracts structured world model elements using LLM inference",
+      "properties": {
+        "systemPrompt": "specialized",
+        "multiPass": true
+      },
+      "tags": [
+        "agent",
+        "core"
+      ]
     },
     {
-      "id": "ent_5fabfc03c31d",
+      "id": "ent_73f46e2c8c70",
       "name": "Structuring Agent",
-      "type": "actor",
-      "description": "Agent that converts raw extraction output into properly structured world model format with normalized types and ID mapping"
+      "type": "system",
+      "description": "Converts raw extraction output into validated WorldModel schema format",
+      "properties": {
+        "normalizesTypes": true,
+        "deduplicatesEntities": true
+      },
+      "tags": [
+        "agent",
+        "validation"
+      ]
     },
     {
-      "id": "ent_6fc5c3e9b6c9",
+      "id": "ent_a48b1187115d",
       "name": "Validation Agent",
-      "type": "actor",
-      "description": "Agent that validates world model integrity, checking for dangling references and structural issues"
+      "type": "system",
+      "description": "Validates world model integrity and computes quality scores",
+      "properties": {
+        "checksReferences": true,
+        "detectsCircularDeps": true
+      },
+      "tags": [
+        "agent",
+        "quality"
+      ]
     },
     {
-      "id": "ent_115e039262e1",
+      "id": "ent_1a3445ebdecc",
       "name": "Second Pass Agent",
-      "type": "actor",
-      "description": "Agent that performs completeness analysis to find implicit entities and relations missed in the first extraction pass"
+      "type": "system",
+      "description": "Finds implicit entities and relations missed in initial extraction",
+      "properties": {
+        "confidenceRange": [
+          0.3,
+          0.7
+        ]
+      },
+      "tags": [
+        "agent",
+        "enhancement"
+      ]
     },
     {
-      "id": "ent_255bad1a8f97",
+      "id": "ent_c29278dadeb6",
       "name": "Refinement Agent",
-      "type": "actor",
-      "description": "Agent that incrementally refines existing world models with new input, extracting only delta changes"
+      "type": "system",
+      "description": "Incrementally updates existing world models with new input",
+      "properties": {
+        "detectsContradictions": true
+      },
+      "tags": [
+        "agent",
+        "incremental"
+      ]
     },
     {
-      "id": "ent_b45bc9774721",
+      "id": "ent_cb4e6d581337",
       "name": "Query Agent",
-      "type": "actor",
-      "description": "Agent that answers natural language questions about world models using deterministic graph queries or LLM inference"
-    },
-    {
-      "id": "ent_c495057da2ca",
-      "name": "Pipeline",
       "type": "system",
-      "description": "Orchestration system that manages the sequential execution of processing stages with timing and callback support"
+      "description": "Answers natural language questions about world models using graph analysis and LLM inference",
+      "properties": {
+        "graphPatterns": "deterministic",
+        "fallbackMode": "llm"
+      },
+      "tags": [
+        "agent",
+        "query"
+      ]
     },
     {
-      "id": "ent_c934bda6fab5",
-      "name": "World Model",
-      "type": "concept",
-      "description": "Core data structure representing entities, relations, processes, and constraints extracted from input"
-    },
-    {
-      "id": "ent_2e5d4796bbb2",
-      "name": "Entity",
-      "type": "concept",
-      "description": "Fundamental building block representing actors, objects, systems, concepts, locations, events, groups, or resources"
-    },
-    {
-      "id": "ent_8372399c4e3e",
-      "name": "Relation",
-      "type": "concept",
-      "description": "Directed connection between entities with semantic type and optional bidirectionality"
-    },
-    {
-      "id": "ent_efdad2b2578e",
-      "name": "Process",
-      "type": "concept",
-      "description": "Dynamic sequence of ordered steps with participants, triggers, and outcomes"
-    },
-    {
-      "id": "ent_44c3123fcbad",
-      "name": "Constraint",
-      "type": "concept",
-      "description": "Rule or invariant that applies to entities with hard or soft severity levels"
-    },
-    {
-      "id": "ent_ae13d5dbca78",
-      "name": "CLI Interface",
+      "id": "ent_7d4d907c6be3",
+      "name": "Transform Agent",
       "type": "system",
-      "description": "Command-line interface providing commands for modeling, validation, querying, and manipulation operations"
+      "description": "Applies natural language transformations to modify world models",
+      "properties": {
+        "supportsRemovals": true,
+        "supportsAdditions": true
+      },
+      "tags": [
+        "agent",
+        "modification"
+      ]
     },
     {
-      "id": "ent_161dbd3fc1d1",
+      "id": "ent_a91bea706662",
+      "name": "Pipeline System",
+      "type": "system",
+      "description": "Orchestrates multi-stage processing with progress callbacks and error handling",
+      "properties": {
+        "configurable": true,
+        "observable": true
+      },
+      "tags": [
+        "orchestration"
+      ]
+    },
+    {
+      "id": "ent_7aa8cac3b938",
       "name": "LLM Client",
       "type": "system",
-      "description": "Anthropic Claude client with retry logic, timeout handling, and JSON parsing capabilities"
+      "description": "Anthropic Claude API client with retry logic and timeout handling",
+      "properties": {
+        "defaultModel": "claude-sonnet-4-20250514",
+        "maxRetries": 3
+      },
+      "tags": [
+        "integration",
+        "external"
+      ]
     },
     {
-      "id": "ent_13d50e36bb08",
-      "name": "Graph Utils",
+      "id": "ent_320022dfe979",
+      "name": "World Model Schema",
+      "type": "concept",
+      "description": "Zod-based type system defining entities, relations, processes, and constraints",
+      "properties": {
+        "enforceEnums": true,
+        "jsonSchemaExport": true
+      },
+      "tags": [
+        "schema",
+        "validation"
+      ]
+    },
+    {
+      "id": "ent_3ba2556a5016",
+      "name": "Source Type Detection",
       "type": "system",
-      "description": "Graph analysis utilities for entity lookup, dependency finding, path discovery, and format export"
+      "description": "Automatically determines input type from content patterns and file extensions",
+      "properties": {
+        "supportedTypes": [
+          "text",
+          "code",
+          "document",
+          "url",
+          "conversation",
+          "mixed"
+        ]
+      },
+      "tags": [
+        "classification"
+      ]
     },
     {
-      "id": "ent_28f604762afc",
+      "id": "ent_451339b0ae29",
+      "name": "Graph Analysis Utils",
+      "type": "system",
+      "description": "Graph algorithms for finding paths, dependencies, clusters, and impact analysis",
+      "properties": {
+        "bfsTraversal": true,
+        "connectedComponents": true
+      },
+      "tags": [
+        "analysis",
+        "graph"
+      ]
+    },
+    {
+      "id": "ent_18d7200b500a",
       "name": "Merge System",
       "type": "system",
-      "description": "System for merging multiple world models with entity deduplication and ID remapping"
+      "description": "Combines multiple world models with entity deduplication and ID remapping",
+      "properties": {
+        "normalizeNames": true,
+        "preserveProperties": true
+      },
+      "tags": [
+        "composition"
+      ]
     },
     {
-      "id": "ent_efd8e6d02833",
-      "name": "Timeline System",
-      "type": "system",
-      "description": "Version control system for tracking world model evolution across snapshots with diff computation"
-    },
-    {
-      "id": "ent_98d31ecef0bc",
+      "id": "ent_f519b3d611ac",
       "name": "Export System",
       "type": "system",
-      "description": "Multi-format export system supporting Claude MD, system prompts, MCP schemas, Mermaid, and DOT formats"
+      "description": "Converts world models to various formats including Claude MD, system prompts, and MCP schemas",
+      "properties": {
+        "formats": [
+          "claude-md",
+          "system-prompt",
+          "mcp",
+          "mermaid",
+          "dot"
+        ]
+      },
+      "tags": [
+        "export",
+        "integration"
+      ]
     },
     {
-      "id": "ent_f1ab2fec92ae",
+      "id": "ent_12d369506444",
+      "name": "CLI Interface",
+      "type": "actor",
+      "description": "Commander.js-based command line interface providing access to all system functionality",
+      "properties": {
+        "commands": 30,
+        "watchMode": true
+      },
+      "tags": [
+        "interface",
+        "user"
+      ]
+    },
+    {
+      "id": "ent_d18212451653",
+      "name": "MCP Server",
+      "type": "system",
+      "description": "Model Context Protocol server that exposes world models as live queryable tools",
+      "properties": {
+        "stdio": true,
+        "toolsCount": 8
+      },
+      "tags": [
+        "server",
+        "integration"
+      ]
+    },
+    {
+      "id": "ent_9900a5e31f00",
+      "name": "Timeline System",
+      "type": "system",
+      "description": "Tracks evolution of world models over time with automatic diffing",
+      "properties": {
+        "snapshotBased": true,
+        "entityHistory": true
+      },
+      "tags": [
+        "versioning",
+        "tracking"
+      ]
+    },
+    {
+      "id": "ent_237867fb0098",
       "name": "Algebra Operations",
       "type": "system",
-      "description": "Set algebra operations for world models including intersection, difference, and overlay functions"
+      "description": "Set operations on world models including intersection, difference, and overlay",
+      "properties": {
+        "intersection": true,
+        "difference": true,
+        "overlay": true
+      },
+      "tags": [
+        "algebra",
+        "composition"
+      ]
     },
     {
-      "id": "ent_0e911d407267",
-      "name": "Schema Validation",
+      "id": "ent_379b695afd01",
+      "name": "Coverage Analysis",
       "type": "system",
-      "description": "Zod-based schema validation system for raw extractions and world model structures"
+      "description": "Measures how completely one world model covers another",
+      "properties": {
+        "weightedScoring": true,
+        "missingElements": true
+      },
+      "tags": [
+        "analysis",
+        "quality"
+      ]
     },
     {
-      "id": "ent_5dd0dc5ae746",
-      "name": "ID Generator",
+      "id": "ent_c8e4b0fe277a",
+      "name": "Fix System",
       "type": "system",
-      "description": "Cryptographic random ID generation system using prefixes for different entity types"
+      "description": "Automatically repairs common validation issues in world models",
+      "properties": {
+        "removeOrphans": true,
+        "deduplicateEntities": true,
+        "fixReferences": true
+      },
+      "tags": [
+        "repair",
+        "validation"
+      ]
     },
     {
-      "id": "ent_0b826e705b09",
-      "name": "Input Text",
-      "type": "resource",
-      "description": "Raw input text to be processed, classified by source type (text, code, document, url, conversation, mixed)"
+      "id": "ent_b3bcacdc1812",
+      "name": "Entity",
+      "type": "concept",
+      "description": "Core domain object representing actors, systems, concepts, locations, events, groups, objects, or resources",
+      "properties": {
+        "hasId": true,
+        "hasType": true,
+        "hasDescription": true
+      },
+      "tags": [
+        "schema",
+        "core"
+      ]
     },
     {
-      "id": "ent_21d5ba1da125",
-      "name": "Chunk",
+      "id": "ent_0a6222aaa979",
+      "name": "Relation",
+      "type": "concept",
+      "description": "Directed connection between entities with semantic type and label",
+      "properties": {
+        "relationTypes": 17,
+        "bidirectional": "optional"
+      },
+      "tags": [
+        "schema",
+        "core"
+      ]
+    },
+    {
+      "id": "ent_2847076e0df4",
+      "name": "Process",
+      "type": "concept",
+      "description": "Sequential workflow with steps, participants, and outcomes",
+      "properties": {
+        "hasSteps": true,
+        "hasParticipants": true,
+        "orderedSteps": true
+      },
+      "tags": [
+        "schema",
+        "core"
+      ]
+    },
+    {
+      "id": "ent_d53ca6458726",
+      "name": "Constraint",
+      "type": "concept",
+      "description": "Invariant or rule that must hold true, with hard or soft severity",
+      "properties": {
+        "constraintTypes": 7,
+        "severityLevels": 2
+      },
+      "tags": [
+        "schema",
+        "core"
+      ]
+    },
+    {
+      "id": "ent_f2e0e562a93e",
+      "name": "Prompt System",
+      "type": "system",
+      "description": "Source-type specific prompts that guide extraction behavior",
+      "properties": {
+        "promptTypes": 6,
+        "baseSchema": "shared"
+      },
+      "tags": [
+        "prompts",
+        "specialization"
+      ]
+    },
+    {
+      "id": "ent_a4fe179726e7",
+      "name": "URL Fetcher",
+      "type": "system",
+      "description": "Fetches and cleans web content, stripping HTML for better extraction",
+      "properties": {
+        "timeout": 30000,
+        "stripHtml": true
+      },
+      "tags": [
+        "fetching",
+        "preprocessing"
+      ]
+    },
+    {
+      "id": "ent_1615df4dd84a",
+      "name": "JSON Schema Generator",
+      "type": "system",
+      "description": "Exports Zod schemas as JSON Schema for external tool integration",
+      "properties": {
+        "target": "draft-2020-12"
+      },
+      "tags": [
+        "export",
+        "schema"
+      ]
+    },
+    {
+      "id": "ent_cd224f31f124",
+      "name": "raw input",
       "type": "object",
-      "description": "Individual text segment with index, total count, content, and token estimate"
+      "description": "Auto-created entity for unresolved reference: raw input",
+      "tags": [
+        "auto-created"
+      ],
+      "confidence": 0.2
     },
     {
-      "id": "ent_8dd0d6972bea",
-      "name": "Raw Extraction",
+      "id": "ent_87a43f5aff80",
+      "name": "source type",
       "type": "object",
-      "description": "Unstructured extraction output from LLM containing arrays of entities, relations, processes, and constraints"
+      "description": "Auto-created entity for unresolved reference: source type",
+      "tags": [
+        "auto-created"
+      ],
+      "confidence": 0.2
     },
     {
-      "id": "ent_ee9e3b751629",
-      "name": "Validation Result",
+      "id": "ent_066f95ab2e35",
+      "name": "text chunks",
       "type": "object",
-      "description": "Validation outcome containing validity status, issues list, and statistical summary"
+      "description": "Auto-created entity for unresolved reference: text chunks",
+      "tags": [
+        "auto-created"
+      ],
+      "confidence": 0.2
     },
     {
-      "id": "ent_bfbd32ed0fce",
-      "name": "Query Result",
+      "id": "ent_73d1d3018c8b",
+      "name": "raw extraction",
       "type": "object",
-      "description": "Query response containing answer, method used, referenced entities, and confidence score"
+      "description": "Auto-created entity for unresolved reference: raw extraction",
+      "tags": [
+        "auto-created"
+      ],
+      "confidence": 0.2
     },
     {
-      "id": "ent_76dd683fdab0",
-      "name": "Timeline",
+      "id": "ent_219d625c4012",
+      "name": "world model",
       "type": "object",
-      "description": "Version history container holding ordered snapshots of world model evolution"
+      "description": "Auto-created entity for unresolved reference: world model",
+      "tags": [
+        "auto-created"
+      ],
+      "confidence": 0.2
     },
     {
-      "id": "ent_732b7859ff0d",
-      "name": "Snapshot",
+      "id": "ent_dcbfb901cf37",
+      "name": "validated model",
       "type": "object",
-      "description": "Point-in-time world model state with timestamp, diff from previous, and statistics"
+      "description": "Auto-created entity for unresolved reference: validated model",
+      "tags": [
+        "auto-created"
+      ],
+      "confidence": 0.2
     },
     {
-      "id": "ent_368daac5a198",
-      "name": "Diff",
+      "id": "ent_cf7645d473ce",
+      "name": "issues",
       "type": "object",
-      "description": "Comparison result showing added, removed, and modified elements between world model versions"
+      "description": "Auto-created entity for unresolved reference: issues",
+      "tags": [
+        "auto-created"
+      ],
+      "confidence": 0.2
+    },
+    {
+      "id": "ent_f4b421eb8760",
+      "name": "score",
+      "type": "object",
+      "description": "Auto-created entity for unresolved reference: score",
+      "tags": [
+        "auto-created"
+      ],
+      "confidence": 0.2
+    },
+    {
+      "id": "ent_33b3abe319cc",
+      "name": "original input",
+      "type": "object",
+      "description": "Auto-created entity for unresolved reference: original input",
+      "tags": [
+        "auto-created"
+      ],
+      "confidence": 0.2
+    },
+    {
+      "id": "ent_000d1fc79b17",
+      "name": "delta extraction",
+      "type": "object",
+      "description": "Auto-created entity for unresolved reference: delta extraction",
+      "tags": [
+        "auto-created"
+      ],
+      "confidence": 0.2
+    },
+    {
+      "id": "ent_c81f473328e9",
+      "name": "delta model",
+      "type": "object",
+      "description": "Auto-created entity for unresolved reference: delta model",
+      "tags": [
+        "auto-created"
+      ],
+      "confidence": 0.2
+    },
+    {
+      "id": "ent_c1a9f2b87aeb",
+      "name": "enhanced model",
+      "type": "object",
+      "description": "Auto-created entity for unresolved reference: enhanced model",
+      "tags": [
+        "auto-created"
+      ],
+      "confidence": 0.2
+    },
+    {
+      "id": "ent_6384e15454c5",
+      "name": "final model",
+      "type": "object",
+      "description": "Auto-created entity for unresolved reference: final model",
+      "tags": [
+        "auto-created"
+      ],
+      "confidence": 0.2
+    },
+    {
+      "id": "ent_90a67ca63deb",
+      "name": "question",
+      "type": "object",
+      "description": "Auto-created entity for unresolved reference: question",
+      "tags": [
+        "auto-created"
+      ],
+      "confidence": 0.2
+    },
+    {
+      "id": "ent_b86c0c5df55d",
+      "name": "graph result or null",
+      "type": "object",
+      "description": "Auto-created entity for unresolved reference: graph result or null",
+      "tags": [
+        "auto-created"
+      ],
+      "confidence": 0.2
+    },
+    {
+      "id": "ent_678d7cb5f967",
+      "name": "model context",
+      "type": "object",
+      "description": "Auto-created entity for unresolved reference: model context",
+      "tags": [
+        "auto-created"
+      ],
+      "confidence": 0.2
+    },
+    {
+      "id": "ent_16b633ebd913",
+      "name": "inference result",
+      "type": "object",
+      "description": "Auto-created entity for unresolved reference: inference result",
+      "tags": [
+        "auto-created"
+      ],
+      "confidence": 0.2
+    },
+    {
+      "id": "ent_4863bc38c316",
+      "name": "result",
+      "type": "object",
+      "description": "Auto-created entity for unresolved reference: result",
+      "tags": [
+        "auto-created"
+      ],
+      "confidence": 0.2
+    },
+    {
+      "id": "ent_77d6681b4cd6",
+      "name": "formatted answer",
+      "type": "object",
+      "description": "Auto-created entity for unresolved reference: formatted answer",
+      "tags": [
+        "auto-created"
+      ],
+      "confidence": 0.2
+    },
+    {
+      "id": "ent_c556835e2793",
+      "name": "existing model",
+      "type": "object",
+      "description": "Auto-created entity for unresolved reference: existing model",
+      "tags": [
+        "auto-created"
+      ],
+      "confidence": 0.2
+    },
+    {
+      "id": "ent_e8e82b437066",
+      "name": "new input",
+      "type": "object",
+      "description": "Auto-created entity for unresolved reference: new input",
+      "tags": [
+        "auto-created"
+      ],
+      "confidence": 0.2
+    },
+    {
+      "id": "ent_12d0bafc183a",
+      "name": "updated model",
+      "type": "object",
+      "description": "Auto-created entity for unresolved reference: updated model",
+      "tags": [
+        "auto-created"
+      ],
+      "confidence": 0.2
+    },
+    {
+      "id": "ent_0943d208b4b4",
+      "name": "refined model",
+      "type": "object",
+      "description": "Auto-created entity for unresolved reference: refined model",
+      "tags": [
+        "auto-created"
+      ],
+      "confidence": 0.2
+    },
+    {
+      "id": "ent_708c7fd772e5",
+      "name": "instruction",
+      "type": "object",
+      "description": "Auto-created entity for unresolved reference: instruction",
+      "tags": [
+        "auto-created"
+      ],
+      "confidence": 0.2
+    },
+    {
+      "id": "ent_4e4c23f67614",
+      "name": "current model",
+      "type": "object",
+      "description": "Auto-created entity for unresolved reference: current model",
+      "tags": [
+        "auto-created"
+      ],
+      "confidence": 0.2
+    },
+    {
+      "id": "ent_a0409e075fb2",
+      "name": "change specification",
+      "type": "object",
+      "description": "Auto-created entity for unresolved reference: change specification",
+      "tags": [
+        "auto-created"
+      ],
+      "confidence": 0.2
+    },
+    {
+      "id": "ent_e94078707e05",
+      "name": "transformation delta",
+      "type": "object",
+      "description": "Auto-created entity for unresolved reference: transformation delta",
+      "tags": [
+        "auto-created"
+      ],
+      "confidence": 0.2
+    },
+    {
+      "id": "ent_7fa0922f8f3f",
+      "name": "transformed model",
+      "type": "object",
+      "description": "Auto-created entity for unresolved reference: transformed model",
+      "tags": [
+        "auto-created"
+      ],
+      "confidence": 0.2
+    },
+    {
+      "id": "ent_737d89bd6ec6",
+      "name": "format type",
+      "type": "object",
+      "description": "Auto-created entity for unresolved reference: format type",
+      "tags": [
+        "auto-created"
+      ],
+      "confidence": 0.2
+    },
+    {
+      "id": "ent_8dd12f55973a",
+      "name": "formatter",
+      "type": "object",
+      "description": "Auto-created entity for unresolved reference: formatter",
+      "tags": [
+        "auto-created"
+      ],
+      "confidence": 0.2
+    },
+    {
+      "id": "ent_e6031aa4ba1a",
+      "name": "formatted output",
+      "type": "object",
+      "description": "Auto-created entity for unresolved reference: formatted output",
+      "tags": [
+        "auto-created"
+      ],
+      "confidence": 0.2
+    },
+    {
+      "id": "ent_c0fef82abb77",
+      "name": "exported file",
+      "type": "object",
+      "description": "Auto-created entity for unresolved reference: exported file",
+      "tags": [
+        "auto-created"
+      ],
+      "confidence": 0.2
     }
   ],
   "relations": [
     {
-      "id": "rel_68220e3a7bb9",
+      "id": "rel_609d0bc642b2",
       "type": "uses",
-      "source": "ent_2b6eba2d4618",
-      "target": "ent_40c32987712e",
-      "label": "splits large inputs into processable chunks"
+      "source": "ent_12d369506444",
+      "target": "ent_a91bea706662",
+      "label": "orchestrates extraction through"
     },
     {
-      "id": "rel_549bfe8dcd5d",
+      "id": "rel_c75f0dcb5a74",
+      "type": "contains",
+      "source": "ent_a91bea706662",
+      "target": "ent_fd6889e0e859",
+      "label": "first stage processes input with"
+    },
+    {
+      "id": "rel_d87746652abe",
+      "type": "contains",
+      "source": "ent_a91bea706662",
+      "target": "ent_73f46e2c8c70",
+      "label": "second stage structures output with"
+    },
+    {
+      "id": "rel_d55b6af35a77",
+      "type": "contains",
+      "source": "ent_a91bea706662",
+      "target": "ent_a48b1187115d",
+      "label": "third stage validates with"
+    },
+    {
+      "id": "rel_9ed27089c2fd",
       "type": "uses",
-      "source": "ent_2b6eba2d4618",
-      "target": "ent_161dbd3fc1d1",
-      "label": "calls LLM for world model extraction"
+      "source": "ent_fd6889e0e859",
+      "target": "ent_4bf6d106e4b2",
+      "label": "splits large input using"
     },
     {
-      "id": "rel_afbef28b493f",
-      "type": "produces",
-      "source": "ent_2b6eba2d4618",
-      "target": "ent_8dd0d6972bea",
-      "label": "generates unstructured extraction output"
-    },
-    {
-      "id": "rel_fc5f780ad61b",
-      "type": "consumes",
-      "source": "ent_5fabfc03c31d",
-      "target": "ent_8dd0d6972bea",
-      "label": "processes raw extraction into structured format"
-    },
-    {
-      "id": "rel_dfb808a3b533",
-      "type": "produces",
-      "source": "ent_5fabfc03c31d",
-      "target": "ent_c934bda6fab5",
-      "label": "creates structured world model with normalized types and IDs"
-    },
-    {
-      "id": "rel_b3edb49389d4",
-      "type": "consumes",
-      "source": "ent_6fc5c3e9b6c9",
-      "target": "ent_c934bda6fab5",
-      "label": "validates world model integrity"
-    },
-    {
-      "id": "rel_7548a93ac1d4",
-      "type": "produces",
-      "source": "ent_6fc5c3e9b6c9",
-      "target": "ent_ee9e3b751629",
-      "label": "generates validation outcome with issues and stats"
-    },
-    {
-      "id": "rel_815a39c1c64b",
-      "type": "contains",
-      "source": "ent_c495057da2ca",
-      "target": "ent_2b6eba2d4618",
-      "label": "orchestrates extraction stage execution"
-    },
-    {
-      "id": "rel_44038726b24b",
-      "type": "contains",
-      "source": "ent_c495057da2ca",
-      "target": "ent_5fabfc03c31d",
-      "label": "orchestrates structuring stage execution"
-    },
-    {
-      "id": "rel_cfc3505008e0",
-      "type": "contains",
-      "source": "ent_c495057da2ca",
-      "target": "ent_6fc5c3e9b6c9",
-      "label": "orchestrates validation stage execution"
-    },
-    {
-      "id": "rel_2b57b3847739",
-      "type": "contains",
-      "source": "ent_c934bda6fab5",
-      "target": "ent_2e5d4796bbb2",
-      "label": "composed of entity instances"
-    },
-    {
-      "id": "rel_224a6747ab93",
-      "type": "contains",
-      "source": "ent_c934bda6fab5",
-      "target": "ent_8372399c4e3e",
-      "label": "composed of relation instances"
-    },
-    {
-      "id": "rel_3d22c7d09284",
-      "type": "contains",
-      "source": "ent_c934bda6fab5",
-      "target": "ent_efdad2b2578e",
-      "label": "composed of process instances"
-    },
-    {
-      "id": "rel_dfea0cb0eed4",
-      "type": "contains",
-      "source": "ent_c934bda6fab5",
-      "target": "ent_44c3123fcbad",
-      "label": "composed of constraint instances"
-    },
-    {
-      "id": "rel_710b5888744a",
-      "type": "depends_on",
-      "source": "ent_8372399c4e3e",
-      "target": "ent_2e5d4796bbb2",
-      "label": "references source and target entities by ID"
-    },
-    {
-      "id": "rel_7ad0dd131a7d",
-      "type": "depends_on",
-      "source": "ent_efdad2b2578e",
-      "target": "ent_2e5d4796bbb2",
-      "label": "references participant entities and step actors"
-    },
-    {
-      "id": "rel_0af1f30824fb",
-      "type": "depends_on",
-      "source": "ent_44c3123fcbad",
-      "target": "ent_2e5d4796bbb2",
-      "label": "applies to entities in scope array"
-    },
-    {
-      "id": "rel_f708c3839674",
+      "id": "rel_ea53e89dc256",
       "type": "uses",
-      "source": "ent_ae13d5dbca78",
-      "target": "ent_c495057da2ca",
-      "label": "executes world model building pipeline"
+      "source": "ent_fd6889e0e859",
+      "target": "ent_7aa8cac3b938",
+      "label": "calls language model through"
     },
     {
-      "id": "rel_5719af464928",
+      "id": "rel_64ace40b6cc2",
       "type": "uses",
-      "source": "ent_ae13d5dbca78",
-      "target": "ent_b45bc9774721",
-      "label": "processes query commands"
+      "source": "ent_fd6889e0e859",
+      "target": "ent_f2e0e562a93e",
+      "label": "gets specialized prompts from"
     },
     {
-      "id": "rel_fb932f19380b",
+      "id": "rel_0c3e749e669f",
       "type": "uses",
-      "source": "ent_ae13d5dbca78",
-      "target": "ent_98d31ecef0bc",
-      "label": "exports world models in various formats"
+      "source": "ent_73f46e2c8c70",
+      "target": "ent_320022dfe979",
+      "label": "validates against"
     },
     {
-      "id": "rel_291fc55f6b30",
+      "id": "rel_5d8b81611eff",
       "type": "uses",
-      "source": "ent_b45bc9774721",
-      "target": "ent_13d50e36bb08",
-      "label": "performs deterministic graph queries"
+      "source": "ent_a48b1187115d",
+      "target": "ent_320022dfe979",
+      "label": "enforces integrity rules from"
     },
     {
-      "id": "rel_f9b41eb73015",
+      "id": "rel_394877462dfa",
       "type": "uses",
-      "source": "ent_b45bc9774721",
-      "target": "ent_161dbd3fc1d1",
-      "label": "performs inference queries when graph patterns don't match"
+      "source": "ent_cb4e6d581337",
+      "target": "ent_451339b0ae29",
+      "label": "performs deterministic queries with"
     },
     {
-      "id": "rel_34fde190e641",
-      "type": "produces",
-      "source": "ent_b45bc9774721",
-      "target": "ent_bfbd32ed0fce",
-      "label": "generates query responses with answers and metadata"
-    },
-    {
-      "id": "rel_7a847530629c",
+      "id": "rel_c78cf74a198d",
       "type": "uses",
-      "source": "ent_255bad1a8f97",
-      "target": "ent_28f604762afc",
-      "label": "merges existing models with delta changes"
+      "source": "ent_cb4e6d581337",
+      "target": "ent_7aa8cac3b938",
+      "label": "falls back to inference through"
     },
     {
-      "id": "rel_2cf71d65b264",
-      "type": "consumes",
-      "source": "ent_115e039262e1",
-      "target": "ent_c934bda6fab5",
-      "label": "analyzes existing model to find gaps"
+      "id": "rel_f27419454957",
+      "type": "uses",
+      "source": "ent_c29278dadeb6",
+      "target": "ent_fd6889e0e859",
+      "label": "extracts deltas using"
     },
     {
-      "id": "rel_ac5dbfc1d65f",
-      "type": "produces",
-      "source": "ent_115e039262e1",
-      "target": "ent_8dd0d6972bea",
-      "label": "extracts implicit entities and relations"
+      "id": "rel_94f311c35520",
+      "type": "uses",
+      "source": "ent_c29278dadeb6",
+      "target": "ent_18d7200b500a",
+      "label": "combines models with"
     },
     {
-      "id": "rel_168efccb9a5a",
+      "id": "rel_aafc74c92f2f",
+      "type": "uses",
+      "source": "ent_1a3445ebdecc",
+      "target": "ent_7aa8cac3b938",
+      "label": "finds implicit elements through"
+    },
+    {
+      "id": "rel_a9fde3e85cbc",
+      "type": "uses",
+      "source": "ent_7d4d907c6be3",
+      "target": "ent_7aa8cac3b938",
+      "label": "applies transformations through"
+    },
+    {
+      "id": "rel_352b8a468809",
+      "type": "uses",
+      "source": "ent_7d4d907c6be3",
+      "target": "ent_18d7200b500a",
+      "label": "merges changes using"
+    },
+    {
+      "id": "rel_0481e7e17925",
+      "type": "uses",
+      "source": "ent_12d369506444",
+      "target": "ent_3ba2556a5016",
+      "label": "automatically determines input type with"
+    },
+    {
+      "id": "rel_7227b3f415b0",
+      "type": "uses",
+      "source": "ent_12d369506444",
+      "target": "ent_a4fe179726e7",
+      "label": "fetches web content through"
+    },
+    {
+      "id": "rel_90dfea9bbd5f",
+      "type": "uses",
+      "source": "ent_12d369506444",
+      "target": "ent_cb4e6d581337",
+      "label": "answers questions through"
+    },
+    {
+      "id": "rel_fba064006edb",
+      "type": "uses",
+      "source": "ent_12d369506444",
+      "target": "ent_451339b0ae29",
+      "label": "performs analysis with"
+    },
+    {
+      "id": "rel_fbfc0d499c0d",
+      "type": "uses",
+      "source": "ent_12d369506444",
+      "target": "ent_f519b3d611ac",
+      "label": "exports models through"
+    },
+    {
+      "id": "rel_92320720180a",
+      "type": "uses",
+      "source": "ent_12d369506444",
+      "target": "ent_9900a5e31f00",
+      "label": "tracks evolution with"
+    },
+    {
+      "id": "rel_3921aefed79d",
+      "type": "uses",
+      "source": "ent_12d369506444",
+      "target": "ent_237867fb0098",
+      "label": "performs set operations with"
+    },
+    {
+      "id": "rel_0a2632112f2e",
+      "type": "uses",
+      "source": "ent_12d369506444",
+      "target": "ent_379b695afd01",
+      "label": "measures coverage with"
+    },
+    {
+      "id": "rel_abfb8bdd6699",
+      "type": "uses",
+      "source": "ent_12d369506444",
+      "target": "ent_c8e4b0fe277a",
+      "label": "repairs issues with"
+    },
+    {
+      "id": "rel_503c22b90e39",
+      "type": "uses",
+      "source": "ent_d18212451653",
+      "target": "ent_cb4e6d581337",
+      "label": "serves queries through"
+    },
+    {
+      "id": "rel_c1a42ef39156",
+      "type": "uses",
+      "source": "ent_d18212451653",
+      "target": "ent_451339b0ae29",
+      "label": "provides tools using"
+    },
+    {
+      "id": "rel_7b55af45b5cd",
       "type": "contains",
-      "source": "ent_efd8e6d02833",
-      "target": "ent_732b7859ff0d",
-      "label": "maintains ordered collection of snapshots"
+      "source": "ent_320022dfe979",
+      "target": "ent_b3bcacdc1812",
+      "label": "defines structure for"
     },
     {
-      "id": "rel_6ab035681d97",
+      "id": "rel_ddfe2ea27e1f",
       "type": "contains",
-      "source": "ent_732b7859ff0d",
-      "target": "ent_c934bda6fab5",
-      "label": "preserves point-in-time model state"
+      "source": "ent_320022dfe979",
+      "target": "ent_0a6222aaa979",
+      "label": "defines structure for"
     },
     {
-      "id": "rel_7d5e1b0919b7",
+      "id": "rel_32ae28189b48",
       "type": "contains",
-      "source": "ent_732b7859ff0d",
-      "target": "ent_368daac5a198",
-      "label": "includes diff from previous snapshot"
+      "source": "ent_320022dfe979",
+      "target": "ent_2847076e0df4",
+      "label": "defines structure for"
     },
     {
-      "id": "rel_9f4e699230e3",
+      "id": "rel_9d56e7f45f9a",
+      "type": "contains",
+      "source": "ent_320022dfe979",
+      "target": "ent_d53ca6458726",
+      "label": "defines structure for"
+    },
+    {
+      "id": "rel_29cdca081406",
+      "type": "flows_to",
+      "source": "ent_b3bcacdc1812",
+      "target": "ent_0a6222aaa979",
+      "label": "connected by"
+    },
+    {
+      "id": "rel_8782d2c5bd15",
+      "type": "flows_to",
+      "source": "ent_b3bcacdc1812",
+      "target": "ent_2847076e0df4",
+      "label": "participates in"
+    },
+    {
+      "id": "rel_5b1c6db3dfae",
+      "type": "flows_to",
+      "source": "ent_b3bcacdc1812",
+      "target": "ent_d53ca6458726",
+      "label": "scoped by"
+    },
+    {
+      "id": "rel_7964f2355d71",
       "type": "uses",
-      "source": "ent_0e911d407267",
-      "target": "ent_8dd0d6972bea",
-      "label": "validates and coerces LLM extraction output"
+      "source": "ent_4bf6d106e4b2",
+      "target": "ent_7aa8cac3b938",
+      "label": "estimates tokens through"
     },
     {
-      "id": "rel_d358dcf95245",
+      "id": "rel_020fdcc450bc",
+      "type": "uses",
+      "source": "ent_f519b3d611ac",
+      "target": "ent_1615df4dd84a",
+      "label": "generates schemas with"
+    },
+    {
+      "id": "rel_35032cbc8dc6",
+      "type": "uses",
+      "source": "ent_9900a5e31f00",
+      "target": "ent_18d7200b500a",
+      "label": "computes diffs using"
+    },
+    {
+      "id": "rel_01f0114de11a",
+      "type": "uses",
+      "source": "ent_c8e4b0fe277a",
+      "target": "ent_320022dfe979",
+      "label": "repairs according to"
+    },
+    {
+      "id": "rel_1381376d68f9",
       "type": "produces",
-      "source": "ent_40c32987712e",
-      "target": "ent_21d5ba1da125",
-      "label": "splits text into manageable chunks"
+      "source": "ent_18d7200b500a",
+      "target": "ent_320022dfe979",
+      "label": "creates valid instances of"
     },
     {
-      "id": "rel_ee610986fcd0",
-      "type": "consumes",
-      "source": "ent_40c32987712e",
-      "target": "ent_0b826e705b09",
-      "label": "processes raw input text"
-    },
-    {
-      "id": "rel_9e5f8f717cb4",
+      "id": "rel_843090ac10b5",
       "type": "produces",
-      "source": "ent_5dd0dc5ae746",
-      "target": "ent_2e5d4796bbb2",
-      "label": "generates unique entity IDs"
-    },
-    {
-      "id": "rel_054eca7ef849",
-      "type": "produces",
-      "source": "ent_5dd0dc5ae746",
-      "target": "ent_8372399c4e3e",
-      "label": "generates unique relation IDs"
-    },
-    {
-      "id": "rel_0a4c03f96791",
-      "type": "produces",
-      "source": "ent_5dd0dc5ae746",
-      "target": "ent_efdad2b2578e",
-      "label": "generates unique process IDs"
-    },
-    {
-      "id": "rel_c204c1f1bea3",
-      "type": "produces",
-      "source": "ent_5dd0dc5ae746",
-      "target": "ent_44c3123fcbad",
-      "label": "generates unique constraint IDs"
+      "source": "ent_237867fb0098",
+      "target": "ent_320022dfe979",
+      "label": "creates valid instances of"
     }
   ],
   "processes": [
     {
-      "id": "proc_ec360988841b",
+      "id": "proc_c32bd1442027",
       "name": "World Model Extraction",
-      "description": "Multi-stage pipeline that converts raw input into structured world model",
-      "trigger": "User provides input text with source type",
+      "description": "Complete pipeline from raw input to validated world model",
+      "trigger": "User provides input text, code, or document",
       "steps": [
         {
           "order": 1,
-          "action": "Check input size and split into chunks if needed",
-          "actor": "ent_40c32987712e",
+          "action": "Detect input source type from content patterns",
+          "actor": "ent_3ba2556a5016",
           "input": [
-            "ent_0b826e705b09"
+            "ent_cd224f31f124"
           ],
           "output": [
-            "ent_21d5ba1da125"
+            "ent_87a43f5aff80"
           ]
         },
         {
           "order": 2,
-          "action": "Extract entities, relations, processes, and constraints from each chunk",
-          "actor": "ent_2b6eba2d4618",
+          "action": "Chunk input if it exceeds token limits",
+          "actor": "ent_4bf6d106e4b2",
           "input": [
-            "ent_21d5ba1da125"
+            "ent_cd224f31f124"
           ],
           "output": [
-            "ent_8dd0d6972bea"
+            "ent_066f95ab2e35"
           ]
         },
         {
           "order": 3,
-          "action": "Merge raw extractions from multiple chunks if applicable",
-          "actor": "ent_2b6eba2d4618",
+          "action": "Extract entities, relations, processes, and constraints",
+          "actor": "ent_fd6889e0e859",
           "input": [
-            "ent_8dd0d6972bea"
+            "ent_066f95ab2e35",
+            "ent_87a43f5aff80"
           ],
           "output": [
-            "ent_8dd0d6972bea"
+            "ent_73d1d3018c8b"
           ]
         },
         {
           "order": 4,
-          "action": "Convert raw extraction to structured world model with ID mapping",
-          "actor": "ent_5fabfc03c31d",
+          "action": "Structure extraction into validated schema format",
+          "actor": "ent_73f46e2c8c70",
           "input": [
-            "ent_8dd0d6972bea"
+            "ent_73d1d3018c8b"
           ],
           "output": [
-            "ent_c934bda6fab5"
+            "ent_219d625c4012"
           ]
         },
         {
           "order": 5,
-          "action": "Validate world model integrity and generate issues report",
-          "actor": "ent_6fc5c3e9b6c9",
+          "action": "Validate integrity and compute quality score",
+          "actor": "ent_a48b1187115d",
           "input": [
-            "ent_c934bda6fab5"
+            "ent_219d625c4012"
           ],
           "output": [
-            "ent_ee9e3b751629"
+            "ent_dcbfb901cf37",
+            "ent_cf7645d473ce",
+            "ent_f4b421eb8760"
           ]
         }
       ],
       "participants": [
-        "ent_40c32987712e",
-        "ent_2b6eba2d4618",
-        "ent_5fabfc03c31d",
-        "ent_6fc5c3e9b6c9",
-        "ent_c495057da2ca"
+        "ent_3ba2556a5016",
+        "ent_4bf6d106e4b2",
+        "ent_fd6889e0e859",
+        "ent_73f46e2c8c70",
+        "ent_a48b1187115d"
       ],
       "outcomes": [
-        "Structured world model",
-        "Validation report",
-        "Processing statistics"
+        "Structured world model with quality assessment"
       ]
     },
     {
-      "id": "proc_4d65ee7a817f",
-      "name": "Multi-Pass Extraction",
-      "description": "Enhanced extraction process with additional passes to capture implicit information",
+      "id": "proc_280685e2a27c",
+      "name": "Multi-Pass Enhancement",
+      "description": "Optional second pass to find implicit elements",
       "trigger": "User requests multiple extraction passes",
       "steps": [
         {
           "order": 1,
-          "action": "Execute standard extraction pipeline",
-          "actor": "ent_c495057da2ca",
+          "action": "Analyze existing model for gaps",
+          "actor": "ent_1a3445ebdecc",
           "input": [
-            "ent_0b826e705b09"
+            "ent_219d625c4012",
+            "ent_33b3abe319cc"
           ],
           "output": [
-            "ent_c934bda6fab5"
+            "ent_000d1fc79b17"
           ]
         },
         {
           "order": 2,
-          "action": "Analyze model for implicit entities and missing relations",
-          "actor": "ent_115e039262e1",
+          "action": "Structure delta into model format",
+          "actor": "ent_73f46e2c8c70",
           "input": [
-            "ent_c934bda6fab5",
-            "ent_0b826e705b09"
+            "ent_000d1fc79b17"
           ],
           "output": [
-            "ent_8dd0d6972bea"
+            "ent_c81f473328e9"
           ]
         },
         {
           "order": 3,
-          "action": "Structure delta extraction into world model format",
-          "actor": "ent_5fabfc03c31d",
+          "action": "Merge delta with existing model",
+          "actor": "ent_18d7200b500a",
           "input": [
-            "ent_8dd0d6972bea"
+            "ent_219d625c4012",
+            "ent_c81f473328e9"
           ],
           "output": [
-            "ent_c934bda6fab5"
+            "ent_c1a9f2b87aeb"
           ]
         },
         {
           "order": 4,
-          "action": "Merge original model with delta model",
-          "actor": "ent_28f604762afc",
+          "action": "Re-validate merged model",
+          "actor": "ent_a48b1187115d",
           "input": [
-            "ent_c934bda6fab5",
-            "ent_c934bda6fab5"
+            "ent_c1a9f2b87aeb"
           ],
           "output": [
-            "ent_c934bda6fab5"
-          ]
-        },
-        {
-          "order": 5,
-          "action": "Validate final merged model",
-          "actor": "ent_6fc5c3e9b6c9",
-          "input": [
-            "ent_c934bda6fab5"
-          ],
-          "output": [
-            "ent_ee9e3b751629"
+            "ent_6384e15454c5"
           ]
         }
       ],
       "participants": [
-        "ent_c495057da2ca",
-        "ent_115e039262e1",
-        "ent_5fabfc03c31d",
-        "ent_28f604762afc",
-        "ent_6fc5c3e9b6c9"
+        "ent_1a3445ebdecc",
+        "ent_73f46e2c8c70",
+        "ent_18d7200b500a",
+        "ent_a48b1187115d"
       ],
       "outcomes": [
-        "Enhanced world model",
-        "Improved completeness",
-        "Additional implicit information"
+        "Enhanced world model with implicit elements"
       ]
     },
     {
-      "id": "proc_f24451608e41",
-      "name": "World Model Query",
-      "description": "Natural language query processing against world models using graph patterns or LLM inference",
-      "trigger": "User asks question about world model",
+      "id": "proc_98037c8632b2",
+      "name": "World Model Querying",
+      "description": "Answer questions about world model content",
+      "trigger": "User asks natural language question",
       "steps": [
         {
           "order": 1,
-          "action": "Parse query against deterministic graph patterns",
-          "actor": "ent_b45bc9774721",
+          "action": "Try deterministic graph pattern matching",
+          "actor": "ent_cb4e6d581337",
           "input": [
-            "ent_c934bda6fab5"
+            "ent_90a67ca63deb",
+            "ent_219d625c4012"
           ],
           "output": [
-            "ent_bfbd32ed0fce"
+            "ent_b86c0c5df55d"
           ]
         },
         {
           "order": 2,
-          "action": "Fall back to LLM inference if no pattern matches",
-          "actor": "ent_b45bc9774721",
+          "action": "If no pattern matches, use LLM inference",
+          "actor": "ent_cb4e6d581337",
           "input": [
-            "ent_c934bda6fab5"
+            "ent_90a67ca63deb",
+            "ent_678d7cb5f967"
           ],
           "output": [
-            "ent_bfbd32ed0fce"
+            "ent_16b633ebd913"
           ]
         },
         {
           "order": 3,
-          "action": "Extract referenced entities from response",
-          "actor": "ent_b45bc9774721",
+          "action": "Format response with confidence and method",
+          "actor": "ent_cb4e6d581337",
           "input": [
-            "ent_bfbd32ed0fce"
+            "ent_4863bc38c316"
           ],
           "output": [
-            "ent_bfbd32ed0fce"
+            "ent_77d6681b4cd6"
           ]
         }
       ],
       "participants": [
-        "ent_b45bc9774721",
-        "ent_13d50e36bb08",
-        "ent_161dbd3fc1d1"
+        "ent_cb4e6d581337",
+        "ent_451339b0ae29",
+        "ent_7aa8cac3b938"
       ],
       "outcomes": [
-        "Natural language answer",
-        "Method used (graph vs inference)",
-        "Confidence score"
+        "Natural language answer with confidence score"
       ]
     },
     {
-      "id": "proc_236cff0d051b",
-      "name": "Incremental Refinement",
-      "description": "Update existing world model with new input while preserving existing structure",
-      "trigger": "User provides new input to refine existing model",
+      "id": "proc_9bf4e29cefd7",
+      "name": "Model Refinement",
+      "description": "Incrementally update existing model with new information",
+      "trigger": "User provides new input for existing model",
       "steps": [
         {
           "order": 1,
-          "action": "Summarize existing world model for context",
-          "actor": "ent_255bad1a8f97",
+          "action": "Extract only new or changed elements",
+          "actor": "ent_c29278dadeb6",
           "input": [
-            "ent_c934bda6fab5"
+            "ent_c556835e2793",
+            "ent_e8e82b437066"
           ],
-          "output": []
+          "output": [
+            "ent_000d1fc79b17"
+          ]
         },
         {
           "order": 2,
-          "action": "Extract only delta changes from new input",
-          "actor": "ent_255bad1a8f97",
+          "action": "Structure delta into model format",
+          "actor": "ent_73f46e2c8c70",
           "input": [
-            "ent_0b826e705b09",
-            "ent_c934bda6fab5"
+            "ent_000d1fc79b17"
           ],
           "output": [
-            "ent_8dd0d6972bea"
+            "ent_c81f473328e9"
           ]
         },
         {
           "order": 3,
-          "action": "Structure delta extraction into world model",
-          "actor": "ent_5fabfc03c31d",
+          "action": "Merge delta with existing model",
+          "actor": "ent_18d7200b500a",
           "input": [
-            "ent_8dd0d6972bea"
+            "ent_c556835e2793",
+            "ent_c81f473328e9"
           ],
           "output": [
-            "ent_c934bda6fab5"
+            "ent_12d0bafc183a"
           ]
         },
         {
           "order": 4,
-          "action": "Merge existing model with delta model",
-          "actor": "ent_28f604762afc",
+          "action": "Validate updated model",
+          "actor": "ent_a48b1187115d",
           "input": [
-            "ent_c934bda6fab5",
-            "ent_c934bda6fab5"
+            "ent_12d0bafc183a"
           ],
           "output": [
-            "ent_c934bda6fab5"
-          ]
-        },
-        {
-          "order": 5,
-          "action": "Validate merged result",
-          "actor": "ent_6fc5c3e9b6c9",
-          "input": [
-            "ent_c934bda6fab5"
-          ],
-          "output": [
-            "ent_ee9e3b751629"
+            "ent_0943d208b4b4"
           ]
         }
       ],
       "participants": [
-        "ent_255bad1a8f97",
-        "ent_5fabfc03c31d",
-        "ent_28f604762afc",
-        "ent_6fc5c3e9b6c9"
+        "ent_c29278dadeb6",
+        "ent_73f46e2c8c70",
+        "ent_18d7200b500a",
+        "ent_a48b1187115d"
       ],
       "outcomes": [
-        "Updated world model",
-        "Delta model",
-        "Merge statistics"
+        "Updated world model with new information integrated"
       ]
     },
     {
-      "id": "proc_9462f38e648e",
-      "name": "Timeline Management",
-      "description": "Version control for world model evolution with snapshot management and history tracking",
-      "trigger": "User adds snapshot to timeline",
+      "id": "proc_6f8d1b3b9054",
+      "name": "Model Transformation",
+      "description": "Apply natural language changes to world model",
+      "trigger": "User provides transformation instruction",
       "steps": [
         {
           "order": 1,
-          "action": "Create snapshot from current world model",
-          "actor": "ent_efd8e6d02833",
+          "action": "Analyze transformation requirements",
+          "actor": "ent_7d4d907c6be3",
           "input": [
-            "ent_c934bda6fab5"
+            "ent_708c7fd772e5",
+            "ent_4e4c23f67614"
           ],
           "output": [
-            "ent_732b7859ff0d"
+            "ent_a0409e075fb2"
           ]
         },
         {
           "order": 2,
-          "action": "Compute diff from previous snapshot if exists",
-          "actor": "ent_efd8e6d02833",
+          "action": "Generate entities/relations to add or modify",
+          "actor": "ent_7d4d907c6be3",
           "input": [
-            "ent_732b7859ff0d",
-            "ent_732b7859ff0d"
+            "ent_a0409e075fb2"
           ],
           "output": [
-            "ent_368daac5a198"
+            "ent_e94078707e05"
           ]
         },
         {
           "order": 3,
-          "action": "Add snapshot to timeline with metadata",
-          "actor": "ent_efd8e6d02833",
+          "action": "Apply changes to model",
+          "actor": "ent_7d4d907c6be3",
           "input": [
-            "ent_732b7859ff0d",
-            "ent_76dd683fdab0"
+            "ent_4e4c23f67614",
+            "ent_e94078707e05"
           ],
           "output": [
-            "ent_76dd683fdab0"
+            "ent_7fa0922f8f3f"
+          ]
+        },
+        {
+          "order": 4,
+          "action": "Re-validate transformed model",
+          "actor": "ent_a48b1187115d",
+          "input": [
+            "ent_7fa0922f8f3f"
+          ],
+          "output": [
+            "ent_6384e15454c5"
           ]
         }
       ],
       "participants": [
-        "ent_efd8e6d02833"
+        "ent_7d4d907c6be3",
+        "ent_a48b1187115d"
       ],
       "outcomes": [
-        "Updated timeline",
-        "Snapshot with diff",
-        "Evolution tracking"
+        "Modified world model reflecting requested changes"
+      ]
+    },
+    {
+      "id": "proc_7fca945123b7",
+      "name": "Model Export",
+      "description": "Convert world model to external formats",
+      "trigger": "User requests specific export format",
+      "steps": [
+        {
+          "order": 1,
+          "action": "Select appropriate export formatter",
+          "actor": "ent_f519b3d611ac",
+          "input": [
+            "ent_737d89bd6ec6"
+          ],
+          "output": [
+            "ent_8dd12f55973a"
+          ]
+        },
+        {
+          "order": 2,
+          "action": "Transform model to target format",
+          "actor": "ent_f519b3d611ac",
+          "input": [
+            "ent_219d625c4012",
+            "ent_8dd12f55973a"
+          ],
+          "output": [
+            "ent_e6031aa4ba1a"
+          ]
+        },
+        {
+          "order": 3,
+          "action": "Write to file or stdout",
+          "actor": "ent_12d369506444",
+          "input": [
+            "ent_e6031aa4ba1a"
+          ],
+          "output": [
+            "ent_c0fef82abb77"
+          ]
+        }
+      ],
+      "participants": [
+        "ent_f519b3d611ac",
+        "ent_12d369506444"
+      ],
+      "outcomes": [
+        "World model in requested format for external consumption"
       ]
     }
   ],
   "constraints": [
     {
-      "id": "cstr_10e20fba92c3",
-      "name": "Entity ID Uniqueness",
-      "type": "invariant",
-      "description": "All entity IDs within a world model must be unique",
-      "scope": [
-        "ent_c934bda6fab5",
-        "ent_2e5d4796bbb2"
-      ],
-      "severity": "hard"
-    },
-    {
-      "id": "cstr_88a54ec7bfe7",
-      "name": "Relation Reference Integrity",
-      "type": "dependency",
-      "description": "Relations must reference existing entity IDs for both source and target",
-      "scope": [
-        "ent_8372399c4e3e",
-        "ent_2e5d4796bbb2"
-      ],
-      "severity": "hard"
-    },
-    {
-      "id": "cstr_fda41f47ac42",
-      "name": "Process Participant Validity",
-      "type": "dependency",
-      "description": "Process participants and step actors must reference existing entity IDs",
-      "scope": [
-        "ent_efdad2b2578e",
-        "ent_2e5d4796bbb2"
-      ],
-      "severity": "hard"
-    },
-    {
-      "id": "cstr_539e78d7a955",
-      "name": "Constraint Scope Validity",
-      "type": "dependency",
-      "description": "Constraint scope arrays must reference existing entity IDs",
-      "scope": [
-        "ent_44c3123fcbad",
-        "ent_2e5d4796bbb2"
-      ],
-      "severity": "hard"
-    },
-    {
-      "id": "cstr_2918a62caa6e",
-      "name": "Chunk Size Limit",
+      "id": "cstr_d40365030a2f",
+      "name": "Token Limit Constraint",
       "type": "capacity",
-      "description": "Individual chunks must not exceed maximum token limit for LLM processing",
+      "description": "Input chunks must not exceed 80,000 tokens to fit in LLM context window",
       "scope": [
-        "ent_21d5ba1da125",
-        "ent_40c32987712e"
+        "ent_4bf6d106e4b2",
+        "ent_7aa8cac3b938"
       ],
       "severity": "hard"
     },
     {
-      "id": "cstr_64d13ae9a7df",
-      "name": "LLM Response Timeout",
+      "id": "cstr_624cf2fd25a7",
+      "name": "Schema Validation",
+      "type": "invariant",
+      "description": "All world models must conform to the defined Zod schema structure",
+      "scope": [
+        "ent_320022dfe979",
+        "ent_73f46e2c8c70",
+        "ent_a48b1187115d"
+      ],
+      "severity": "hard"
+    },
+    {
+      "id": "cstr_346ecad3dc8a",
+      "name": "Entity Reference Integrity",
+      "type": "dependency",
+      "description": "All relation sources/targets and process participants must reference valid entity IDs",
+      "scope": [
+        "ent_0a6222aaa979",
+        "ent_2847076e0df4",
+        "ent_a48b1187115d"
+      ],
+      "severity": "hard"
+    },
+    {
+      "id": "cstr_34170a8ca42c",
+      "name": "Unique Entity IDs",
+      "type": "invariant",
+      "description": "Each entity within a world model must have a unique identifier",
+      "scope": [
+        "ent_b3bcacdc1812",
+        "ent_73f46e2c8c70"
+      ],
+      "severity": "hard"
+    },
+    {
+      "id": "cstr_81b63c76aba8",
+      "name": "Process Step Ordering",
       "type": "temporal",
-      "description": "LLM calls must complete within configured timeout period",
+      "description": "Process steps should be ordered sequentially without gaps or duplicates",
       "scope": [
-        "ent_161dbd3fc1d1"
-      ],
-      "severity": "hard"
-    },
-    {
-      "id": "cstr_958ec4dea818",
-      "name": "Entity Name Consistency",
-      "type": "rule",
-      "description": "Entity names should be consistent across merges and not contain only whitespace",
-      "scope": [
-        "ent_2e5d4796bbb2",
-        "ent_28f604762afc"
+        "ent_2847076e0df4",
+        "ent_c8e4b0fe277a"
       ],
       "severity": "soft"
     },
     {
-      "id": "cstr_175a22d3a6c7",
+      "id": "cstr_bef222dada21",
+      "name": "Retry Limit",
+      "type": "boundary",
+      "description": "LLM API calls are limited to 3 retry attempts with exponential backoff",
+      "scope": [
+        "ent_7aa8cac3b938"
+      ],
+      "severity": "hard"
+    },
+    {
+      "id": "cstr_b13d3e7e90f0",
+      "name": "Entity Name Deduplication",
+      "type": "rule",
+      "description": "Entities with identical normalized names should be merged during model combination",
+      "scope": [
+        "ent_18d7200b500a",
+        "ent_73f46e2c8c70"
+      ],
+      "severity": "soft"
+    },
+    {
+      "id": "cstr_ed7f9e1e87c5",
+      "name": "Quality Score Range",
+      "type": "boundary",
+      "description": "Model quality scores must be between 0 and 100",
+      "scope": [
+        "ent_a48b1187115d"
+      ],
+      "severity": "hard"
+    },
+    {
+      "id": "cstr_351c320afaf4",
+      "name": "Circular Dependency Detection",
+      "type": "invariant",
+      "description": "Models should not contain circular dependencies between entities",
+      "scope": [
+        "ent_a48b1187115d",
+        "ent_451339b0ae29"
+      ],
+      "severity": "soft"
+    },
+    {
+      "id": "cstr_aff85773e02e",
       "name": "Confidence Score Range",
       "type": "boundary",
-      "description": "All confidence scores must be between 0.0 and 1.0 inclusive",
+      "description": "All confidence scores must be between 0.0 and 1.0",
       "scope": [
-        "ent_c934bda6fab5",
-        "ent_8dd0d6972bea",
-        "ent_bfbd32ed0fce"
+        "ent_b3bcacdc1812",
+        "ent_320022dfe979"
+      ],
+      "severity": "hard"
+    },
+    {
+      "id": "cstr_4ae97d4003f3",
+      "name": "API Timeout",
+      "type": "temporal",
+      "description": "LLM API calls must complete within 2 minutes",
+      "scope": [
+        "ent_7aa8cac3b938"
+      ],
+      "severity": "hard"
+    },
+    {
+      "id": "cstr_39bf07da1ce8",
+      "name": "Non-Empty Extraction",
+      "type": "rule",
+      "description": "Extractions should contain at least one entity or relation to be considered valid",
+      "scope": [
+        "ent_fd6889e0e859"
       ],
       "severity": "soft"
-    },
-    {
-      "id": "cstr_58ec64fd302e",
-      "name": "CLI Input Validation",
-      "type": "boundary",
-      "description": "CLI commands must receive valid input parameters and file paths",
-      "scope": [
-        "ent_ae13d5dbca78"
-      ],
-      "severity": "hard"
-    },
-    {
-      "id": "cstr_6f0a54096ce4",
-      "name": "Schema Compliance",
-      "type": "invariant",
-      "description": "All data structures must comply with their respective Zod schemas",
-      "scope": [
-        "ent_0e911d407267",
-        "ent_c934bda6fab5",
-        "ent_8dd0d6972bea"
-      ],
-      "severity": "hard"
     }
   ],
   "metadata": {
     "source_type": "code",
-    "source_summary": "TypeScript source code for a comprehensive world model extraction system with CLI, agents, utilities, and export capabilities",
+    "source_summary": "Analysis of SWM codebase revealing agent-based architecture for extracting, validating, and manipulating structured world models from various input sources",
     "confidence": 0.95,
     "extraction_notes": [
-      "Extracted architectural components from TypeScript modules focusing on data flow and system interactions",
-      "Identified agent-based processing pipeline with clear stage dependencies",
-      "Captured world model schema with entities, relations, processes, and constraints as core concepts",
-      "Mapped CLI command structure to underlying system operations",
-      "Noted comprehensive utility systems for graph operations, merging, timeline management, and export formats",
-      "System shows sophisticated retry logic, validation, and error handling throughout"
+      "Identified comprehensive multi-agent architecture with clear separation of concerns",
+      "System supports multiple input types and provides extensive CLI and programmatic interfaces",
+      "Strong validation and quality assurance throughout pipeline",
+      "Rich ecosystem of analysis, comparison, and export tools",
+      "MCP server integration enables live AI assistant interaction",
+      "Timeline and versioning support for model evolution tracking",
+      "Mathematical operations (algebra) on world models enable composition workflows"
     ]
   }
 }
