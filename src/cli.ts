@@ -370,7 +370,7 @@ program
 program
   .command("model")
   .description("Build a structured world model from input")
-  .argument("[input]", "Text input or file path")
+  .argument("[input...]", "Text input (multiple words joined) or file path")
   .option(
     "-f, --file <paths...>",
     "Read input from one or more files (concatenated)",
@@ -417,10 +417,11 @@ program
   .option("-d, --description <desc>", "Set the world model description")
   .action(
     async (
-      inputArg: string | undefined,
+      inputArgs: string[],
       opts: Record<string, string | boolean | undefined>,
     ) => {
       try {
+        const inputArg = inputArgs.length > 0 ? inputArgs.join(" ") : undefined;
         const { raw, detectedUrl, fileCount } = await readInputAsync(
           inputArg,
           opts.file as string | string[] | undefined,
