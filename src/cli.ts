@@ -1272,10 +1272,17 @@ program
           case "mcp":
             output = JSON.stringify(toMcpSchema(model), null, 2);
             break;
+          case "markdown-table":
+          case "table": {
+            const { toMarkdownTable } =
+              await import("./export/markdown-table.js");
+            output = toMarkdownTable(model);
+            break;
+          }
           default:
             console.error(
               chalk.red(
-                `Unknown export format: ${opts.as}. Use: claude-md, system-prompt, mcp`,
+                `Unknown export format: ${opts.as}. Use: claude-md, system-prompt, mcp, markdown-table`,
               ),
             );
             process.exit(1);

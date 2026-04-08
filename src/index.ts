@@ -49,6 +49,7 @@ export type { FixResult } from "./utils/fix.js";
 export { toClaudeMd } from "./export/claude-md.js";
 export { toSystemPrompt } from "./export/system-prompt.js";
 export { toMcpSchema } from "./export/mcp-schema.js";
+export { toMarkdownTable } from "./export/markdown-table.js";
 export { getWorldModelJsonSchema } from "./schema/json-schema.js";
 
 // Timeline
