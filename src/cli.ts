@@ -954,4 +954,96 @@ program
     }
   });
 
+// ─── entities ─────────────────────────────────────────────────
+program
+  .command("entities")
+  .description("List all entities in a world model")
+  .argument("<model>", "Path to world model JSON")
+  .option(
+    "-t, --type <type>",
+    "Filter by entity type (actor, system, object, ...)",
+  )
+  .option("--json", "Output as JSON array")
+  .action(
+    (modelPath: string, opts: Record<string, string | boolean | undefined>) => {
+      try {
+        const model = readModel(modelPath);
+        let entities = model.entities;
+        if (opts.type) {
+          entities = entities.filter((e) => e.type === opts.type);
+        }
+        if (opts.json) {
+          console.log(JSON.stringify(entities, null, 2));
+        } else {
+          for (const e of entities) {
+            const conf =
+              e.confidence !== undefined
+                ? chalk.gray(` (${Math.round(e.confidence * 100)}%)`)
+                : "";
+            console.log(`  [${e.type}] ${chalk.bold(e.name)}${conf}`);
+            console.log(chalk.gray(`    ${e.description}`));
+          }
+          console.error(
+            chalk.gray(
+              `\n  ${entities.length} entities${opts.type ? ` of type "${opts.type}"` : ""}`,
+            ),
+          );
+        }
+      } catch (err) {
+        console.error(
+          chalk.red(
+            `Error: ${err instanceof Error ? err.message : String(err)}`,
+          ),
+        );
+        process.exit(1);
+      }
+    },
+  );
+
+// ─── relations ────────────────────────────────────────────────
+program
+  .command("relations")
+  .description("List all relations in a world model")
+  .argument("<model>", "Path to world model JSON")
+  .option(
+    "-t, --type <type>",
+    "Filter by relation type (uses, depends_on, ...)",
+  )
+  .option("--json", "Output as JSON array")
+  .action(
+    (modelPath: string, opts: Record<string, string | boolean | undefined>) => {
+      try {
+        const model = readModel(modelPath);
+        let relations = model.relations;
+        if (opts.type) {
+          relations = relations.filter((r) => r.type === opts.type);
+        }
+        if (opts.json) {
+          console.log(JSON.stringify(relations, null, 2));
+        } else {
+          for (const r of relations) {
+            const src =
+              model.entities.find((e) => e.id === r.source)?.name ?? r.source;
+            const tgt =
+              model.entities.find((e) => e.id === r.target)?.name ?? r.target;
+            console.log(`  ${src} ${chalk.yellow(`—[${r.type}]→`)} ${tgt}`);
+            if (r.label) console.log(chalk.gray(`    ${r.label}`));
+          }
+          console.error(
+            chalk.gray(
+              `\n  ${relations.length} relations${opts.type ? ` of type "${opts.type}"` : ""}`,
+            ),
+          );
+        }
+      } catch (err) {
+        console.error(
+          chalk.red(
+            `Error: ${err instanceof Error ? err.message : String(err)}`,
+          ),
+        );
+        process.exit(1);
+      }
+    },
+  );
+
 program.parse();
