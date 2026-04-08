@@ -304,7 +304,7 @@ program
         }
 
         const passes = parseInt((opts.passes as string) ?? "1", 10) || 1;
-        const result = await buildWorldModel(input, {
+        let result = await buildWorldModel(input, {
           ...stageCallbacks(opts.quiet as boolean),
           passes,
           model: opts.model as string | undefined,
@@ -318,6 +318,18 @@ program
           if (!opts.quiet && fixes.length > 0) {
             console.error(chalk.yellow(`\n  Auto-fixed: ${fixes.join(", ")}`));
           }
+          // Re-validate after fix to get accurate score
+          const { validationAgent: va } =
+            await import("./agents/validation.js");
+          const { validation: revalidation } = await va({
+            input,
+            worldModel: finalModel,
+          });
+          result = {
+            ...result,
+            worldModel: finalModel,
+            validation: revalidation,
+          };
         }
 
         const output = formatOutput(
