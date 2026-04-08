@@ -2400,4 +2400,194 @@ program
     }
   });
 
+// ═══════════════════════════════════════════════════════════════════
+// Ada Compiler Commands (from @swm/compiler + @swm/bridge)
+// ═══════════════════════════════════════════════════════════════════
+
+program
+  .command("compile")
+  .description(
+    "Compile intent through Ada's 9-stage pipeline (CTX→INT→PER→ENT→PRO→SYN→VER→GOV→BLD)",
+  )
+  .argument(
+    "<intent>",
+    "What to build — describe the system in natural language",
+  )
+  .option("--amend", "Extend existing blueprint rather than replacing")
+  .option("--no-execute", "Write config only, skip Claude spawn")
+  .option("-m, --model <model>", "Claude model to use")
+  .option("--api-key <key>", "Anthropic API key")
+  .action(async (intent: string, opts: Record<string, unknown>) => {
+    try {
+      const { MotherCompiler } = await import("@swm/compiler");
+      const compiler = new MotherCompiler();
+
+      console.error(chalk.blue("■ Ada Semantic Compiler"));
+      console.error(
+        chalk.gray(
+          `  Intent: ${intent.slice(0, 80)}${intent.length > 80 ? "..." : ""}`,
+        ),
+      );
+      console.error(
+        chalk.gray(
+          "  Pipeline: CTX → INT → PER → ENT → PRO → SYN → VER → GOV → BLD\n",
+        ),
+      );
+
+      const result = await compiler.compile(intent, {
+        apiKey: opts.apiKey as string | undefined,
+        onStageStart: (stage) => {
+          console.error(chalk.yellow(`  ▸ ${stage}...`));
+        },
+      });
+
+      console.error(
+        chalk.green(
+          `\n  ✓ ${result.status} (confidence: ${result.governorDecision.confidence})`,
+        ),
+      );
+      console.log(JSON.stringify(result.blueprint, null, 2));
+    } catch (err) {
+      handleError(err);
+    }
+  });
+
+program
+  .command("build")
+  .description(
+    "Unified pipeline: extract world model from input, then compile intent into architecture",
+  )
+  .argument("<intent>", "What to build")
+  .option("-f, --file <paths...>", "Input file(s) to extract from")
+  .option("-p, --passes <n>", "Extraction passes (1-3)", "1")
+  .option("-m, --model <model>", "Claude model")
+  .option("--api-key <key>", "Anthropic API key")
+  .option("--format <format>", "Output format: json, yaml", "json")
+  .action(async (intent: string, opts: Record<string, unknown>) => {
+    try {
+      const files = opts.file as string[] | undefined;
+      let raw = "";
+      let sourceType: PipelineInput["sourceType"] = "text";
+
+      if (files && files.length > 0) {
+        for (const f of files) {
+          const resolved = resolve(f);
+          raw += readFileSync(resolved, "utf-8") + "\n\n";
+        }
+        sourceType = detectSourceType(raw, files[0]);
+      } else {
+        raw = intent;
+      }
+
+      const { buildEnrichedModel } = await import("@swm/bridge");
+
+      console.error(chalk.blue("■ SWM Unified Pipeline"));
+      console.error(chalk.gray("  Phase 1: SWM extraction..."));
+
+      const result = await buildEnrichedModel(
+        { raw, sourceType, name: "unified-build" },
+        intent,
+        {
+          passes: parseInt(opts.passes as string) || 1,
+          extractionModel: opts.model as string | undefined,
+          apiKey: opts.apiKey as string | undefined,
+          onStageStart: (stage) => {
+            console.error(chalk.yellow(`  ▸ Ada ${stage}...`));
+          },
+        },
+      );
+
+      console.error(
+        chalk.green(
+          `\n  ✓ Unified build complete (${result.totalDurationMs}ms)`,
+        ),
+      );
+      console.error(
+        chalk.gray(`    Entities: ${result.enrichedModel.entities.length}`),
+      );
+      console.error(
+        chalk.gray(
+          `    Bounded contexts: ${result.enrichedModel.boundedContexts.length}`,
+        ),
+      );
+      console.error(
+        chalk.gray(`    Compilation: ${result.compilation.status}`),
+      );
+
+      if (opts.format === "yaml") {
+        console.log(yamlStringify(result.enrichedModel));
+      } else {
+        console.log(JSON.stringify(result.enrichedModel, null, 2));
+      }
+    } catch (err) {
+      handleError(err);
+    }
+  });
+
+program
+  .command("scan")
+  .description(
+    "Scan codebase structure (Ada CTX stage — no LLM, shows what the compiler sees)",
+  )
+  .option("-d, --dir <path>", "Directory to scan", ".")
+  .action(async (opts: Record<string, unknown>) => {
+    try {
+      const { analyzeCodebase } = await import("@swm/compiler");
+      const dir = resolve(opts.dir as string);
+
+      console.error(chalk.blue("■ Codebase Scan (CTX)"));
+      console.error(chalk.gray(`  Directory: ${dir}\n`));
+
+      const ctx = await analyzeCodebase(dir);
+
+      console.log(JSON.stringify(ctx, null, 2));
+    } catch (err) {
+      handleError(err);
+    }
+  });
+
+program
+  .command("serve-unified")
+  .description(
+    "Start unified MCP server with SWM extraction tools + Ada governance tools",
+  )
+  .argument("[model]", "Path to world model JSON (optional)")
+  .option("--no-ada", "Disable Ada tools even if .ada/ exists")
+  .action(
+    async (modelPath: string | undefined, opts: Record<string, unknown>) => {
+      try {
+        console.error(chalk.blue("■ SWM Unified MCP Server"));
+
+        if (modelPath) {
+          const resolved = resolve(modelPath);
+          if (!existsSync(resolved)) {
+            console.error(chalk.red(`File not found: ${resolved}`));
+            process.exit(1);
+          }
+          const model = await readModel(modelPath);
+          console.error(
+            chalk.gray(
+              `  World Model: ${model.name} (${model.entities.length} entities)`,
+            ),
+          );
+        }
+
+        const hasAda =
+          opts.ada !== false && existsSync(resolve(".ada/state.json"));
+        console.error(
+          chalk.gray(`  Ada tools: ${hasAda ? "enabled" : "disabled"}`),
+        );
+        console.error(chalk.green("  Listening on stdio...\n"));
+
+        const { startUnifiedServer } = await import("@swm/mcp-server");
+        await startUnifiedServer({
+          worldModelPath: modelPath,
+          enableAda: hasAda,
+        });
+      } catch (err) {
+        handleError(err);
+      }
+    },
+  );
+
 program.parse();
