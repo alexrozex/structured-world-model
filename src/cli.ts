@@ -449,6 +449,14 @@ program
           }
           console.error(chalk.gray(`  Summary: ${summarize(finalModel)}`));
           console.error(chalk.gray(`\n  Total: ${result.totalDurationMs}ms`));
+        } else {
+          // Quiet mode: still emit score to stderr for CI logging
+          const v = result.validation;
+          if (v.score !== undefined) {
+            console.error(
+              `score=${v.score} entities=${v.stats.entities} relations=${v.stats.relations}`,
+            );
+          }
         }
 
         // Quality gate
