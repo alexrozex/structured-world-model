@@ -135,8 +135,23 @@ async function readStdin(): Promise<string> {
 
 async function readInputAsync(
   inputArg?: string,
-  filePath?: string,
+  filePaths?: string | string[],
 ): Promise<{ raw: string; detectedUrl?: string }> {
+  // Multiple files — concatenate with headers
+  if (Array.isArray(filePaths) && filePaths.length > 1) {
+    const parts: string[] = [];
+    for (const fp of filePaths) {
+      const resolved = resolve(fp);
+      if (!existsSync(resolved)) throw new Error(`File not found: ${resolved}`);
+      const content = readFileSync(resolved, "utf-8");
+      parts.push(`// === ${fp} ===\n${content}`);
+    }
+    return { raw: parts.join("\n\n") };
+  }
+
+  // Single file path (extract from array if needed)
+  const filePath = Array.isArray(filePaths) ? filePaths[0] : filePaths;
+
   // Check if input is a URL — fetch it
   const candidate = filePath || inputArg || "";
   if (isUrl(candidate)) {
@@ -212,7 +227,10 @@ program
   .command("model")
   .description("Build a structured world model from input")
   .argument("[input]", "Text input or file path")
-  .option("-f, --file <path>", "Read input from file")
+  .option(
+    "-f, --file <paths...>",
+    "Read input from one or more files (concatenated)",
+  )
   .option("-o, --output <path>", "Write output to file")
   .option(
     "-t, --type <type>",
@@ -250,7 +268,7 @@ program
       try {
         const { raw, detectedUrl } = await readInputAsync(
           inputArg,
-          opts.file as string | undefined,
+          opts.file as string | string[] | undefined,
         );
         if (!raw.trim()) {
           console.error(chalk.red("Error: No input provided"));
@@ -261,7 +279,12 @@ program
           (opts.type as PipelineInput["sourceType"]) ||
           (detectedUrl
             ? "url"
-            : detectSourceType(raw, (opts.file as string) ?? inputArg));
+            : detectSourceType(
+                raw,
+                (Array.isArray(opts.file)
+                  ? opts.file[0]
+                  : (opts.file as string)) ?? inputArg,
+              ));
         const input: PipelineInput = {
           raw,
           sourceType,
