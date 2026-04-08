@@ -29,11 +29,15 @@ export interface PipelineStage<TIn = unknown, TOut = unknown> {
 export class Pipeline {
   private stages: PipelineStage[] = [];
   private onStageStart?: (name: string) => void;
-  private onStageEnd?: (name: string, durationMs: number) => void;
+  private onStageEnd?: (
+    name: string,
+    durationMs: number,
+    data?: unknown,
+  ) => void;
 
   constructor(options?: {
     onStageStart?: (name: string) => void;
-    onStageEnd?: (name: string, durationMs: number) => void;
+    onStageEnd?: (name: string, durationMs: number, data?: unknown) => void;
   }) {
     this.onStageStart = options?.onStageStart;
     this.onStageEnd = options?.onStageEnd;
@@ -56,7 +60,7 @@ export class Pipeline {
       current = await stage.run(current);
 
       const durationMs = Date.now() - start;
-      this.onStageEnd?.(stage.name, durationMs);
+      this.onStageEnd?.(stage.name, durationMs, current);
 
       stageResults.push({
         stage: stage.name,

@@ -10,7 +10,7 @@ import type { WorldModelType } from "./schema/index.js";
 
 export interface SWMOptions {
   onStageStart?: (name: string) => void;
-  onStageEnd?: (name: string, durationMs: number) => void;
+  onStageEnd?: (name: string, durationMs: number, data?: unknown) => void;
   /** Number of extraction passes (1 = standard, 2+ = deeper). Default 1. Max 3. */
   passes?: number;
   /** Claude model to use. Default: claude-sonnet-4-20250514 */

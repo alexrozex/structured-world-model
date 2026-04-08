@@ -210,8 +210,28 @@ function stageCallbacks(quiet?: boolean) {
     onStageStart: (name: string) => {
       if (!quiet) process.stderr.write(chalk.yellow(`  ▸ ${name}...`));
     },
-    onStageEnd: (_name: string, ms: number) => {
-      if (!quiet) process.stderr.write(chalk.green(` done (${ms}ms)\n`));
+    onStageEnd: (_name: string, ms: number, data?: unknown) => {
+      if (!quiet) {
+        let detail = "";
+        if (data && typeof data === "object") {
+          const d = data as Record<string, unknown>;
+          // After structuring or validation, show model stats
+          if (d.worldModel && typeof d.worldModel === "object") {
+            const wm = d.worldModel as Record<string, unknown[]>;
+            detail = chalk.gray(
+              ` (${wm.entities?.length ?? "?"}e ${wm.relations?.length ?? "?"}r ${wm.processes?.length ?? "?"}p ${wm.constraints?.length ?? "?"}c)`,
+            );
+          }
+          // After extraction, show raw extraction counts
+          if (d.extraction && typeof d.extraction === "object") {
+            const ex = d.extraction as Record<string, unknown[]>;
+            detail = chalk.gray(
+              ` (${ex.entities?.length ?? "?"}e ${ex.relations?.length ?? "?"}r)`,
+            );
+          }
+        }
+        process.stderr.write(chalk.green(` done (${ms}ms)`) + detail + "\n");
+      }
     },
   };
 }
