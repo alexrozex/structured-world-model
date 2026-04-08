@@ -258,6 +258,63 @@ function run() {
     );
   }
 
+  // Dangling step actor cleared
+  {
+    const { model, fixes } = fixWorldModel(
+      makeModel({
+        processes: [
+          {
+            id: "proc_1",
+            name: "Flow",
+            description: "test",
+            steps: [{ order: 1, action: "do", actor: "ent_gone" }],
+            participants: ["ent_1"],
+            outcomes: ["done"],
+          },
+        ],
+      }),
+    );
+    assert(
+      model.processes[0].steps[0].actor === undefined,
+      "Dangling actor: cleared",
+    );
+    assert(
+      fixes.some((f) => f.includes("dangling step actors")),
+      "Dangling actor: fix reported",
+    );
+  }
+
+  // Duplicate step orders renumbered
+  {
+    const { model, fixes } = fixWorldModel(
+      makeModel({
+        processes: [
+          {
+            id: "proc_1",
+            name: "Flow",
+            description: "test",
+            steps: [
+              { order: 1, action: "a" },
+              { order: 1, action: "b" },
+              { order: 1, action: "c" },
+            ],
+            participants: ["ent_1"],
+            outcomes: ["done"],
+          },
+        ],
+      }),
+    );
+    const orders = model.processes[0].steps.map((s) => s.order);
+    assert(
+      JSON.stringify(orders) === "[1,2,3]",
+      "Dupe orders: renumbered sequentially",
+    );
+    assert(
+      fixes.some((f) => f.includes("Renumbered")),
+      "Dupe orders: fix reported",
+    );
+  }
+
   console.log(`\n═══ ${passed}/${passed + failed} passed ═══\n`);
   if (failed > 0) process.exit(1);
 }

@@ -122,6 +122,42 @@ export function fixWorldModel(model: WorldModelType): FixResult {
     if (removed > 0) fixes.push(`Removed ${removed} duplicate relations`);
   }
 
+  // Fix 9: Clear dangling step actors
+  {
+    const ids = entityIds();
+    let fixedCount = 0;
+    processes = processes.map((p) => ({
+      ...p,
+      steps: p.steps.map((s) => {
+        if (s.actor && !ids.has(s.actor)) {
+          fixedCount++;
+          return { ...s, actor: undefined };
+        }
+        return s;
+      }),
+    }));
+    if (fixedCount > 0)
+      fixes.push(`Cleared ${fixedCount} dangling step actors`);
+  }
+
+  // Fix 10: Renumber duplicate step orders sequentially
+  {
+    let fixedCount = 0;
+    processes = processes.map((p) => {
+      const orders = p.steps.map((s) => s.order);
+      const hasDupes = new Set(orders).size !== orders.length;
+      if (hasDupes) {
+        fixedCount++;
+        return { ...p, steps: p.steps.map((s, i) => ({ ...s, order: i + 1 })) };
+      }
+      return p;
+    });
+    if (fixedCount > 0)
+      fixes.push(
+        `Renumbered steps in ${fixedCount} processes with duplicate orders`,
+      );
+  }
+
   return {
     model: { ...model, entities, relations, processes, constraints },
     fixes,
