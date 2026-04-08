@@ -665,6 +665,7 @@ program
             ),
           );
           let rebuilding = false;
+          let previousModel: WorldModelType | null = finalModel;
           for (const wp of watchPaths) {
             watch(resolve(wp as string), async (eventType) => {
               if (eventType !== "change" || rebuilding) return;
@@ -714,6 +715,14 @@ program
                 } else {
                   console.log(newOutput);
                 }
+                // Show diff from previous build
+                if (previousModel) {
+                  const wd = diffWorldModels(previousModel, newFinal);
+                  if (wd.summary !== "No changes") {
+                    console.error(chalk.gray(`  Changes: ${wd.summary}`));
+                  }
+                }
+                previousModel = newFinal;
               } catch (e) {
                 console.error(
                   chalk.red(
