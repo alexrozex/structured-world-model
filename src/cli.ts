@@ -146,10 +146,71 @@ async function readStdin(): Promise<string> {
   return Buffer.concat(chunks).toString("utf-8");
 }
 
+const CODE_EXTS = new Set([
+  "ts",
+  "tsx",
+  "js",
+  "jsx",
+  "py",
+  "rb",
+  "go",
+  "rs",
+  "java",
+  "c",
+  "cpp",
+  "cs",
+  "swift",
+  "kt",
+]);
+const DOC_EXTS = new Set([
+  "json",
+  "yaml",
+  "yml",
+  "xml",
+  "csv",
+  "toml",
+  "md",
+  "txt",
+  "rst",
+]);
+const ALL_EXTS = new Set([...CODE_EXTS, ...DOC_EXTS]);
+
+function expandDirectories(paths: string[]): string[] {
+  const { readdirSync, statSync } =
+    require("node:fs") as typeof import("node:fs");
+  const { join } = require("node:path") as typeof import("node:path");
+  const result: string[] = [];
+  for (const p of paths) {
+    const resolved = resolve(p);
+    try {
+      if (statSync(resolved).isDirectory()) {
+        const files = readdirSync(resolved, { recursive: true }) as string[];
+        for (const f of files) {
+          const ext = String(f).split(".").pop()?.toLowerCase() ?? "";
+          if (ALL_EXTS.has(ext)) result.push(join(resolved, String(f)));
+        }
+      } else {
+        result.push(resolved);
+      }
+    } catch {
+      result.push(resolved);
+    }
+  }
+  return result;
+}
+
 async function readInputAsync(
   inputArg?: string,
   filePaths?: string | string[],
 ): Promise<{ raw: string; detectedUrl?: string }> {
+  // Expand directories into file lists
+  if (filePaths) {
+    const paths = Array.isArray(filePaths) ? filePaths : [filePaths];
+    const expanded = expandDirectories(paths);
+    if (expanded.length > 1) filePaths = expanded;
+    else if (expanded.length === 1) filePaths = expanded[0];
+  }
+
   // Multiple files — concatenate with headers
   if (Array.isArray(filePaths) && filePaths.length > 1) {
     const parts: string[] = [];
