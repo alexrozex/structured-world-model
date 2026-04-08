@@ -261,6 +261,7 @@ program
     "--min-score <n>",
     "Exit non-zero if quality score is below this threshold (0-100)",
   )
+  .option("--watch", "Watch input file and rebuild on change")
   .action(
     async (
       inputArg: string | undefined,
@@ -378,6 +379,93 @@ program
             );
             process.exit(1);
           }
+        }
+        // Watch mode
+        if (opts.watch) {
+          const watchPaths = Array.isArray(opts.file)
+            ? opts.file
+            : opts.file
+              ? [opts.file as string]
+              : inputArg
+                ? [inputArg]
+                : [];
+          if (
+            watchPaths.length === 0 ||
+            !watchPaths.every((p) => existsSync(resolve(p as string)))
+          ) {
+            console.error(
+              chalk.yellow("  --watch requires a file path (-f or argument)"),
+            );
+            return;
+          }
+          const { watch } = await import("node:fs");
+          console.error(
+            chalk.blue(
+              `\n  Watching ${watchPaths.length} file(s) for changes... (Ctrl+C to stop)\n`,
+            ),
+          );
+          let rebuilding = false;
+          for (const wp of watchPaths) {
+            watch(resolve(wp as string), async (eventType) => {
+              if (eventType !== "change" || rebuilding) return;
+              rebuilding = true;
+              console.error(
+                chalk.gray(
+                  `\n  [${new Date().toLocaleTimeString()}] Change detected, rebuilding...`,
+                ),
+              );
+              try {
+                const { raw: newRaw } = await readInputAsync(
+                  inputArg,
+                  opts.file as string | string[] | undefined,
+                );
+                const newInput: PipelineInput = {
+                  raw: newRaw,
+                  sourceType: sourceType,
+                  name: input.name,
+                };
+                const newResult = await buildWorldModel(newInput, {
+                  ...stageCallbacks(opts.quiet as boolean),
+                  passes,
+                  model: opts.model as string | undefined,
+                });
+                let newFinal = newResult.worldModel;
+                if (opts.fix) {
+                  const { fixWorldModel } = await import("./utils/fix.js");
+                  const { model: fixed } = fixWorldModel(newFinal);
+                  newFinal = fixed;
+                }
+                const newOutput = formatOutput(
+                  newFinal,
+                  (opts.format as string) ?? "json",
+                  (opts.pretty as boolean) ?? true,
+                );
+                if (opts.output) {
+                  writeFileSync(
+                    resolve(opts.output as string),
+                    newOutput,
+                    "utf-8",
+                  );
+                  console.error(
+                    chalk.green(
+                      `  ✓ Updated ${opts.output} — ${newResult.validation.stats.entities} entities, score: ${newResult.validation.score}/100`,
+                    ),
+                  );
+                } else {
+                  console.log(newOutput);
+                }
+              } catch (e) {
+                console.error(
+                  chalk.red(
+                    `  Rebuild error: ${e instanceof Error ? e.message : String(e)}`,
+                  ),
+                );
+              }
+              rebuilding = false;
+            });
+          }
+          // Keep process alive
+          await new Promise(() => {});
         }
       } catch (err) {
         console.error(
