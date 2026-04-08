@@ -29,7 +29,7 @@ export async function fetchUrl(
   return { text: raw, contentType };
 }
 
-function stripHtml(html: string): string {
+export function stripHtml(html: string): string {
   return (
     html
       // Remove script and style blocks entirely
