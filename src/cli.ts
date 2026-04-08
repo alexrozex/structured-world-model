@@ -6,6 +6,7 @@ import { resolve } from "node:path";
 import chalk from "chalk";
 import { stringify as yamlStringify } from "yaml";
 import { buildWorldModel } from "./swm.js";
+import { fetchUrl, isUrl } from "./utils/fetch.js";
 import { refineWorldModel } from "./agents/refinement.js";
 import { mergeWorldModels, diffWorldModels } from "./utils/merge.js";
 import {
@@ -56,6 +57,20 @@ function readInput(inputArg?: string, filePath?: string): string {
   throw new Error(
     "No input provided. Pass text, a file path, or use -f <file>.",
   );
+}
+
+async function readInputAsync(
+  inputArg?: string,
+  filePath?: string,
+): Promise<{ raw: string; detectedUrl?: string }> {
+  // Check if input is a URL — fetch it
+  const candidate = filePath || inputArg || "";
+  if (isUrl(candidate)) {
+    process.stderr.write(chalk.gray(`  Fetching ${candidate}...\n`));
+    const { text } = await fetchUrl(candidate);
+    return { raw: text, detectedUrl: candidate };
+  }
+  return { raw: readInput(inputArg, filePath) };
 }
 
 function readModel(path: string): WorldModelType {
@@ -129,18 +144,23 @@ program
       opts: Record<string, string | boolean | undefined>,
     ) => {
       try {
-        const raw = readInput(inputArg, opts.file as string | undefined);
+        const { raw, detectedUrl } = await readInputAsync(
+          inputArg,
+          opts.file as string | undefined,
+        );
         if (!raw.trim()) {
           console.error(chalk.red("Error: No input provided"));
           process.exit(1);
         }
 
         const sourceType =
-          (opts.type as PipelineInput["sourceType"]) || detectSourceType(raw);
+          (opts.type as PipelineInput["sourceType"]) ||
+          (detectedUrl ? "url" : detectSourceType(raw));
         const input: PipelineInput = {
           raw,
           sourceType,
           name:
+            detectedUrl ||
             (opts.file as string) ||
             (inputArg && inputArg.length < 100 ? inputArg : undefined),
         };
