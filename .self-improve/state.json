@@ -1,7 +1,7 @@
 {
   "cycle": 11,
   "lastScore": 100,
-  "lastTestCount": 800,
+  "lastTestCount": 816,
   "improvements": [
     "e2e-multipass",
     "e2e-code-extraction",
@@ -18,9 +18,15 @@
     "extraction-retry-logging",
     "test-src-agents-transform-ts",
     "test-src-agents-second-pass-ts",
-    "test-src-agents-refinement-ts"
+    "test-src-agents-refinement-ts",
+    "test-src-utils-ids-ts",
+    "test-src-schema-world-model-ts",
+    "test-src-serve-mcp-server-ts",
+    "test-src-export-html-ts",
+    "test-src-export-markdown-table-ts",
+    "test-src-export-claude-md-ts"
   ],
   "staleCount": 0,
   "startedAt": "2026-04-09T07:18:47.000Z",
-  "lastRunAt": "2026-04-09T08:32:43.431Z"
+  "lastRunAt": "2026-04-09T08:39:38.073Z"
 }

@@ -875,77 +875,91 @@ program
   .description("Diff two world models")
   .argument("<before>", "Path to before world model JSON")
   .argument("<after>", "Path to after world model JSON")
-  .action(async (beforePath: string, afterPath: string) => {
-    try {
-      const before = await readModel(beforePath);
-      const after = await readModel(afterPath);
-      const diff = diffWorldModels(before, after);
+  .option("--json", "Output diff as JSON")
+  .action(
+    async (
+      beforePath: string,
+      afterPath: string,
+      opts: Record<string, unknown>,
+    ) => {
+      try {
+        const before = await readModel(beforePath);
+        const after = await readModel(afterPath);
+        const diff = diffWorldModels(before, after);
 
-      console.log(chalk.blue("■ World Model Diff\n"));
-      console.log(chalk.white(`  Summary: ${diff.summary}\n`));
+        if (opts.json) {
+          console.log(JSON.stringify(diff, null, 2));
+          return;
+        }
 
-      if (diff.entities.added.length) {
-        console.log(chalk.green("  + Entities added:"));
-        for (const name of diff.entities.added)
-          console.log(chalk.green(`    + ${name}`));
-      }
-      if (diff.entities.removed.length) {
-        console.log(chalk.red("  - Entities removed:"));
-        for (const name of diff.entities.removed)
-          console.log(chalk.red(`    - ${name}`));
-      }
-      if (diff.entities.modified.length) {
-        console.log(chalk.yellow("  ~ Entities modified:"));
-        for (const name of diff.entities.modified)
-          console.log(chalk.yellow(`    ~ ${name}`));
-      }
-      if (diff.relations.added.length) {
-        console.log(
-          chalk.green(`  + ${diff.relations.added.length} relations added`),
-        );
-      }
-      if (diff.relations.removed.length) {
-        console.log(
-          chalk.red(`  - ${diff.relations.removed.length} relations removed`),
-        );
-      }
-      if (diff.processes.added.length) {
-        console.log(
-          chalk.green(`  + ${diff.processes.added.length} processes added`),
-        );
-      }
-      if (diff.constraints.added.length) {
-        console.log(
-          chalk.green(`  + ${diff.constraints.added.length} constraints added`),
-        );
-      }
+        console.log(chalk.blue("■ World Model Diff\n"));
+        console.log(chalk.white(`  Summary: ${diff.summary}\n`));
 
-      // Score comparison
-      const { validationAgent: va } = await import("./agents/validation.js");
-      const { validation: vBefore } = await va({
-        input: { raw: "", sourceType: "text" },
-        worldModel: before,
-      });
-      const { validation: vAfter } = await va({
-        input: { raw: "", sourceType: "text" },
-        worldModel: after,
-      });
-      if (vBefore.score !== undefined && vAfter.score !== undefined) {
-        const delta = vAfter.score - vBefore.score;
-        const arrow =
-          delta > 0
-            ? chalk.green(`+${delta}`)
-            : delta < 0
-              ? chalk.red(`${delta}`)
-              : chalk.gray("±0");
-        console.log(
-          `\n  Quality: ${vBefore.score} → ${vAfter.score} (${arrow})`,
-        );
+        if (diff.entities.added.length) {
+          console.log(chalk.green("  + Entities added:"));
+          for (const name of diff.entities.added)
+            console.log(chalk.green(`    + ${name}`));
+        }
+        if (diff.entities.removed.length) {
+          console.log(chalk.red("  - Entities removed:"));
+          for (const name of diff.entities.removed)
+            console.log(chalk.red(`    - ${name}`));
+        }
+        if (diff.entities.modified.length) {
+          console.log(chalk.yellow("  ~ Entities modified:"));
+          for (const name of diff.entities.modified)
+            console.log(chalk.yellow(`    ~ ${name}`));
+        }
+        if (diff.relations.added.length) {
+          console.log(
+            chalk.green(`  + ${diff.relations.added.length} relations added`),
+          );
+        }
+        if (diff.relations.removed.length) {
+          console.log(
+            chalk.red(`  - ${diff.relations.removed.length} relations removed`),
+          );
+        }
+        if (diff.processes.added.length) {
+          console.log(
+            chalk.green(`  + ${diff.processes.added.length} processes added`),
+          );
+        }
+        if (diff.constraints.added.length) {
+          console.log(
+            chalk.green(
+              `  + ${diff.constraints.added.length} constraints added`,
+            ),
+          );
+        }
+
+        // Score comparison
+        const { validationAgent: va } = await import("./agents/validation.js");
+        const { validation: vBefore } = await va({
+          input: { raw: "", sourceType: "text" },
+          worldModel: before,
+        });
+        const { validation: vAfter } = await va({
+          input: { raw: "", sourceType: "text" },
+          worldModel: after,
+        });
+        if (vBefore.score !== undefined && vAfter.score !== undefined) {
+          const delta = vAfter.score - vBefore.score;
+          const arrow =
+            delta > 0
+              ? chalk.green(`+${delta}`)
+              : delta < 0
+                ? chalk.red(`${delta}`)
+                : chalk.gray("±0");
+          console.log(
+            `\n  Quality: ${vBefore.score} → ${vAfter.score} (${arrow})`,
+          );
+        }
+      } catch (err) {
+        handleError(err);
       }
-    } catch (err) {
-      handleError(err);
-    }
-  });
+    },
+  );
 
 // ─── inspect ──────────────────────────────────────────────────
 program
