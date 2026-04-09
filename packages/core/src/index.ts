@@ -33,7 +33,11 @@ export type { ImpactAnalysis } from "./utils/graph.js";
 export type { Cluster } from "./utils/graph.js";
 
 // Merge & diff
-export { mergeWorldModels, diffWorldModels, detectMergeConflicts } from "./utils/merge.js";
+export {
+  mergeWorldModels,
+  diffWorldModels,
+  detectMergeConflicts,
+} from "./utils/merge.js";
 export type { WorldModelDiff, MergeConflict } from "./utils/merge.js";
 
 // Compare
@@ -56,6 +60,7 @@ export { toClaudeMd } from "./export/claude-md.js";
 export { toSystemPrompt } from "./export/system-prompt.js";
 export { toMcpSchema } from "./export/mcp-schema.js";
 export { toMarkdownTable } from "./export/markdown-table.js";
+export { toHtml } from "./export/html.js";
 export { getWorldModelJsonSchema } from "./schema/json-schema.js";
 
 // Timeline
@@ -64,5 +69,27 @@ export {
   addSnapshot,
   entityHistory,
   timelineSummary,
+  snapshotChangelog,
 } from "./utils/timeline.js";
 export type { Timeline, Snapshot } from "./utils/timeline.js";
+
+// Pipeline stages (for custom pipeline composition)
+export { extractionAgent } from "./agents/extraction.js";
+export { structuringAgent } from "./agents/structuring.js";
+export { validationAgent } from "./agents/validation.js";
+export { secondPassAgent } from "./agents/second-pass.js";
+
+// Schema utilities
+export {
+  validateExtraction,
+  getRawExtractionJsonSchema,
+} from "./schema/extraction.js";
+
+// MCP server
+export { startMcpServer } from "./serve/mcp-server.js";
+
+// LLM utilities
+export { setDefaultModel, getDefaultModel } from "./utils/llm.js";
+
+// ID generation
+export { genId } from "./utils/ids.js";
