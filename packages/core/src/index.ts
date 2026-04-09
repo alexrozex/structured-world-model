@@ -69,6 +69,8 @@ export { toMarkdownTable } from "./export/markdown-table.js";
 export { toHtml } from "./export/html.js";
 export { toComparisonHtml } from "./export/comparison-html.js";
 export { toSummaryCard } from "./export/summary-card.js";
+export { generateMcpPackage } from "./export/mcp-package.js";
+export type { McpPackageFiles } from "./export/mcp-package.js";
 export { getWorldModelJsonSchema } from "./schema/json-schema.js";
 
 // Timeline

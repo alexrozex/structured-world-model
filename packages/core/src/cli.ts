@@ -3288,4 +3288,39 @@ program
     },
   );
 
+// ─── publish ─────────────────────────────────────────────────
+program
+  .command("publish")
+  .description("Generate a deployable MCP server package from a world model")
+  .argument("<model>", "Path to world model JSON")
+  .option("-o, --output <dir>", "Output directory", ".")
+  .option("--name <name>", "Package name override")
+  .action(async (modelPath: string, opts: Record<string, unknown>) => {
+    try {
+      const model = await readModel(modelPath);
+      const { generateMcpPackage } = await import("./export/mcp-package.js");
+      const files = generateMcpPackage(model, {
+        name: opts.name as string | undefined,
+      });
+      const outDir = resolve(opts.output as string);
+
+      const { mkdirSync } = await import("node:fs");
+      mkdirSync(outDir, { recursive: true });
+
+      for (const [filename, content] of Object.entries(files)) {
+        writeFileSync(join(outDir, filename), content, "utf-8");
+      }
+
+      console.error(
+        chalk.green(`\n✓ MCP server package generated in ${outDir}/`),
+      );
+      console.error(chalk.gray("  Files: " + Object.keys(files).join(", ")));
+      console.error(
+        chalk.gray(`  Run: cd ${outDir} && npm install && npm start`),
+      );
+    } catch (err) {
+      handleError(err);
+    }
+  });
+
 program.parse();
