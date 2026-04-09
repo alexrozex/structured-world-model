@@ -341,6 +341,56 @@ async function run() {
         "mcp-config generates config",
       );
     }
+    // Test 22: info command
+    {
+      const out = cli("info");
+      assert(
+        out.includes("1.0.0") || out.includes("Version"),
+        "info shows version",
+      );
+      assert(
+        out.includes("sonnet") || out.includes("Model"),
+        "info shows model",
+      );
+    }
+
+    // Test 23: info --json
+    {
+      const out = cli("info --json");
+      const parsed = JSON.parse(out);
+      assert(parsed.version === "1.0.0", "info --json has version");
+      assert(
+        typeof parsed.apiKeySet === "boolean",
+        "info --json has apiKeySet",
+      );
+    }
+
+    // Test 24: health command
+    {
+      const out = cli(`health ${TMP_MODEL}`);
+      assert(
+        out.includes("Grade") || out.includes("grade"),
+        "health shows grade",
+      );
+    }
+
+    // Test 25: filter command
+    {
+      const out = cli(`filter ${TMP_MODEL} -t actor`);
+      assert(
+        out.includes("User") || out.includes("entities"),
+        "filter by type works",
+      );
+    }
+
+    // Test 26: estimate command
+    {
+      const out = cli("estimate 'A simple marketplace'");
+      assert(
+        out.includes("Cost") || out.includes("tokens"),
+        "estimate shows cost info",
+      );
+    }
   } finally {
     // Cleanup
     if (existsSync(TMP_MODEL)) unlinkSync(TMP_MODEL);

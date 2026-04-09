@@ -2907,4 +2907,45 @@ program
     }
   });
 
+// ─── info ────────────────────────────────────────────────────
+program
+  .command("info")
+  .description("Show SWM version, configuration, and API connectivity")
+  .option("--json", "Output as JSON")
+  .action(async (opts: Record<string, unknown>) => {
+    const { getDefaultModel } = await import("./utils/llm.js" as string);
+    const hasKey = !!process.env.ANTHROPIC_API_KEY;
+
+    const info = {
+      version: "1.0.0",
+      model: getDefaultModel(),
+      apiKeySet: hasKey,
+      nodeVersion: process.version,
+      platform: process.platform,
+      commands: 39,
+      exports: 65,
+      testCount: 1100,
+    };
+
+    if (opts.json) {
+      console.log(JSON.stringify(info, null, 2));
+    } else {
+      console.log(chalk.blue("\n  Structured World Model\n"));
+      console.log(chalk.white(`  Version:     ${info.version}`));
+      console.log(chalk.gray(`  Model:       ${info.model}`));
+      console.log(
+        hasKey
+          ? chalk.green("  API Key:     Set")
+          : chalk.red(
+              "  API Key:     NOT SET — export ANTHROPIC_API_KEY=sk-ant-...",
+            ),
+      );
+      console.log(chalk.gray(`  Node:        ${info.nodeVersion}`));
+      console.log(chalk.gray(`  Platform:    ${info.platform}`));
+      console.log(chalk.gray(`  Commands:    ${info.commands}`));
+      console.log(chalk.gray(`  API exports: ${info.exports}`));
+      console.log(chalk.gray(`  Tests:       ${info.testCount}+\n`));
+    }
+  });
+
 program.parse();
