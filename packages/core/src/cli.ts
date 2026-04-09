@@ -538,6 +538,17 @@ program
           result = await buildWorldModel(input, buildOpts);
         }
 
+        // Surface auto-fix results from pipeline
+        const autoFixStage = result.stages.find((s) => s.stage === "auto-fix");
+        if (autoFixStage && !opts.quiet) {
+          const fixData = autoFixStage.data as { fixes?: string[] } | undefined;
+          if (fixData?.fixes && fixData.fixes.length > 0) {
+            console.error(
+              chalk.yellow(`  Auto-fixed: ${fixData.fixes.join(", ")}`),
+            );
+          }
+        }
+
         let finalModel = result.worldModel;
         if (opts.name) {
           finalModel = { ...finalModel, name: opts.name as string };
