@@ -2841,4 +2841,70 @@ program
     }
   });
 
+// ─── estimate ────────────────────────────────────────────────
+program
+  .command("estimate")
+  .description("Preview extraction cost, tokens, and duration before running")
+  .argument("[input...]", "Text input or leave empty for file-based estimate")
+  .option("-f, --file <paths...>", "Input file(s) to estimate")
+  .option("-p, --passes <n>", "Number of extraction passes", "1")
+  .option("-m, --model <model>", "Model tier: sonnet, opus, haiku", "sonnet")
+  .option("--json", "Output as JSON")
+  .action(async (inputArgs: string[], opts: Record<string, unknown>) => {
+    try {
+      let raw = "";
+      const files = opts.file as string[] | undefined;
+      if (files?.length) {
+        for (const f of files) raw += readFileSync(resolve(f), "utf-8") + "\n";
+      } else if (inputArgs.length) {
+        raw = inputArgs.join(" ");
+      } else {
+        raw = await readStdin();
+      }
+
+      const { estimateCost } = await import("./utils/cost.js" as string);
+      const est = estimateCost(raw, {
+        passes: parseInt(opts.passes as string) || 1,
+        sourceType: detectSourceType(raw) as any,
+        model: opts.model as string as "sonnet" | "opus" | "haiku",
+      });
+
+      if (opts.json) {
+        console.log(JSON.stringify(est, null, 2));
+      } else {
+        console.log(chalk.blue("\n  Cost Estimate\n"));
+        console.log(
+          chalk.gray(
+            `  Input:        ${raw.length.toLocaleString()} chars → ~${est.inputTokens.toLocaleString()} tokens`,
+          ),
+        );
+        console.log(
+          chalk.gray(
+            `  Output:       ~${est.outputTokens.toLocaleString()} tokens`,
+          ),
+        );
+        console.log(
+          chalk.gray(
+            `  Total:        ~${est.totalTokens.toLocaleString()} tokens`,
+          ),
+        );
+        console.log(
+          chalk.white(`  Cost:         $${est.estimatedCostUSD.toFixed(4)}`),
+        );
+        console.log(
+          chalk.green(`  With cache:   $${est.cachedCostUSD.toFixed(4)}`),
+        );
+        console.log(
+          chalk.gray(`  Duration:     ~${est.estimatedDurationSec}s`),
+        );
+        if (est.warnings.length) {
+          console.log(chalk.yellow("\n  Warnings:"));
+          for (const w of est.warnings) console.log(chalk.yellow(`    ! ${w}`));
+        }
+      }
+    } catch (err) {
+      handleError(err);
+    }
+  });
+
 program.parse();
