@@ -3323,4 +3323,77 @@ program
     }
   });
 
+// ─── check ───────────────────────────────────────────────────
+program
+  .command("check")
+  .description("CI gate: validate + health check with exit codes")
+  .argument("<model>", "Path to world model JSON")
+  .option("--min-score <n>", "Minimum quality score (0-100)", "0")
+  .option("--min-grade <grade>", "Minimum health grade (A/B/C/D)")
+  .option("--json", "Output as JSON")
+  .action(async (modelPath: string, opts: Record<string, unknown>) => {
+    try {
+      const model = await readModel(modelPath);
+      const { validationAgent: va } = await import("./agents/validation.js");
+      const { validation } = await va({
+        input: { raw: "", sourceType: "text" as const },
+        worldModel: model,
+      });
+      const { assessHealth } = await import("./utils/health.js");
+      const health = assessHealth(model, validation);
+
+      const minScore = parseInt(opts.minScore as string) || 0;
+      const minGrade = opts.minGrade as string | undefined;
+
+      const failures: string[] = [];
+      if (!validation.valid) failures.push("Validation failed");
+      if (validation.score !== undefined && validation.score < minScore)
+        failures.push(`Score ${validation.score} < minimum ${minScore}`);
+      if (minGrade) {
+        const grades = ["A", "B", "C", "D", "F"];
+        const minIdx = grades.indexOf(minGrade);
+        const actualIdx = grades.indexOf(health.grade);
+        if (minIdx >= 0 && actualIdx > minIdx)
+          failures.push(`Grade ${health.grade} < minimum ${minGrade}`);
+      }
+
+      if (opts.json) {
+        console.log(
+          JSON.stringify(
+            {
+              passed: failures.length === 0,
+              score: validation.score,
+              grade: health.grade,
+              failures,
+              issues: validation.issues.length,
+              entities: model.entities.length,
+            },
+            null,
+            2,
+          ),
+        );
+      } else {
+        if (failures.length === 0) {
+          console.log(
+            chalk.green(
+              `  PASS  Grade ${health.grade} | Score ${validation.score}/100 | ${model.entities.length} entities`,
+            ),
+          );
+        } else {
+          console.log(chalk.red(`  FAIL`));
+          for (const f of failures) console.log(chalk.red(`    - ${f}`));
+          console.log(
+            chalk.gray(
+              `  Grade ${health.grade} | Score ${validation.score}/100`,
+            ),
+          );
+        }
+      }
+
+      if (failures.length > 0) process.exit(1);
+    } catch (err) {
+      handleError(err);
+    }
+  });
+
 program.parse();
