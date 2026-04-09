@@ -59,8 +59,9 @@ export function structuringAgent(stageInput: {
     occurrence: "event",
   };
   function normalizeEntityType(
-    raw: string,
+    raw: string | undefined | null,
   ): WorldModelType["entities"][number]["type"] {
+    if (!raw) return "object";
     const lower = raw.toLowerCase().trim();
     if (VALID_ENTITY_TYPES.has(lower))
       return lower as WorldModelType["entities"][number]["type"];
@@ -89,8 +90,9 @@ export function structuringAgent(stageInput: {
     "transforms",
   ]);
   function normalizeRelationType(
-    raw: string,
+    raw: string | undefined | null,
   ): WorldModelType["relations"][number]["type"] {
+    if (!raw) return "uses";
     const lower = raw.toLowerCase().trim().replace(/ /g, "_");
     if (VALID_RELATION_TYPES.has(lower))
       return lower as WorldModelType["relations"][number]["type"];
@@ -108,8 +110,9 @@ export function structuringAgent(stageInput: {
     "authorization",
   ]);
   function normalizeConstraintType(
-    raw: string,
+    raw: string | undefined | null,
   ): WorldModelType["constraints"][number]["type"] {
+    if (!raw) return "rule";
     const lower = raw.toLowerCase().trim().replace(/ /g, "_");
     if (VALID_CONSTRAINT_TYPES.has(lower))
       return lower as WorldModelType["constraints"][number]["type"];
@@ -119,7 +122,8 @@ export function structuringAgent(stageInput: {
   // Build entity name → ID map (case-insensitive + trimmed for robust matching)
   const entityIdMap = new Map<string, string>(); // normalized name → id
   const entityOriginalNames = new Map<string, string>(); // normalized name → original name
-  const normalizeForLookup = (name: string) => name.toLowerCase().trim();
+  const normalizeForLookup = (name: string | undefined | null) =>
+    (name ?? "").toLowerCase().trim();
 
   // Deduplicate entities by normalized name during initial build
   const entities: Array<{
@@ -132,7 +136,7 @@ export function structuringAgent(stageInput: {
     confidence?: number;
   }> = [];
 
-  for (const e of extraction.entities) {
+  for (const e of extraction.entities ?? []) {
     const key = normalizeForLookup(e.name);
     if (entityIdMap.has(key)) {
       // Duplicate — merge into existing entity
@@ -188,7 +192,7 @@ export function structuringAgent(stageInput: {
     return id;
   };
 
-  const relations = extraction.relations.map((r) => ({
+  const relations = (extraction.relations ?? []).map((r) => ({
     id: genId("rel"),
     type: normalizeRelationType(r.type),
     source: resolveEntityId(r.source),
@@ -197,28 +201,28 @@ export function structuringAgent(stageInput: {
     bidirectional: r.bidirectional,
   }));
 
-  const processes = extraction.processes.map((p) => ({
+  const processes = (extraction.processes ?? []).map((p) => ({
     id: genId("proc"),
     name: p.name,
     description: p.description,
     trigger: p.trigger,
-    steps: p.steps.map((s, idx) => ({
+    steps: (p.steps ?? []).map((s, idx) => ({
       order: s.order ?? idx + 1,
-      action: s.action,
+      action: s.action ?? "",
       actor: s.actor ? resolveEntityId(s.actor) : undefined,
       input: s.inputs?.map(resolveEntityId),
       output: s.outputs?.map(resolveEntityId),
     })),
-    participants: p.participants.map(resolveEntityId),
-    outcomes: p.outcomes,
+    participants: (p.participants ?? []).map(resolveEntityId),
+    outcomes: p.outcomes ?? [],
   }));
 
-  const constraints = extraction.constraints.map((c) => ({
+  const constraints = (extraction.constraints ?? []).map((c) => ({
     id: genId("cstr"),
     name: c.name,
     type: normalizeConstraintType(c.type),
     description: c.description,
-    scope: c.scope.map(resolveEntityId),
+    scope: (c.scope ?? []).map(resolveEntityId),
     severity: c.severity,
   }));
 

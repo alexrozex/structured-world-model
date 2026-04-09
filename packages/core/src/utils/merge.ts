@@ -21,8 +21,8 @@ export function detectMergeConflicts(
 ): MergeConflict[] {
   const conflicts: MergeConflict[] = [];
 
-  function normalizeEntityName(name: string): string {
-    return name
+  function normalizeEntityName(name: string | undefined | null): string {
+    return (name ?? "")
       .toLowerCase()
       .replace(/[^a-z0-9]/g, "_")
       .replace(/_+/g, "_")
@@ -74,8 +74,8 @@ export function mergeWorldModels(
   const entityMap = new Map<string, WorldModelType["entities"][number]>();
   const oldIdToNewId = new Map<string, string>();
 
-  function normalizeEntityName(name: string): string {
-    return name
+  function normalizeEntityName(name: string | undefined | null): string {
+    return (name ?? "")
       .toLowerCase()
       .replace(/[^a-z0-9]/g, "_")
       .replace(/_+/g, "_")

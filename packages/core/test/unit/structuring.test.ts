@@ -368,6 +368,97 @@ async function run() {
     );
   }
 
+  // Null/undefined type fields don't crash — defaults applied
+  {
+    const ext = makeExtraction({
+      entities: [
+        {
+          name: "Widget",
+          type: undefined as any,
+          description: "A widget",
+          tags: [],
+        },
+        {
+          name: "Gadget",
+          type: null as any,
+          description: "A gadget",
+          tags: [],
+        },
+        { name: "Thing", type: "", description: "A thing", tags: [] },
+      ],
+      relations: [
+        {
+          source: "Widget",
+          target: "Gadget",
+          type: undefined as any,
+          label: "uses",
+        },
+        { source: "Gadget", target: "Thing", type: null as any, label: "has" },
+      ],
+      constraints: [
+        {
+          name: "Rule1",
+          type: undefined as any,
+          description: "A rule",
+          scope: ["Widget"],
+          severity: "hard",
+        },
+      ],
+    });
+    const { worldModel } = await structuringAgent({ input, extraction: ext });
+
+    // Entities with null/undefined types should default to "object"
+    const widget = worldModel.entities.find((e) => e.name === "Widget");
+    assert(widget?.type === "object", "Null entity type defaults to object");
+
+    const gadget = worldModel.entities.find((e) => e.name === "Gadget");
+    assert(
+      gadget?.type === "object",
+      "Undefined entity type defaults to object",
+    );
+
+    // Relations with null/undefined types should default to "uses"
+    assert(
+      worldModel.relations.length >= 1,
+      "Relations with null types still created",
+    );
+
+    // Constraints with null/undefined types should default to "rule"
+    assert(
+      worldModel.constraints.length >= 1,
+      "Constraints with null types still created",
+    );
+    assert(
+      worldModel.constraints[0].type === "rule",
+      "Null constraint type defaults to rule",
+    );
+  }
+
+  // Entity with undefined name doesn't crash
+  {
+    const ext = makeExtraction({
+      entities: [
+        {
+          name: undefined as any,
+          type: "actor",
+          description: "Unnamed",
+          tags: [],
+        },
+        { name: "Valid", type: "system", description: "A system", tags: [] },
+      ],
+    });
+    try {
+      const { worldModel } = await structuringAgent({ input, extraction: ext });
+      // Should not crash — may skip or keep the unnamed entity
+      assert(
+        worldModel.entities.length >= 1,
+        "Unnamed entity doesn't crash structuring",
+      );
+    } catch {
+      assert(false, "Unnamed entity should not crash structuring");
+    }
+  }
+
   console.log(`\n═══ ${passed}/${passed + failed} passed ═══\n`);
   if (failed > 0) process.exit(1);
 }
