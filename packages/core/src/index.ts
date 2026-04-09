@@ -1,4 +1,6 @@
 export { buildWorldModel } from "./swm.js";
+export { swm } from "./swm-quick.js";
+export type { QuickResult, QuickOptions } from "./swm-quick.js";
 export type { SWMOptions } from "./swm.js";
 export { Pipeline } from "./pipeline/index.js";
 export type { PipelineInput, PipelineResult } from "./pipeline/index.js";
