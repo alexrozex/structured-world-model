@@ -3396,4 +3396,86 @@ program
     }
   });
 
+// ─── convert ─────────────────────────────────────────────────
+program
+  .command("convert")
+  .description(
+    "Convert a world model between formats (json, yaml, mermaid, dot, html, card)",
+  )
+  .argument("<model>", "Path to world model JSON or YAML")
+  .argument(
+    "<format>",
+    "Target format: json, yaml, mermaid, dot, html, card, claude-md, system-prompt",
+  )
+  .option("-o, --output <path>", "Write to file")
+  .action(
+    async (
+      modelPath: string,
+      format: string,
+      opts: Record<string, unknown>,
+    ) => {
+      try {
+        const model = await readModel(modelPath);
+        let output: string;
+
+        switch (format) {
+          case "json":
+            output = JSON.stringify(model, null, 2);
+            break;
+          case "yaml":
+          case "yml":
+            output = yamlStringify(model);
+            break;
+          case "mermaid":
+            output = toMermaid(model);
+            break;
+          case "dot":
+          case "graphviz":
+            output = toDot(model);
+            break;
+          case "html": {
+            const { toHtml } = await import("./export/html.js");
+            output = toHtml(model);
+            break;
+          }
+          case "card": {
+            const { toSummaryCard } = await import("./export/summary-card.js");
+            output = toSummaryCard(model);
+            break;
+          }
+          case "claude-md":
+            output = toClaudeMd(model);
+            break;
+          case "system-prompt":
+            output = toSystemPrompt(model);
+            break;
+          case "table": {
+            const { toMarkdownTable } =
+              await import("./export/markdown-table.js");
+            output = toMarkdownTable(model);
+            break;
+          }
+          default:
+            console.error(
+              chalk.red(
+                `Unknown format: ${format}. Use: json, yaml, mermaid, dot, html, card, claude-md, system-prompt, table`,
+              ),
+            );
+            process.exit(1);
+        }
+
+        if (opts.output) {
+          writeFileSync(resolve(opts.output as string), output, "utf-8");
+          console.error(
+            chalk.green(`✓ Converted to ${format} → ${opts.output}`),
+          );
+        } else {
+          console.log(output);
+        }
+      } catch (err) {
+        handleError(err);
+      }
+    },
+  );
+
 program.parse();
