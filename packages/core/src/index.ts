@@ -102,6 +102,10 @@ export { setDefaultModel, getDefaultModel } from "./utils/llm.js";
 // ID generation
 export { genId } from "./utils/ids.js";
 
+// Filtering
+export { filterModel } from "./utils/filter.js";
+export type { FilterOptions } from "./utils/filter.js";
+
 // Versioning
 export {
   bumpVersion,
