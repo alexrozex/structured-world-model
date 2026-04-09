@@ -2781,4 +2781,64 @@ program
     }
   });
 
+// ─── filter ──────────────────────────────────────────────────
+program
+  .command("filter")
+  .description(
+    "Extract a subset of a world model by entity type, tag, confidence, or search term",
+  )
+  .argument("<model>", "Path to world model JSON")
+  .option(
+    "-t, --type <types...>",
+    "Keep only these entity types (actor, system, object, ...)",
+  )
+  .option("--tag <tags...>", "Keep only entities matching these tags")
+  .option(
+    "--min-confidence <n>",
+    "Keep only entities with confidence >= n",
+    parseFloat,
+  )
+  .option("-s, --search <term>", "Keep only entities matching search term")
+  .option("--severity <severity>", "Keep only hard or soft constraints", "")
+  .option("-o, --output <path>", "Write filtered model to file")
+  .option("--format <format>", "Output format: json, yaml", "json")
+  .action(async (modelPath: string, opts: Record<string, unknown>) => {
+    try {
+      const model = await readModel(modelPath);
+      const { filterModel } = await import("./utils/filter.js" as string);
+
+      const filtered = filterModel(model, {
+        entityTypes: opts.type as string[] | undefined,
+        tags: opts.tag as string[] | undefined,
+        minConfidence: opts.minConfidence as number | undefined,
+        search: opts.search as string | undefined,
+        constraintSeverity:
+          (opts.severity as "hard" | "soft" | "") || undefined,
+      });
+
+      const output = formatOutput(
+        filtered,
+        (opts.format as string) ?? "json",
+        true,
+      );
+
+      if (opts.output) {
+        writeFileSync(resolve(opts.output as string), output, "utf-8");
+        console.error(
+          chalk.green(`✓ Filtered model written to ${opts.output}`),
+        );
+      } else {
+        console.log(output);
+      }
+
+      console.error(
+        chalk.gray(
+          `  ${model.entities.length} → ${filtered.entities.length} entities, ${model.relations.length} → ${filtered.relations.length} relations`,
+        ),
+      );
+    } catch (err) {
+      handleError(err);
+    }
+  });
+
 program.parse();
