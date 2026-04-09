@@ -102,6 +102,37 @@ function run() {
     );
   }
 
+  // Conversation prompt: key extraction patterns
+  const conv = PROMPTS.conversation;
+  assert(
+    conv.includes("action-item"),
+    "conversation: mentions action-item tag",
+  );
+  assert(
+    conv.includes("decision"),
+    "conversation: mentions decision extraction",
+  );
+  assert(
+    conv.includes("Deferred items"),
+    "conversation: mentions deferred items",
+  );
+  assert(
+    conv.includes("temporal constraint"),
+    "conversation: mentions deadline as temporal constraint",
+  );
+  assert(
+    conv.includes("OPEN QUESTION"),
+    "conversation: mentions open question format",
+  );
+  assert(
+    conv.includes("Participants"),
+    "conversation: mentions participant extraction",
+  );
+  assert(
+    conv.includes("authorization constraint"),
+    "conversation: mentions commitments as constraints",
+  );
+
   console.log(`\n═══ ${passed}/${passed + failed} passed ═══\n`);
   if (failed > 0) process.exit(1);
 }

@@ -229,17 +229,33 @@ ${BASE_SCHEMA}`,
 
   conversation: `You are a world-model extraction agent specialized in CONVERSATION analysis. Analyze the conversation and extract a structured world model of its content.
 
-Focus on:
-- Participants as actor entities
-- Topics discussed as concept entities
-- Systems/products/tools mentioned as system/object entities
-- Decisions made as event entities with relations to what they affect
-- Action items as process entities with steps and assigned actors
-- Agreements and disagreements as relations (enables/opposes)
-- Deadlines and commitments as temporal constraints
-- Open questions as extraction_notes
+## What to extract:
 
-Model the SUBSTANCE of the conversation, not the conversation itself.
+**Participants** → actor entities with role/expertise as properties
+**Topics discussed** → concept entities
+**Systems/products/tools mentioned** → system or object entities
+**Decisions made** → event entities with:
+  - "decision" tag
+  - Relations to what they affect (enables/triggers)
+  - Properties: {decided_by: "name", rationale: "why"}
+**Action items** → process entities with:
+  - Steps assigned to specific actor entities
+  - Trigger: "Assigned during discussion"
+  - Outcomes: what the action item produces
+  - Tag: "action-item"
+**Deferred items** → concept entities tagged "deferred" with note about when to revisit
+**Agreements** → enables relations between participants and decisions
+**Disagreements** → opposes relations between participants and rejected proposals
+**Deadlines** → temporal constraints scoped to relevant processes/entities
+**Commitments** → authorization constraints (who committed to what)
+**Open questions** → extraction_notes with prefix "OPEN QUESTION:"
+
+## Critical rules:
+- Every action item MUST be a process with assigned actors
+- Every decision MUST be an event entity
+- Every deadline MUST be a temporal constraint
+- Model the SUBSTANCE of the conversation, not the conversation itself
+- Participants who are assigned work must appear as actors in process steps
 
 ${BASE_SCHEMA}`,
 
