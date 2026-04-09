@@ -3087,4 +3087,67 @@ program
     }
   });
 
+// ─── top ─────────────────────────────────────────────────────
+program
+  .command("top")
+  .description(
+    "Show the most connected entities — what matters most in this model",
+  )
+  .argument("<model>", "Path to world model JSON")
+  .option("-n, --count <n>", "Number of entities to show", "10")
+  .option("--json", "Output as JSON")
+  .action(async (modelPath: string, opts: Record<string, unknown>) => {
+    try {
+      const model = await readModel(modelPath);
+      const n = parseInt(opts.count as string) || 10;
+
+      // Count connections per entity
+      const connections = new Map<string, number>();
+      for (const e of model.entities) connections.set(e.id, 0);
+      for (const r of model.relations) {
+        connections.set(r.source, (connections.get(r.source) ?? 0) + 1);
+        connections.set(r.target, (connections.get(r.target) ?? 0) + 1);
+      }
+      for (const p of model.processes) {
+        for (const pid of p.participants) {
+          connections.set(pid, (connections.get(pid) ?? 0) + 1);
+        }
+      }
+
+      const ranked = model.entities
+        .map((e) => ({
+          name: e.name,
+          type: e.type,
+          connections: connections.get(e.id) ?? 0,
+          confidence: e.confidence,
+        }))
+        .sort((a, b) => b.connections - a.connections)
+        .slice(0, n);
+
+      if (opts.json) {
+        console.log(JSON.stringify(ranked, null, 2));
+      } else {
+        console.log(
+          chalk.blue(
+            `\n  Top ${Math.min(n, ranked.length)} entities by connectivity\n`,
+          ),
+        );
+        for (let i = 0; i < ranked.length; i++) {
+          const e = ranked[i];
+          const conf =
+            e.confidence !== undefined
+              ? chalk.gray(` ${Math.round(e.confidence * 100)}%`)
+              : "";
+          const bar = "█".repeat(Math.min(e.connections, 20));
+          console.log(
+            `  ${chalk.white(`${i + 1}.`)} ${chalk.bold(e.name)} ${chalk.gray(`(${e.type})`)}${conf}`,
+          );
+          console.log(`     ${chalk.blue(bar)} ${e.connections} connections\n`);
+        }
+      }
+    } catch (err) {
+      handleError(err);
+    }
+  });
+
 program.parse();
