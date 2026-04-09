@@ -528,6 +528,112 @@ async function run() {
         "fix dry-run shows result",
       );
     }
+
+    // Test 37: explain command
+    {
+      const out = cli(`explain ${TMP_MODEL} User`);
+      assert(out.includes("User"), "explain shows entity name");
+      assert(
+        out.includes("actor") || out.includes("type"),
+        "explain shows entity type",
+      );
+      assert(
+        out.includes("Connectivity") || out.includes("connections"),
+        "explain shows connectivity",
+      );
+    }
+
+    // Test 38: explain --json
+    {
+      const out = cli(`explain ${TMP_MODEL} User --json`);
+      const parsed = JSON.parse(out);
+      assert(parsed.entity.name === "User", "explain --json has entity name");
+      assert(typeof parsed.rank === "number", "explain --json has rank");
+      assert(
+        typeof parsed.connections === "number",
+        "explain --json has connections",
+      );
+      assert(
+        Array.isArray(parsed.incoming),
+        "explain --json has incoming array",
+      );
+      assert(
+        Array.isArray(parsed.outgoing),
+        "explain --json has outgoing array",
+      );
+      assert(
+        Array.isArray(parsed.processes),
+        "explain --json has processes array",
+      );
+      assert(
+        Array.isArray(parsed.constraints),
+        "explain --json has constraints array",
+      );
+    }
+
+    // Test 39: explain nonexistent entity
+    {
+      const out = cli(`explain ${TMP_MODEL} Nonexistent`);
+      assert(
+        out.includes("not found") || out.includes("Available"),
+        "explain shows error for missing entity",
+      );
+    }
+
+    // Test 40: relations --json
+    {
+      const out = cli(`relations ${TMP_MODEL} --json`);
+      const parsed = JSON.parse(out);
+      assert(Array.isArray(parsed), "relations --json returns array");
+      assert(parsed.length === 3, "relations --json has 3 relations");
+    }
+
+    // Test 41: processes --json
+    {
+      const out = cli(`processes ${TMP_MODEL} --json`);
+      const parsed = JSON.parse(out);
+      assert(Array.isArray(parsed), "processes --json returns array");
+    }
+
+    // Test 42: constraints --json
+    {
+      const out = cli(`constraints ${TMP_MODEL} --json`);
+      const parsed = JSON.parse(out);
+      assert(Array.isArray(parsed), "constraints --json returns array");
+    }
+
+    // Test 43: constraints --severity filter
+    {
+      const out = cli(`constraints ${TMP_MODEL} -s hard`);
+      assert(
+        out.includes("Valid Payment") || out.includes("hard"),
+        "constraints -s hard filters correctly",
+      );
+    }
+
+    // Test 44: impact --json
+    {
+      const out = cli(`impact ${TMP_MODEL} User --json`);
+      const parsed = JSON.parse(out);
+      assert(typeof parsed.severity === "string", "impact --json has severity");
+    }
+
+    // Test 45: clusters --json
+    {
+      const out = cli(`clusters ${TMP_MODEL} --json`);
+      const parsed = JSON.parse(out);
+      assert(Array.isArray(parsed), "clusters --json returns array");
+    }
+
+    // Test 46: summary is one line
+    {
+      const out = cli(`summary ${TMP_MODEL}`);
+      const lines = out
+        .trim()
+        .split("\n")
+        .filter((l) => l.trim());
+      assert(lines.length <= 3, "summary is concise (1-3 lines)");
+    }
   } finally {
     // Cleanup
     if (existsSync(TMP_MODEL)) unlinkSync(TMP_MODEL);
