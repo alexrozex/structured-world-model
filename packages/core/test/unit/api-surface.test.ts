@@ -120,9 +120,34 @@ async function run() {
   // ID generation
   assert(typeof mod.genId === "function", "genId exported");
 
+  // Filtering
+  assert(typeof mod.filterModel === "function", "filterModel exported");
+
+  // Serialization
+  assert(typeof mod.toCompactJSON === "function", "toCompactJSON exported");
+  assert(typeof mod.toPrettyJSON === "function", "toPrettyJSON exported");
+  assert(typeof mod.toYAML === "function", "toYAML exported");
+  assert(typeof mod.modelSize === "function", "modelSize exported");
+
+  // Versioning
+  assert(typeof mod.bumpVersion === "function", "bumpVersion exported");
+  assert(typeof mod.versionModel === "function", "versionModel exported");
+  assert(typeof mod.compareVersions === "function", "compareVersions exported");
+
+  // Model loading
+  assert(typeof mod.parseWorldModel === "function", "parseWorldModel exported");
+  assert(
+    typeof mod.validateWorldModel === "function",
+    "validateWorldModel exported",
+  );
+  assert(
+    typeof mod.loadWorldModelFromFile === "function",
+    "loadWorldModelFromFile exported",
+  );
+
   // Count total exports
   const exportCount = Object.keys(mod).length;
-  assert(exportCount >= 40, `API surface: ${exportCount} exports (>= 40)`);
+  assert(exportCount >= 55, `API surface: ${exportCount} exports (>= 55)`);
 
   console.log(
     `\n\u2550\u2550\u2550 ${passed}/${passed + failed} passed \u2550\u2550\u2550\n`,

@@ -106,6 +106,14 @@ export { genId } from "./utils/ids.js";
 export { filterModel } from "./utils/filter.js";
 export type { FilterOptions } from "./utils/filter.js";
 
+// Serialization
+export {
+  toCompactJSON,
+  toPrettyJSON,
+  toYAML,
+  modelSize,
+} from "./utils/serialize.js";
+
 // Versioning
 export {
   bumpVersion,
