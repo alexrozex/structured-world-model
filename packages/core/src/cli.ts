@@ -1322,7 +1322,7 @@ program
   .argument("<model>", "Path to world model JSON")
   .option(
     "--as <format>",
-    "Export format: claude-md, system-prompt, mcp, markdown-table, html",
+    "Export format: claude-md, system-prompt, mcp, markdown-table, html, yaml, json",
     "claude-md",
   )
   .option("-o, --output <path>", "Write to file")
@@ -1354,10 +1354,17 @@ program
             output = toHtml(model);
             break;
           }
+          case "yaml":
+          case "yml":
+            output = yamlStringify(model);
+            break;
+          case "json":
+            output = JSON.stringify(model, null, 2);
+            break;
           default:
             console.error(
               chalk.red(
-                `Unknown export format: ${opts.as}. Use: claude-md, system-prompt, mcp, markdown-table, html`,
+                `Unknown export format: ${opts.as}. Use: claude-md, system-prompt, mcp, markdown-table, html, yaml, json`,
               ),
             );
             process.exit(1);

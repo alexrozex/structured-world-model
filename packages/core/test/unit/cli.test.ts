@@ -288,6 +288,25 @@ async function run() {
       );
     }
 
+    // Test 15b: export --as yaml
+    {
+      const out = cli(`export ${TMP_MODEL} --as yaml`);
+      assert(out.includes("name: Test Marketplace"), "export yaml has name");
+      assert(out.includes("entities:"), "export yaml has entities");
+      assert(!out.startsWith("{"), "export yaml is not JSON");
+    }
+
+    // Test 15c: export --as json
+    {
+      const out = cli(`export ${TMP_MODEL} --as json`);
+      const parsed = JSON.parse(out);
+      assert(
+        parsed.name === "Test Marketplace",
+        "export json has correct name",
+      );
+      assert(parsed.entities.length === 4, "export json has entities");
+    }
+
     // Test 16: clusters command
     {
       const out = cli(`clusters ${TMP_MODEL}`);
