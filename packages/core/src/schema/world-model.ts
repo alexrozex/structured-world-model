@@ -115,6 +115,10 @@ export const Process = z.object({
   outcomes: z
     .array(z.string())
     .describe("What this process produces or changes"),
+  source_context: z
+    .string()
+    .optional()
+    .describe("Verbatim excerpt from input that evidences this process"),
 });
 
 export type Process = z.infer<typeof Process>;
@@ -141,6 +145,10 @@ export const Constraint = z.object({
   severity: z
     .enum(["hard", "soft"])
     .describe("Hard = violation is an error, Soft = violation is a warning"),
+  source_context: z
+    .string()
+    .optional()
+    .describe("Verbatim excerpt from input that evidences this constraint"),
 });
 
 export type Constraint = z.infer<typeof Constraint>;

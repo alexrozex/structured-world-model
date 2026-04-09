@@ -46,6 +46,7 @@ const RawProcessSchema = z.object({
   steps: z.array(RawProcessStepSchema).default([]),
   participants: z.array(z.string()).default([]),
   outcomes: z.array(z.string()).default([]),
+  source_context: z.string().optional(),
 });
 
 const RawConstraintSchema = z.object({
@@ -54,6 +55,7 @@ const RawConstraintSchema = z.object({
   description: z.string().default(""),
   scope: z.array(z.string()).default([]),
   severity: z.enum(["hard", "soft"]).default("soft"),
+  source_context: z.string().optional(),
 });
 
 export const RawExtractionSchema = z.object({

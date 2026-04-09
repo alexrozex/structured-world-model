@@ -224,6 +224,7 @@ export function structuringAgent(stageInput: {
     })),
     participants: (p.participants ?? []).map(resolveEntityId),
     outcomes: p.outcomes ?? [],
+    source_context: p.source_context,
   }));
 
   const constraints = (extraction.constraints ?? []).map((c) => ({
@@ -233,6 +234,7 @@ export function structuringAgent(stageInput: {
     description: c.description,
     scope: (c.scope ?? []).map(resolveEntityId),
     severity: c.severity,
+    source_context: c.source_context,
   }));
 
   const worldModel: WorldModelType = {

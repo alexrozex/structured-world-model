@@ -319,6 +319,66 @@ function run() {
     );
   }
 
+  // Process source_context
+  {
+    const withCtx = Process.safeParse({
+      id: "proc_1",
+      name: "Login",
+      description: "Auth flow",
+      steps: [{ order: 1, action: "Enter creds" }],
+      participants: ["ent_1"],
+      outcomes: ["Token"],
+      source_context: "The login flow starts when a user enters credentials",
+    });
+    assert(withCtx.success, "Process with source_context parses");
+    assert(
+      withCtx.success &&
+        withCtx.data.source_context ===
+          "The login flow starts when a user enters credentials",
+      "Process source_context value preserved",
+    );
+
+    const withoutCtx = Process.safeParse({
+      id: "proc_2",
+      name: "Logout",
+      description: "Logout",
+      steps: [],
+      participants: [],
+      outcomes: [],
+    });
+    assert(withoutCtx.success, "Process without source_context parses");
+  }
+
+  // Constraint source_context
+  {
+    const withCtx = Constraint.safeParse({
+      id: "cstr_1",
+      name: "Auth Required",
+      type: "authorization",
+      description: "Must authenticate",
+      scope: ["ent_1"],
+      severity: "hard",
+      source_context: "All users must authenticate before accessing the system",
+    });
+    assert(withCtx.success, "Constraint with source_context parses");
+    assert(
+      withCtx.success &&
+        withCtx.data.source_context ===
+          "All users must authenticate before accessing the system",
+      "Constraint source_context value preserved",
+    );
+
+    const withoutCtx = Constraint.safeParse({
+      id: "cstr_2",
+      name: "Rate",
+      type: "capacity",
+      description: "Limit",
+      scope: [],
+      severity: "soft",
+    });
+    assert(withoutCtx.success, "Constraint without source_context parses");
+  }
+
   console.log(`\n═══ ${passed}/${passed + failed} passed ═══\n`);
   if (failed > 0) process.exit(1);
 }

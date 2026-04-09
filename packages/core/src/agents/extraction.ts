@@ -43,6 +43,7 @@ export interface RawExtraction {
     }>;
     participants: string[];
     outcomes: string[];
+    source_context?: string;
   }>;
   constraints: Array<{
     name: string;
@@ -50,6 +51,7 @@ export interface RawExtraction {
     description: string;
     scope: string[];
     severity: "hard" | "soft";
+    source_context?: string;
   }>;
   model_name: string;
   model_description: string;
