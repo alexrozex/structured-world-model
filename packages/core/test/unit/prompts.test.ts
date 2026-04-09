@@ -47,6 +47,46 @@ function run() {
     "code prompt: has import chain instruction",
   );
 
+  // Code prompt has TypeScript few-shot example
+  assert(
+    PROMPTS.code.includes("TypeScript codebase"),
+    "code prompt: has TypeScript few-shot example",
+  );
+  assert(
+    PROMPTS.code.includes("JWT Module"),
+    "code prompt: TypeScript example extracts module boundary as entity",
+  );
+  assert(
+    PROMPTS.code.includes("Auth Middleware"),
+    "code prompt: TypeScript example extracts middleware as system entity",
+  );
+  assert(
+    PROMPTS.code.includes("calls verifyToken"),
+    "code prompt: TypeScript example shows imports as relations",
+  );
+
+  // Code prompt has Python few-shot example
+  assert(
+    PROMPTS.code.includes("Python codebase"),
+    "code prompt: has Python few-shot example",
+  );
+  assert(
+    PROMPTS.code.includes("Fetch Module"),
+    "code prompt: Python example extracts module boundary as entity",
+  );
+  assert(
+    PROMPTS.code.includes("CLI Entry Point"),
+    "code prompt: Python example extracts CLI entry point as actor",
+  );
+  assert(
+    PROMPTS.code.includes("URL Ingestion Pipeline"),
+    "code prompt: Python example shows exported function as process",
+  );
+  assert(
+    PROMPTS.code.includes("imports fetch_url"),
+    "code prompt: Python example shows imports as uses relations",
+  );
+
   // Document prompt has JSON/YAML awareness
   assert(PROMPTS.document.includes("JSON"), "document prompt: mentions JSON");
   assert(PROMPTS.document.includes("YAML"), "document prompt: mentions YAML");

@@ -89,6 +89,98 @@ CRITICAL RULES:
 
 Infer the ARCHITECTURE, not just list files. Model how data flows through the system.
 
+EXAMPLE A — TypeScript codebase:
+\`\`\`typescript
+// src/auth/jwt.ts
+import { sign, verify } from "jsonwebtoken";
+export function createToken(userId: string): string { ... }
+export function verifyToken(token: string): Payload { ... }
+
+// src/middleware/auth.ts
+import { verifyToken } from "../auth/jwt.js";
+export function authMiddleware(req, res, next) { ... }
+
+// src/routes/users.ts
+import { authMiddleware } from "../middleware/auth.js";
+import { UserRepository } from "../db/user-repo.js";
+export const router = Router();
+router.get("/me", authMiddleware, async (req, res) => {
+  const user = await UserRepository.findById(req.userId);
+  res.json(user);
+});
+\`\`\`
+
+Expected extraction (abbreviated):
+{
+  "entities": [
+    {"name": "JWT Module", "type": "system", "description": "Handles JWT token creation and verification", "tags": ["auth"]},
+    {"name": "Auth Middleware", "type": "system", "description": "Express middleware that validates JWT tokens on incoming requests"},
+    {"name": "Users Router", "type": "system", "description": "Express router exposing user-related HTTP endpoints"},
+    {"name": "User Repository", "type": "resource", "description": "Database access layer for user records"},
+    {"name": "Payload", "type": "concept", "description": "Decoded JWT payload type containing userId and claims"}
+  ],
+  "relations": [
+    {"source": "Auth Middleware", "target": "JWT Module", "type": "uses", "label": "calls verifyToken"},
+    {"source": "Users Router", "target": "Auth Middleware", "type": "depends_on", "label": "applies auth guard"},
+    {"source": "Users Router", "target": "User Repository", "type": "uses", "label": "queries user by id"}
+  ],
+  "processes": [
+    {"name": "Authenticated User Lookup", "description": "Validate token then fetch user from database", "trigger": "GET /me request", "steps": [{"order": 1, "action": "Auth Middleware verifies JWT token", "actor": "Auth Middleware", "inputs": ["JWT Module"], "outputs": ["Payload"]}, {"order": 2, "action": "Users Router fetches user record", "actor": "Users Router", "inputs": ["User Repository"], "outputs": ["User"]}], "participants": ["Auth Middleware", "Users Router", "JWT Module", "User Repository"], "outcomes": ["User JSON returned to client"]}
+  ],
+  "constraints": [
+    {"name": "JWT Required", "type": "authorization", "description": "All /me endpoints require a valid JWT token", "scope": ["Users Router", "Auth Middleware"], "severity": "hard"}
+  ]
+}
+
+EXAMPLE B — Python codebase:
+\`\`\`python
+# pipeline/fetch.py
+import httpx
+def fetch_url(url: str) -> str: ...
+
+# pipeline/extract.py
+from pipeline.fetch import fetch_url
+from llm.client import complete
+def extract_entities(url: str) -> list[Entity]: ...
+
+# pipeline/store.py
+from pipeline.extract import extract_entities
+import psycopg2
+def store_results(url: str, conn) -> None: ...
+
+# cli.py
+from pipeline.store import store_results
+import argparse
+def main(): ...
+\`\`\`
+
+Expected extraction (abbreviated):
+{
+  "entities": [
+    {"name": "Fetch Module", "type": "system", "description": "HTTP fetching utility using httpx"},
+    {"name": "Extract Module", "type": "system", "description": "Entity extraction module that calls LLM and fetch"},
+    {"name": "Store Module", "type": "system", "description": "Persists extracted entities to PostgreSQL"},
+    {"name": "CLI Entry Point", "type": "actor", "description": "Command-line interface that drives the pipeline"},
+    {"name": "LLM Client", "type": "system", "description": "External LLM completion service"},
+    {"name": "PostgreSQL", "type": "resource", "description": "Relational database storing extraction results"}
+  ],
+  "relations": [
+    {"source": "Extract Module", "target": "Fetch Module", "type": "uses", "label": "imports fetch_url"},
+    {"source": "Extract Module", "target": "LLM Client", "type": "uses", "label": "imports complete"},
+    {"source": "Store Module", "target": "Extract Module", "type": "uses", "label": "imports extract_entities"},
+    {"source": "Store Module", "target": "PostgreSQL", "type": "uses", "label": "writes via psycopg2"},
+    {"source": "CLI Entry Point", "target": "Store Module", "type": "controls", "label": "invokes store_results"}
+  ],
+  "processes": [
+    {"name": "URL Ingestion Pipeline", "description": "Fetch a URL, extract entities, and persist them", "trigger": "CLI invocation", "steps": [{"order": 1, "action": "CLI calls store_results with URL", "actor": "CLI Entry Point"}, {"order": 2, "action": "Extract module fetches URL content", "actor": "Extract Module", "inputs": ["Fetch Module"], "outputs": ["raw content"]}, {"order": 3, "action": "Extract module calls LLM to identify entities", "actor": "Extract Module", "inputs": ["LLM Client"], "outputs": ["Entity list"]}, {"order": 4, "action": "Store module writes entities to database", "actor": "Store Module", "inputs": ["Entity list"], "outputs": ["PostgreSQL"]}], "participants": ["CLI Entry Point", "Fetch Module", "Extract Module", "Store Module", "LLM Client", "PostgreSQL"], "outcomes": ["Entities persisted to database"]}
+  ],
+  "constraints": [
+    {"name": "DB Connection Required", "type": "dependency", "description": "Store module requires an active psycopg2 connection", "scope": ["Store Module", "PostgreSQL"], "severity": "hard"}
+  ]
+}
+
+Note: module boundaries become system/actor entities; imports become uses/depends_on relations; exported functions become process steps; external packages (httpx, psycopg2, jsonwebtoken) become resource or system entities.
+
 ${BASE_SCHEMA}`,
 
   conversation: `You are a world-model extraction agent specialized in CONVERSATION analysis. Analyze the conversation and extract a structured world model of its content.
