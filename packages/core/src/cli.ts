@@ -1365,6 +1365,12 @@ program
           case "mermaid":
             output = toMermaid(model);
             break;
+          case "card":
+          case "summary-card": {
+            const { toSummaryCard } = await import("./export/summary-card.js");
+            output = toSummaryCard(model);
+            break;
+          }
           case "json":
             output = JSON.stringify(model, null, 2);
             break;
