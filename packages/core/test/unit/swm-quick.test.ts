@@ -71,6 +71,22 @@ async function run() {
     assert(defaults.model === undefined, "default model is undefined");
   }
 
+  // QuickResult includes cost field
+  {
+    const { estimateCost } = await import("../../src/utils/cost.js");
+    const cost = estimateCost("A marketplace for freelancers");
+    assert(
+      typeof cost.estimatedCostUSD === "number",
+      "cost: estimatedCostUSD is number",
+    );
+    assert(
+      typeof cost.cachedCostUSD === "number",
+      "cost: cachedCostUSD is number",
+    );
+    assert(typeof cost.inputTokens === "number", "cost: inputTokens is number");
+    assert(cost.totalTokens > 0, "cost: positive total tokens");
+  }
+
   console.log(
     `\n\u2550\u2550\u2550 ${passed}/${passed + failed} passed \u2550\u2550\u2550\n`,
   );

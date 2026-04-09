@@ -19,6 +19,7 @@ import { toMarkdownTable } from "./export/markdown-table.js";
 import { toHtml } from "./export/html.js";
 import { assessHealth } from "./utils/health.js";
 import type { HealthReport } from "./utils/health.js";
+import { estimateCost } from "./utils/cost.js";
 import { isUrl } from "./utils/fetch.js";
 
 export interface QuickResult {
@@ -37,6 +38,8 @@ export interface QuickResult {
     html: string;
     json: string;
   };
+  /** Cost estimate for this extraction */
+  cost: import("./utils/cost.js").CostEstimate;
   /** Pipeline timing in ms */
   durationMs: number;
 }
@@ -96,11 +99,17 @@ export async function swm(
     json: JSON.stringify(result.worldModel, null, 2),
   };
 
+  const cost = estimateCost(input, {
+    passes: options?.passes ?? 1,
+    sourceType,
+  });
+
   return {
     model: result.worldModel,
     validation: result.validation,
     health,
     exports,
+    cost,
     durationMs: result.totalDurationMs,
   };
 }
