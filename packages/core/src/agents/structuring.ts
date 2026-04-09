@@ -134,6 +134,7 @@ export function structuringAgent(stageInput: {
     properties?: Record<string, unknown>;
     tags?: string[];
     confidence?: number;
+    source_context?: string;
   }> = [];
 
   for (const e of extraction.entities ?? []) {
@@ -155,6 +156,12 @@ export function structuringAgent(stageInput: {
         if (e.tags) {
           existing.tags = [...new Set([...(existing.tags ?? []), ...e.tags])];
         }
+        // Merge source_context
+        if (e.source_context) {
+          existing.source_context = existing.source_context
+            ? `${existing.source_context} | ${e.source_context}`
+            : e.source_context;
+        }
       }
     } else {
       const id = genId("ent");
@@ -168,6 +175,7 @@ export function structuringAgent(stageInput: {
         properties: e.properties,
         tags: e.tags,
         confidence: e.confidence,
+        source_context: e.source_context,
       });
     }
   }

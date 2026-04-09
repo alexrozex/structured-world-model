@@ -40,6 +40,12 @@ export const Entity = z.object({
     .describe(
       "Extraction confidence for this entity (1=explicit, 0.5=inferred, 0=placeholder)",
     ),
+  source_context: z
+    .string()
+    .optional()
+    .describe(
+      "Verbatim excerpt from the input that evidences this entity's existence",
+    ),
 });
 
 export type Entity = z.infer<typeof Entity>;

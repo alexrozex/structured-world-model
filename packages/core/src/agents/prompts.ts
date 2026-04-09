@@ -1,7 +1,7 @@
 const BASE_SCHEMA = `Output ONLY valid JSON with this EXACT structure — no other text before or after:
 {
   "entities": [
-    { "name": "string", "type": "actor|object|system|concept|location|event|group|resource", "description": "string", "properties": {}, "tags": ["string"] }
+    { "name": "string", "type": "actor|object|system|concept|location|event|group|resource", "description": "string", "properties": {}, "tags": ["string"], "source_context": "verbatim quote or close paraphrase from input proving this entity exists" }
   ],
   "relations": [
     { "source": "entity name string", "target": "entity name string", "type": "has|is_a|part_of|depends_on|produces|consumes|controls|communicates_with|located_in|triggers|inherits|contains|uses|flows_to|opposes|enables|transforms", "label": "string", "bidirectional": false }
