@@ -1,7 +1,10 @@
-import { callAgentJSON } from "../utils/llm.js";
+import { callAgentJSON, callAgentStructured } from "../utils/llm.js";
 import type { WorldModelType } from "../schema/index.js";
 import type { RawExtraction } from "./extraction.js";
-import { validateExtraction } from "../schema/extraction.js";
+import {
+  validateExtraction,
+  getRawExtractionJsonSchema,
+} from "../schema/extraction.js";
 import { structuringAgent } from "./structuring.js";
 import { mergeWorldModels } from "../utils/merge.js";
 import { validationAgent } from "./validation.js";
@@ -67,9 +70,20 @@ export async function transformWorldModel(
   const systemPrompt = TRANSFORM_PROMPT.replace("{modelSummary}", summary);
   const userMessage = `Apply this transformation to the world model:\n\n${instruction}`;
 
-  const rawResult = await callAgentJSON<unknown>(systemPrompt, userMessage, {
-    maxTokens: 16384,
-  });
+  let rawResult: unknown;
+  try {
+    const jsonSchema = getRawExtractionJsonSchema();
+    rawResult = await callAgentStructured<unknown>(
+      systemPrompt,
+      userMessage,
+      jsonSchema,
+      { maxTokens: 16384 },
+    );
+  } catch {
+    rawResult = await callAgentJSON<unknown>(systemPrompt, userMessage, {
+      maxTokens: 16384,
+    });
+  }
 
   const { extraction, issues } = validateExtraction(rawResult);
   if (issues.length > 0) {

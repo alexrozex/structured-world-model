@@ -1,8 +1,11 @@
-import { callAgentJSON } from "../utils/llm.js";
+import { callAgentJSON, callAgentStructured } from "../utils/llm.js";
 import type { WorldModelType } from "../schema/index.js";
 import type { PipelineInput } from "../pipeline/index.js";
 import type { RawExtraction } from "./extraction.js";
-import { validateExtraction } from "../schema/extraction.js";
+import {
+  validateExtraction,
+  getRawExtractionJsonSchema,
+} from "../schema/extraction.js";
 
 const SECOND_PASS_PROMPT = `You are a world-model COMPLETENESS agent. You are given:
 1. The original raw input
@@ -100,13 +103,20 @@ export async function secondPassAgent(
 
   const userMessage = `## Original Input:\n${originalInput.raw}\n\n---\n\n## Already Extracted World Model:\n${modelSummary}\n\n---\n\nWhat did the first pass MISS? Extract only NEW entities, relations, processes, and constraints that are implicit in the input but not yet in the model.`;
 
-  const rawResult = await callAgentJSON<unknown>(
-    SECOND_PASS_PROMPT,
-    userMessage,
-    {
+  let rawResult: unknown;
+  try {
+    const jsonSchema = getRawExtractionJsonSchema();
+    rawResult = await callAgentStructured<unknown>(
+      SECOND_PASS_PROMPT,
+      userMessage,
+      jsonSchema,
+      { maxTokens: 16384 },
+    );
+  } catch {
+    rawResult = await callAgentJSON<unknown>(SECOND_PASS_PROMPT, userMessage, {
       maxTokens: 16384,
-    },
-  );
+    });
+  }
 
   const { extraction, issues } = validateExtraction(rawResult);
   if (issues.length > 0) {

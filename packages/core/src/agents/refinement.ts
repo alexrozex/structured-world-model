@@ -1,7 +1,11 @@
-import { callAgentJSON } from "../utils/llm.js";
+import { callAgentJSON, callAgentStructured } from "../utils/llm.js";
 import type { WorldModelType } from "../schema/index.js";
 import type { PipelineInput } from "../pipeline/index.js";
 import type { RawExtraction } from "./extraction.js";
+import {
+  validateExtraction,
+  getRawExtractionJsonSchema,
+} from "../schema/extraction.js";
 import { structuringAgent } from "./structuring.js";
 import { validationAgent } from "./validation.js";
 import { mergeWorldModels } from "../utils/merge.js";
@@ -72,13 +76,25 @@ export async function refineWorldModel(
 
   const userMessage = `Given the existing world model above, analyze this NEW ${newInput.sourceType} input and extract only what's new or changed.\n\n---\n\n${newInput.raw}`;
 
-  const deltaExtraction = await callAgentJSON<RawExtraction>(
-    systemPrompt,
-    userMessage,
-    {
-      maxTokens: 16384,
-    },
-  );
+  let deltaExtraction: RawExtraction;
+  try {
+    const jsonSchema = getRawExtractionJsonSchema();
+    const raw = await callAgentStructured<unknown>(
+      systemPrompt,
+      userMessage,
+      jsonSchema,
+      { maxTokens: 16384 },
+    );
+    const { extraction } = validateExtraction(raw);
+    deltaExtraction = extraction as unknown as RawExtraction;
+  } catch {
+    // Fallback to unstructured JSON
+    deltaExtraction = await callAgentJSON<RawExtraction>(
+      systemPrompt,
+      userMessage,
+      { maxTokens: 16384 },
+    );
+  }
 
   options?.onStageEnd?.("refinement-extraction", Date.now() - start);
 
