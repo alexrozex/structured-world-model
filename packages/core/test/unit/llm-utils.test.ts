@@ -1,4 +1,8 @@
-import { estimateTokens, checkInputSize } from "../../src/utils/llm.js";
+import {
+  estimateTokens,
+  checkInputSize,
+  callAgentStructured,
+} from "../../src/utils/llm.js";
 
 let passed = 0;
 let failed = 0;

@@ -1,7 +1,13 @@
 import type { WorldModelType } from "../schema/index.js";
 
 export interface Conflict {
-  kind: "entity_type" | "relation_type" | "constraint_severity" | "description";
+  kind:
+    | "entity_type"
+    | "relation_type"
+    | "constraint_severity"
+    | "constraint_scope"
+    | "process_mismatch"
+    | "description";
   element: string;
   modelA: string;
   modelB: string;
@@ -86,13 +92,69 @@ export function compare(a: WorldModelType, b: WorldModelType): CompareResult {
     }
   }
 
-  // Constraint severity conflicts
+  // Process comparison — step count, step actions, triggers
+  const aProcs = new Map(a.processes.map((p) => [normalize(p.name), p]));
+  const bProcs = new Map(b.processes.map((p) => [normalize(p.name), p]));
+
+  for (const [key, pA] of aProcs) {
+    const pB = bProcs.get(key);
+    if (!pB) continue;
+
+    let processConflict = false;
+
+    // Different step counts
+    if (pA.steps.length !== pB.steps.length) {
+      conflicts.push({
+        kind: "process_mismatch",
+        element: pA.name,
+        modelA: `${pA.steps.length} steps`,
+        modelB: `${pB.steps.length} steps`,
+      });
+      processConflict = true;
+    } else {
+      // Same step count — compare actions by order
+      const sortedA = [...pA.steps].sort((a, b) => a.order - b.order);
+      const sortedB = [...pB.steps].sort((a, b) => a.order - b.order);
+      for (let i = 0; i < sortedA.length; i++) {
+        if (sortedA[i].action !== sortedB[i].action) {
+          conflicts.push({
+            kind: "process_mismatch",
+            element: `${pA.name} step ${sortedA[i].order}`,
+            modelA: sortedA[i].action,
+            modelB: sortedB[i].action,
+          });
+          processConflict = true;
+        }
+      }
+    }
+
+    // Different triggers
+    const trigA = pA.trigger ?? "";
+    const trigB = pB.trigger ?? "";
+    if (trigA !== trigB) {
+      conflicts.push({
+        kind: "process_mismatch",
+        element: `${pA.name} trigger`,
+        modelA: trigA || "(none)",
+        modelB: trigB || "(none)",
+      });
+      processConflict = true;
+    }
+
+    if (!processConflict) {
+      agreements++;
+    }
+  }
+
+  // Constraint severity and scope conflicts
   const aCstrs = new Map(a.constraints.map((c) => [normalize(c.name), c]));
   const bCstrs = new Map(b.constraints.map((c) => [normalize(c.name), c]));
 
   for (const [key, cA] of aCstrs) {
     const cB = bCstrs.get(key);
     if (!cB) continue;
+
+    let constraintConflict = false;
 
     if (cA.severity !== cB.severity) {
       conflicts.push({
@@ -101,7 +163,34 @@ export function compare(a: WorldModelType, b: WorldModelType): CompareResult {
         modelA: cA.severity,
         modelB: cB.severity,
       });
-    } else {
+      constraintConflict = true;
+    }
+
+    // Scope comparison — resolve entity IDs to names for meaningful comparison
+    const resolveScope = (scope: string[], model: WorldModelType): string[] => {
+      return scope
+        .map((id) =>
+          normalize(model.entities.find((e) => e.id === id)?.name ?? id),
+        )
+        .sort();
+    };
+
+    const scopeA = resolveScope(cA.scope, a);
+    const scopeB = resolveScope(cB.scope, b);
+    const scopeAStr = scopeA.join(",");
+    const scopeBStr = scopeB.join(",");
+
+    if (scopeAStr !== scopeBStr) {
+      conflicts.push({
+        kind: "constraint_scope",
+        element: cA.name,
+        modelA: scopeA.join(", ") || "(empty)",
+        modelB: scopeB.join(", ") || "(empty)",
+      });
+      constraintConflict = true;
+    }
+
+    if (!constraintConflict) {
       agreements++;
     }
   }

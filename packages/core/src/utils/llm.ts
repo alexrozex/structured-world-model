@@ -28,12 +28,56 @@ export interface CallOptions {
   maxTokens?: number;
   retries?: number;
   timeoutMs?: number;
+  cache?: boolean; // Enable prompt caching (default: true)
 }
 
 const DEFAULT_RETRIES = 3;
 const BASE_DELAY_MS = 1000;
 const DEFAULT_TIMEOUT_MS = 120_000; // 2 minutes
 const MAX_INPUT_TOKENS_WARNING = 150_000;
+
+/** Minimum estimated tokens for prompt caching to be worthwhile (Anthropic requirement). */
+const MIN_CACHE_TOKENS = 1024;
+
+/**
+ * Build the `system` parameter for the Anthropic API.
+ * When caching is enabled and the prompt is long enough, wraps the text in
+ * a content block with `cache_control` so repeated calls reuse the cached prefix.
+ */
+function buildSystemParam(
+  systemPrompt: string,
+  cache: boolean,
+):
+  | string
+  | Array<{
+      type: "text";
+      text: string;
+      cache_control?: { type: "ephemeral" };
+    }> {
+  if (!cache || estimateTokens(systemPrompt) < MIN_CACHE_TOKENS) {
+    return systemPrompt;
+  }
+  return [
+    {
+      type: "text" as const,
+      text: systemPrompt,
+      cache_control: { type: "ephemeral" as const },
+    },
+  ];
+}
+
+/**
+ * Log prompt-cache hit/miss stats when present on a response.
+ */
+function logCacheUsage(usage: Record<string, unknown>): void {
+  const created = usage.cache_creation_input_tokens as number | undefined;
+  const read = usage.cache_read_input_tokens as number | undefined;
+  if (created || read) {
+    process.stderr.write(
+      `  [cache] creation=${created ?? 0}  read=${read ?? 0}\n`,
+    );
+  }
+}
 
 function isRetryable(err: unknown): boolean {
   if (err instanceof Anthropic.APIError) {
@@ -115,17 +159,20 @@ export async function callAgent(
   const llm = getClient();
   const retries = options?.retries ?? DEFAULT_RETRIES;
   const timeoutMs = options?.timeoutMs ?? DEFAULT_TIMEOUT_MS;
+  const useCache = options?.cache ?? true;
 
   return withRetry(
     async () => {
       const apiCall = llm.messages.create({
         model: options?.model ?? defaultModel,
         max_tokens: options?.maxTokens ?? 8192,
-        system: systemPrompt,
+        system: buildSystemParam(systemPrompt, useCache),
         messages: [{ role: "user", content: userMessage }],
       });
 
       const response = await withTimeout(apiCall, timeoutMs, "LLM call");
+
+      logCacheUsage(response.usage as unknown as Record<string, unknown>);
 
       const textBlock = response.content.find((b) => b.type === "text");
       if (!textBlock || textBlock.type !== "text") {
@@ -166,6 +213,62 @@ export async function callAgentJSON<T>(
     },
     retries,
     "callAgentJSON",
+  );
+}
+
+/**
+ * Call the LLM with guaranteed structured output via output_config JSON schema.
+ * The API constrains the model to produce valid JSON matching the provided schema.
+ * Falls back to callAgentJSON if the API rejects the output_config parameter.
+ */
+export async function callAgentStructured<T>(
+  systemPrompt: string,
+  userMessage: string,
+  jsonSchema: Record<string, unknown>,
+  options?: CallOptions,
+): Promise<T> {
+  if (!systemPrompt)
+    throw new Error("callAgentStructured: systemPrompt is required");
+  if (!userMessage)
+    throw new Error("callAgentStructured: userMessage is required");
+
+  const llm = getClient();
+  const model = options?.model ?? defaultModel;
+  const maxTokens = options?.maxTokens ?? 16384;
+  const retries = options?.retries ?? DEFAULT_RETRIES;
+  const timeoutMs = options?.timeoutMs ?? DEFAULT_TIMEOUT_MS;
+  const useCache = options?.cache ?? true;
+
+  return withRetry(
+    async () => {
+      const apiCall = llm.messages.create({
+        model,
+        max_tokens: maxTokens,
+        system: buildSystemParam(systemPrompt, useCache),
+        messages: [{ role: "user", content: userMessage }],
+        // @ts-expect-error — output_config is newer than SDK types may expose
+        output_config: {
+          format: {
+            type: "json_schema",
+            schema: jsonSchema,
+          },
+        },
+      });
+
+      const response = await withTimeout(
+        apiCall,
+        timeoutMs,
+        "LLM structured call",
+      );
+
+      const textBlock = response.content.find((b) => b.type === "text");
+      if (!textBlock || textBlock.type !== "text") {
+        throw new Error("No text in structured response");
+      }
+      return JSON.parse(textBlock.text) as T;
+    },
+    retries,
+    "callAgentStructured",
   );
 }
 

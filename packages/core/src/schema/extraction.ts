@@ -70,6 +70,14 @@ export const RawExtractionSchema = z.object({
 export type ValidatedRawExtraction = z.infer<typeof RawExtractionSchema>;
 
 /**
+ * Return the RawExtraction Zod schema as a JSON Schema object,
+ * suitable for use with the Anthropic structured output API.
+ */
+export function getRawExtractionJsonSchema(): Record<string, unknown> {
+  return z.toJSONSchema(RawExtractionSchema, { target: "draft-2020-12" });
+}
+
+/**
  * Validate and coerce raw LLM extraction output.
  * Returns a clean extraction with defaults for missing fields,
  * plus any validation issues encountered.

@@ -41,9 +41,7 @@ export async function startMcpServer(modelPath: string): Promise<void> {
     debounceTimer = setTimeout(() => {
       try {
         state.model = loadModel(resolved);
-        process.stderr.write(
-          `[swm-mcp] hot-reloaded model from ${resolved}\n`,
-        );
+        process.stderr.write(`[swm-mcp] hot-reloaded model from ${resolved}\n`);
       } catch {
         process.stderr.write(
           `[swm-mcp] failed to reload model from ${resolved} — keeping previous version\n`,
@@ -361,7 +359,9 @@ export async function startMcpServer(modelPath: string): Promise<void> {
     "Get a Mermaid diagram of the world model for visualization",
     {},
     async () => {
-      return { content: [{ type: "text" as const, text: toMermaid(state.model) }] };
+      return {
+        content: [{ type: "text" as const, text: toMermaid(state.model) }],
+      };
     },
   );
 
@@ -409,6 +409,91 @@ export async function startMcpServer(modelPath: string): Promise<void> {
           `Affected constraints: ${result.affectedConstraints.map((c) => `[${c.severity}] ${c.name}`).join(", ")}`,
         );
       }
+      return { content: [{ type: "text" as const, text: lines.join("\n") }] };
+    },
+  );
+
+  // ─── Tool: search ────────────────────────────────────────
+  server.tool(
+    "search",
+    "Full-text search across all entities, relations, processes, and constraints",
+    { query: z.string().describe("Search term") },
+    async ({ query }) => {
+      const model = state.model;
+      const q = query.toLowerCase();
+
+      const matchedEntities = model.entities.filter(
+        (e) =>
+          e.name.toLowerCase().includes(q) ||
+          (e.description && e.description.toLowerCase().includes(q)),
+      );
+
+      const matchedRelations = model.relations.filter((r) =>
+        r.label.toLowerCase().includes(q),
+      );
+
+      const matchedProcesses = model.processes.filter(
+        (p) =>
+          p.name.toLowerCase().includes(q) ||
+          (p.description && p.description.toLowerCase().includes(q)) ||
+          p.steps.some((s) => s.action.toLowerCase().includes(q)),
+      );
+
+      const matchedConstraints = model.constraints.filter(
+        (c) =>
+          c.name.toLowerCase().includes(q) ||
+          (c.description && c.description.toLowerCase().includes(q)),
+      );
+
+      const lines: string[] = [];
+
+      lines.push("**Entities:**");
+      if (matchedEntities.length > 0) {
+        for (const e of matchedEntities) {
+          lines.push(`  ${e.name} (${e.type}) — ${e.description ?? ""}`);
+        }
+      } else {
+        lines.push("  No matches.");
+      }
+
+      lines.push("\n**Relations:**");
+      if (matchedRelations.length > 0) {
+        for (const r of matchedRelations) {
+          const src =
+            model.entities.find((e) => e.id === r.source)?.name ?? r.source;
+          const tgt =
+            model.entities.find((e) => e.id === r.target)?.name ?? r.target;
+          lines.push(`  ${src} —[${r.type}]→ ${tgt}: ${r.label}`);
+        }
+      } else {
+        lines.push("  No matches.");
+      }
+
+      lines.push("\n**Processes:**");
+      if (matchedProcesses.length > 0) {
+        for (const p of matchedProcesses) {
+          lines.push(`  ${p.name} — ${p.description ?? ""}`);
+        }
+      } else {
+        lines.push("  No matches.");
+      }
+
+      lines.push("\n**Constraints:**");
+      if (matchedConstraints.length > 0) {
+        for (const c of matchedConstraints) {
+          lines.push(`  [${c.severity}] ${c.name} — ${c.description ?? ""}`);
+        }
+      } else {
+        lines.push("  No matches.");
+      }
+
+      const total =
+        matchedEntities.length +
+        matchedRelations.length +
+        matchedProcesses.length +
+        matchedConstraints.length;
+      lines.unshift(`Found ${total} result(s) for "${query}":\n`);
+
       return { content: [{ type: "text" as const, text: lines.join("\n") }] };
     },
   );

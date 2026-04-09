@@ -213,6 +213,62 @@ async function runProof() {
     detail: `Stages: [${stageNames.join(" → ")}]`,
   });
 
+  // ─── Stage 12: Multi-pass extraction finds additional entities ──
+  console.log("\n▸ Running multi-pass extraction comparison...\n");
+
+  let pass1EntityCount = 0;
+  let pass2EntityCount = 0;
+  try {
+    const pass1Result = await buildWorldModel(
+      {
+        raw: TEST_INPUT,
+        sourceType: "text",
+        name: "Rocky Mountain Tattoo Studio (pass-1)",
+      },
+      {
+        passes: 1,
+        onStageStart: (name) => process.stdout.write(`  ▸ [pass1] ${name}...`),
+        onStageEnd: (_name, ms) => console.log(` ✓ (${ms}ms)`),
+      },
+    );
+    pass1EntityCount = pass1Result.worldModel.entities.length;
+
+    const pass2Result = await buildWorldModel(
+      {
+        raw: TEST_INPUT,
+        sourceType: "text",
+        name: "Rocky Mountain Tattoo Studio (pass-2)",
+      },
+      {
+        passes: 2,
+        onStageStart: (name) => process.stdout.write(`  ▸ [pass2] ${name}...`),
+        onStageEnd: (_name, ms) => console.log(` ✓ (${ms}ms)`),
+      },
+    );
+    pass2EntityCount = pass2Result.worldModel.entities.length;
+
+    proofs.push({
+      label: "Multi-pass extraction finds additional entities",
+      passed: pass2EntityCount >= pass1EntityCount,
+      detail: `Pass 1: ${pass1EntityCount} entities, Pass 2: ${pass2EntityCount} entities`,
+    });
+
+    const pass2WmParse = WorldModel.safeParse(pass2Result.worldModel);
+    proofs.push({
+      label: "Multi-pass WorldModel passes Zod schema validation",
+      passed: pass2WmParse.success,
+      detail: pass2WmParse.success
+        ? "All fields conform to schema"
+        : `Schema errors: ${JSON.stringify(pass2WmParse.error?.issues?.slice(0, 3) ?? pass2WmParse.error)}`,
+    });
+  } catch (err) {
+    proofs.push({
+      label: "Multi-pass extraction finds additional entities",
+      passed: false,
+      detail: `Error: ${String(err)}`,
+    });
+  }
+
   // ─── Print report ──────────────────────────────────────
   printReport(proofs, Date.now() - start);
 

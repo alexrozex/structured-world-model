@@ -15,11 +15,18 @@ export interface QueryResult {
   confidence: number;
   /** Entity names whose extraction confidence in the model is below 0.5 — treat these answers as uncertain */
   low_confidence_entities: string[];
+  /** Which deterministic graph pattern matched (empty string for inference) */
+  pattern: string;
+  /** One-line explanation of why this pattern was chosen */
+  reasoning: string;
 }
 
 // ─── Internal result type (before confidence annotation) ──────
 
-type RawQueryResult = Omit<QueryResult, "low_confidence_entities">;
+type RawQueryResult = Omit<
+  QueryResult,
+  "low_confidence_entities" | "pattern" | "reasoning"
+>;
 
 /**
  * Annotate a result with low_confidence_entities by looking up each
@@ -44,6 +51,8 @@ function annotateConfidence(
 // ─── Deterministic graph queries ──────────────────────────────
 
 const GRAPH_PATTERNS: Array<{
+  name: string;
+  reasoning: string;
   pattern: RegExp;
   handler: (
     model: WorldModelType,
@@ -51,6 +60,8 @@ const GRAPH_PATTERNS: Array<{
   ) => RawQueryResult | null;
 }> = [
   {
+    name: "what-uses",
+    reasoning: "Question asks what depends on / uses / needs a specific entity",
     // "what depends on X" / "what uses X" / "what needs X"
     pattern:
       /what\s+(?:depends\s+on|uses|needs|requires|consumes)\s+(?:the\s+)?(.+?)(?:\?|$)/i,
@@ -82,6 +93,8 @@ const GRAPH_PATTERNS: Array<{
     },
   },
   {
+    name: "dependencies",
+    reasoning: "Question asks what a specific entity depends on / uses / needs",
     // "what does X depend on" / "what does X use" / "what does X need"
     pattern:
       /what\s+does\s+(.+?)\s+(?:depend\s+on|use|need|require|consume)(?:\?|$)/i,
@@ -113,6 +126,9 @@ const GRAPH_PATTERNS: Array<{
     },
   },
   {
+    name: "paths",
+    reasoning:
+      "Question asks how two entities are connected or for a path between them",
     // "how is X connected to Y" / "path from X to Y" / "how does X relate to Y"
     pattern:
       /(?:how\s+(?:is|does)\s+(.+?)\s+(?:connected|related?)\s+to\s+(.+?)|path\s+from\s+(.+?)\s+to\s+(.+?))(?:\?|$)/i,
@@ -153,6 +169,8 @@ const GRAPH_PATTERNS: Array<{
     },
   },
   {
+    name: "constraints",
+    reasoning: "Question asks what constraints or rules apply to an entity",
     // "what constraints apply to X" / "rules for X"
     pattern:
       /(?:what\s+constraints?\s+(?:apply|applies)\s+to|rules?\s+for)\s+(?:the\s+)?(.+?)(?:\?|$)/i,
@@ -185,6 +203,9 @@ const GRAPH_PATTERNS: Array<{
     },
   },
   {
+    name: "impact",
+    reasoning:
+      "Question asks what breaks or what the impact is of removing an entity",
     // "what breaks if I remove X" / "impact of removing X" / "what happens without X"
     pattern:
       /(?:what\s+(?:breaks|happens)|impact\s+of\s+removing|what\s+if\s+(?:we|I)\s+remove)\s+(?:if\s+(?:we|I)\s+remove\s+)?(?:the\s+)?(.+?)(?:\?|$)/i,
@@ -224,6 +245,9 @@ const GRAPH_PATTERNS: Array<{
     },
   },
   {
+    name: "processes",
+    reasoning:
+      "Question asks what processes involve or include a specific entity",
     // "what processes involve X" / "where does X participate" / "processes for X"
     pattern:
       /(?:what\s+processes?\s+(?:involve|include|use|have)|(?:where|which\s+processes?)\s+does\s+.+?\s+participate|processes?\s+(?:for|with|involving))\s+(?:the\s+)?(.+?)(?:\?|$)/i,
@@ -266,6 +290,8 @@ const GRAPH_PATTERNS: Array<{
     },
   },
   {
+    name: "list-type",
+    reasoning: "Question asks to list or show entities of a specific type",
     // "list all actors" / "show all systems" / "show actors" / "what actors are there"
     pattern: /(?:list|show|what)\s+(?:all\s+)?(\w+?)s?(?:\s|$|\?)/i,
     handler: (model, match) => {
@@ -308,6 +334,9 @@ const GRAPH_PATTERNS: Array<{
     },
   },
   {
+    name: "stats",
+    reasoning:
+      "Question asks for statistics, counts, or a summary of the model",
     // "how many entities" / "stats" / "summary"
     pattern: /(?:how\s+many|stats|statistics|summary|overview)\b/i,
     handler: (model) => {
@@ -337,6 +366,9 @@ const GRAPH_PATTERNS: Array<{
     },
   },
   {
+    name: "describe",
+    reasoning:
+      "Question asks what an entity is or requests a description of it",
     // "what is X" / "describe X" / "tell me about X"
     pattern:
       /(?:what\s+is|describe|tell\s+me\s+about|who\s+is)\s+(?:the\s+)?(.+?)(?:\?|$)/i,
@@ -466,7 +498,14 @@ async function inferenceQuery(
     .map((e) => e.name);
 
   return annotateConfidence(
-    { answer, method: "inference", entities_referenced: referenced, confidence: 0.8 },
+    {
+      answer,
+      method: "inference",
+      entities_referenced: referenced,
+      confidence: 0.8,
+      pattern: "",
+      reasoning: "No deterministic pattern matched; fell back to LLM inference",
+    },
     model,
   );
 }
@@ -495,15 +534,22 @@ export async function queryWorldModel(
       entities_referenced: [],
       confidence: 1,
       low_confidence_entities: [],
+      pattern: "",
+      reasoning: "",
     };
   }
 
   // Try deterministic graph queries first
-  for (const { pattern, handler } of GRAPH_PATTERNS) {
+  for (const { name, reasoning, pattern, handler } of GRAPH_PATTERNS) {
     const match = question.match(pattern);
     if (match) {
       const result = handler(model, match);
-      if (result) return annotateConfidence(result, model);
+      if (result) {
+        const annotated = annotateConfidence(result, model);
+        annotated.pattern = name;
+        annotated.reasoning = reasoning;
+        return annotated;
+      }
       // Pattern matched but handler returned null (entity not found) — fall through to inference
     }
   }

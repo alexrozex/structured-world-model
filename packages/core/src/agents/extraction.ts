@@ -1,8 +1,15 @@
-import { callAgentJSON, checkInputSize } from "../utils/llm.js";
+import {
+  callAgentJSON,
+  callAgentStructured,
+  checkInputSize,
+} from "../utils/llm.js";
 import type { PipelineInput } from "../pipeline/index.js";
 import { chunkInput } from "./chunker.js";
 import { getPromptForSourceType } from "./prompts.js";
-import { validateExtraction } from "../schema/extraction.js";
+import {
+  validateExtraction,
+  getRawExtractionJsonSchema,
+} from "../schema/extraction.js";
 
 export interface RawExtraction {
   entities: Array<{
@@ -205,6 +212,34 @@ function mergeRawExtractions(extractions: RawExtraction[]): RawExtraction {
   return merged;
 }
 
+/**
+ * Try structured output first (guaranteed JSON schema conformance),
+ * fall back to callAgentJSON if the API or model doesn't support it.
+ */
+async function callExtractionLLM(
+  systemPrompt: string,
+  userMessage: string,
+): Promise<unknown> {
+  try {
+    const schema = getRawExtractionJsonSchema();
+    return await callAgentStructured<unknown>(
+      systemPrompt,
+      userMessage,
+      schema,
+      { maxTokens: 16384, retries: 0 },
+    );
+  } catch (err) {
+    // Structured output not supported or failed — fall back to manual JSON parsing
+    const msg = err instanceof Error ? err.message : String(err);
+    process.stderr.write(
+      `  [structured-output] falling back to callAgentJSON: ${msg.slice(0, 120)}\n`,
+    );
+    return callAgentJSON<unknown>(systemPrompt, userMessage, {
+      maxTokens: 16384,
+    });
+  }
+}
+
 class EmptyExtractionError extends Error {
   constructor(issues: string[]) {
     super(`Extraction produced empty result: ${issues.join("; ")}`);
@@ -249,13 +284,7 @@ export async function extractionAgent(
     const userMessage = `Analyze the following ${input.sourceType} input and extract a complete world model.\n\n---\n\n${input.raw}`;
     const MAX_EMPTY_RETRIES = 2;
     for (let attempt = 0; attempt <= MAX_EMPTY_RETRIES; attempt++) {
-      const rawResult = await callAgentJSON<unknown>(
-        sourcePrompt,
-        userMessage,
-        {
-          maxTokens: 16384,
-        },
-      );
+      const rawResult = await callExtractionLLM(sourcePrompt, userMessage);
       try {
         return {
           input,
@@ -293,9 +322,7 @@ export async function extractionAgent(
 
     const userMessage = `Analyze chunk ${chunk.index + 1}/${chunk.total} of a ${input.sourceType} input and extract all world model elements.\n\n---\n\n${chunk.text}`;
 
-    const rawResult = await callAgentJSON<unknown>(prompt, userMessage, {
-      maxTokens: 16384,
-    });
+    const rawResult = await callExtractionLLM(prompt, userMessage);
     extractions.push(validateAndCoerce(rawResult));
   }
 

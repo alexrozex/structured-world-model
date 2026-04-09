@@ -1138,6 +1138,7 @@ program
   .argument("<model>", "Path to world model JSON")
   .argument("<question>", "Natural language question")
   .option("--json", "Output result as JSON")
+  .option("--explain", "Show which query pattern matched and why")
   .action(
     async (
       modelPath: string,
@@ -1157,6 +1158,13 @@ program
               `\n  Method: ${result.method} | Confidence: ${result.confidence} | Entities: ${result.entities_referenced.join(", ") || "none"}`,
             ),
           );
+          if (opts.explain) {
+            console.error(
+              chalk.cyan(
+                `  Pattern: ${result.pattern || "(none)"} | Reasoning: ${result.reasoning || "(none)"}`,
+              ),
+            );
+          }
         }
       } catch (err) {
         handleError(err);

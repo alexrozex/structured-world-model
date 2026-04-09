@@ -343,6 +343,34 @@ async function run() {
     );
   }
 
+  // ── Explain: pattern field ──────────────────────────────────
+
+  // Graph query returns a non-empty pattern field
+  {
+    const r = await queryWorldModel(model, "what depends on the API Server?");
+    assert(
+      typeof r.pattern === "string" && r.pattern.length > 0,
+      "explain: what-uses query returns non-empty pattern",
+    );
+    assert(
+      r.pattern === "what-uses",
+      "explain: what-uses query pattern is 'what-uses'",
+    );
+  }
+
+  // Different graph query returns a different non-empty pattern field
+  {
+    const r = await queryWorldModel(model, "what does API Server depend on?");
+    assert(
+      typeof r.pattern === "string" && r.pattern.length > 0,
+      "explain: dependencies query returns non-empty pattern",
+    );
+    assert(
+      r.pattern === "dependencies",
+      "explain: dependencies query pattern is 'dependencies'",
+    );
+  }
+
   console.log(`\n═══ ${passed}/${passed + failed} passed ═══\n`);
   if (failed > 0) process.exit(1);
 }
