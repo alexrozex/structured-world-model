@@ -171,7 +171,41 @@ export function toMermaid(model: WorldModelType): string {
 }
 
 /**
+ * Entity type to fill color mapping for DOT export.
+ */
+const DOT_TYPE_COLORS: Record<string, string> = {
+  actor: "blue",
+  system: "green",
+  object: "orange",
+  concept: "purple",
+  event: "red",
+  location: "gray",
+  group: "cyan",
+  resource: "yellow",
+};
+
+/**
+ * Entity type to node shape mapping for DOT export.
+ */
+const DOT_TYPE_SHAPES: Record<string, string> = {
+  actor: "box",
+  system: "component",
+  object: "ellipse",
+  concept: "diamond",
+  event: "hexagon",
+  location: "house",
+  group: "tab",
+  resource: "folder",
+};
+
+/**
  * Export world model as DOT (Graphviz) format.
+ *
+ * Features:
+ * - Entities colored and shaped by type
+ * - Relation edges labeled with their type
+ * - Constraint nodes rendered as small red boxes with dashed connections to scope entities
+ * - Legend subgraph showing type-to-color/shape mapping
  */
 export function toDot(model: WorldModelType): string {
   const dotEscape = (s: string) =>
@@ -184,36 +218,76 @@ export function toDot(model: WorldModelType): string {
     "  labelloc=t;",
     '  fontname="Helvetica";',
     "  fontsize=16;",
-    '  node [shape=box, style="rounded,filled", fillcolor="#f0f0f0", fontname="Helvetica"];',
+    '  node [style=filled, fontname="Helvetica"];',
     '  edge [fontname="Helvetica", fontsize=10];',
     "",
   ];
 
-  const typeColors: Record<string, string> = {
-    actor: "#d4edda",
-    system: "#cce5ff",
-    object: "#f0f0f0",
-    concept: "#fff3cd",
-    location: "#e2d5f1",
-    event: "#f8d7da",
-    group: "#d1ecf1",
-    resource: "#ffeeba",
-  };
-
+  // ─── Entity nodes (colored + shaped by type) ───────────────
   for (const e of model.entities) {
-    const color = typeColors[e.type] ?? "#f0f0f0";
+    const color = DOT_TYPE_COLORS[e.type] ?? "white";
+    const shape = DOT_TYPE_SHAPES[e.type] ?? "ellipse";
     const label = `${dotEscape(e.name)}\\n(${e.type})`;
-    lines.push(`  "${e.id}" [label="${label}", fillcolor="${color}"];`);
+    lines.push(
+      `  "${e.id}" [label="${label}", fillcolor="${color}", shape=${shape}, fontcolor="white"];`,
+    );
   }
 
   lines.push("");
 
+  // ─── Relation edges (labeled with type) ────────────────────
   for (const r of model.relations) {
     const label = r.type.replace(/_/g, " ");
     const dir = r.bidirectional ? ", dir=both" : "";
     lines.push(`  "${r.source}" -> "${r.target}" [label="${label}"${dir}];`);
   }
 
+  lines.push("");
+
+  // ─── Constraint annotation nodes ───────────────────────────
+  if (model.constraints.length > 0) {
+    lines.push("  // Constraints");
+    for (const c of model.constraints) {
+      const severityLabel = c.severity === "hard" ? "!" : "~";
+      const label = `${severityLabel} ${dotEscape(c.name)}\\n${dotEscape(c.description)}`;
+      lines.push(
+        `  "${c.id}" [label="${label}", shape=box, fillcolor="red", fontcolor="white", fontsize=9, width=0.5, height=0.3];`,
+      );
+      for (const scopeId of c.scope) {
+        lines.push(
+          `  "${c.id}" -> "${scopeId}" [style=dashed, color="red", arrowhead=none];`,
+        );
+      }
+    }
+  }
+
+  lines.push("");
+
+  // ─── Legend subgraph ───────────────────────────────────────
+  lines.push("  subgraph cluster_legend {");
+  lines.push('    label="Legend";');
+  lines.push("    style=dashed;");
+  lines.push('    fontname="Helvetica";');
+  lines.push("    fontsize=12;");
+  lines.push('    color="gray";');
+
+  const typeKeys = Object.keys(DOT_TYPE_COLORS);
+  for (const type of typeKeys) {
+    const color = DOT_TYPE_COLORS[type];
+    const shape = DOT_TYPE_SHAPES[type];
+    lines.push(
+      `    "legend_${type}" [label="${type}", fillcolor="${color}", shape=${shape}, fontcolor="white", fontsize=9];`,
+    );
+  }
+
+  // Invisible edges to stack legend nodes vertically
+  for (let i = 0; i < typeKeys.length - 1; i++) {
+    lines.push(
+      `    "legend_${typeKeys[i]}" -> "legend_${typeKeys[i + 1]}" [style=invis];`,
+    );
+  }
+
+  lines.push("  }");
   lines.push("}");
   return lines.join("\n");
 }

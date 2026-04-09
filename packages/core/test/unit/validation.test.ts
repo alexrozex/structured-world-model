@@ -1008,6 +1008,111 @@ async function run() {
     );
   }
 
+  // Test 44: Low relation density warning
+  {
+    const model = makeModel({
+      entities: [
+        { id: "e1", name: "A", type: "actor", description: "Entity A" },
+        { id: "e2", name: "B", type: "system", description: "Entity B" },
+        { id: "e3", name: "C", type: "object", description: "Entity C" },
+        { id: "e4", name: "D", type: "concept", description: "Entity D" },
+      ],
+      relations: [
+        { id: "r1", type: "uses", source: "e1", target: "e2", label: "x" },
+      ],
+    });
+    const { validation } = await validationAgent({ input, worldModel: model });
+    assert(
+      hasIssue(validation.issues, "LOW_RELATION_DENSITY"),
+      "LOW_RELATION_DENSITY: 1 relation for 4 entities triggers warning",
+    );
+  }
+
+  // Test 45: Adequate relation density — no false positive
+  {
+    const model = makeModel({
+      entities: [
+        { id: "e1", name: "A", type: "actor", description: "Entity A" },
+        { id: "e2", name: "B", type: "system", description: "Entity B" },
+      ],
+      relations: [
+        { id: "r1", type: "uses", source: "e1", target: "e2", label: "x" },
+      ],
+    });
+    const { validation } = await validationAgent({ input, worldModel: model });
+    assert(
+      !hasIssue(validation.issues, "LOW_RELATION_DENSITY"),
+      "No false positive: 1 relation for 2 entities is adequate",
+    );
+  }
+
+  // Test 46: Sparse graph info — more than 30% entities have zero relations
+  {
+    const model = makeModel({
+      entities: [
+        { id: "e1", name: "A", type: "actor", description: "Entity A" },
+        { id: "e2", name: "B", type: "system", description: "Entity B" },
+        { id: "e3", name: "C", type: "object", description: "Entity C" },
+        { id: "e4", name: "D", type: "concept", description: "Entity D" },
+        { id: "e5", name: "E", type: "object", description: "Entity E" },
+      ],
+      relations: [
+        { id: "r1", type: "uses", source: "e1", target: "e2", label: "x" },
+      ],
+    });
+    const { validation } = await validationAgent({ input, worldModel: model });
+    assert(
+      hasIssue(validation.issues, "SPARSE_GRAPH"),
+      "SPARSE_GRAPH: 3 of 5 entities (60%) have no relations",
+    );
+  }
+
+  // Test 47: No sparse graph when all entities have relations
+  {
+    const model = makeModel({
+      entities: [
+        { id: "e1", name: "A", type: "actor", description: "Entity A" },
+        { id: "e2", name: "B", type: "system", description: "Entity B" },
+        { id: "e3", name: "C", type: "object", description: "Entity C" },
+      ],
+      relations: [
+        { id: "r1", type: "uses", source: "e1", target: "e2", label: "x" },
+        { id: "r2", type: "uses", source: "e2", target: "e3", label: "y" },
+      ],
+    });
+    const { validation } = await validationAgent({ input, worldModel: model });
+    assert(
+      !hasIssue(validation.issues, "SPARSE_GRAPH"),
+      "No false positive: all entities participate in relations",
+    );
+  }
+
+  // Test 48: Sparse graph threshold boundary — exactly 30% is not triggered
+  {
+    const entities = [];
+    for (let i = 1; i <= 10; i++) {
+      entities.push({
+        id: `e${i}`,
+        name: `Ent${i}`,
+        type: "object",
+        description: `Entity ${i}`,
+      });
+    }
+    // 7 entities in relations, 3 isolated = 30% exactly — should NOT trigger (>30 required)
+    const relations = [
+      { id: "r1", type: "uses", source: "e1", target: "e2", label: "x" },
+      { id: "r2", type: "uses", source: "e3", target: "e4", label: "x" },
+      { id: "r3", type: "uses", source: "e5", target: "e6", label: "x" },
+      { id: "r4", type: "uses", source: "e6", target: "e7", label: "x" },
+    ];
+    const model = makeModel({ entities, relations });
+    const { validation } = await validationAgent({ input, worldModel: model });
+    assert(
+      !hasIssue(validation.issues, "SPARSE_GRAPH"),
+      "No SPARSE_GRAPH at exactly 30% — threshold is strictly greater than",
+    );
+  }
+
   console.log(`\n═══ ${passed}/${passed + failed} passed ═══\n`);
   if (failed > 0) process.exit(1);
 }

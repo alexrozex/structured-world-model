@@ -201,6 +201,45 @@ function run() {
     assert(dot.includes("ent_1"), "toDot: includes entity IDs");
     assert(dot.includes("->"), "toDot: includes directed edges");
     assert(dot.includes("}"), "toDot: properly closed");
+
+    // Color + shape by type
+    assert(
+      dot.includes('fillcolor="blue"'),
+      "toDot: actor entity has blue fillcolor",
+    );
+    assert(
+      dot.includes('fillcolor="green"'),
+      "toDot: system entity has green fillcolor",
+    );
+    assert(
+      dot.includes('fillcolor="yellow"'),
+      "toDot: resource entity has yellow fillcolor",
+    );
+    assert(dot.includes("shape=box"), "toDot: actor entity uses box shape");
+    assert(
+      dot.includes("shape=component"),
+      "toDot: system entity uses component shape",
+    );
+    assert(
+      dot.includes("shape=folder"),
+      "toDot: resource entity uses folder shape",
+    );
+
+    // Constraint annotation nodes
+    assert(dot.includes('"cstr_1"'), "toDot: contains constraint node cstr_1");
+    assert(dot.includes('"cstr_2"'), "toDot: contains constraint node cstr_2");
+    assert(dot.includes("style=dashed"), "toDot: constraint edges are dashed");
+
+    // Legend subgraph
+    assert(
+      dot.includes("subgraph cluster_legend"),
+      "toDot: contains legend subgraph",
+    );
+    assert(dot.includes("legend_actor"), "toDot: legend includes actor entry");
+    assert(
+      dot.includes("legend_system"),
+      "toDot: legend includes system entry",
+    );
   }
 
   // ─── Escaping in Mermaid/DOT ─────────────────────────

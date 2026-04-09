@@ -260,6 +260,40 @@ export function validationAgent(stageInput: {
     }
   }
 
+  // Check for low relation density
+  if (
+    worldModel.entities.length > 0 &&
+    worldModel.relations.length < worldModel.entities.length * 0.5
+  ) {
+    issues.push({
+      type: "warning",
+      code: "LOW_RELATION_DENSITY",
+      message: `Relation count (${worldModel.relations.length}) is low relative to entity count (${worldModel.entities.length}) — extraction may be missing connections`,
+      path: "relations",
+    });
+  }
+
+  // Check for sparse graph (entities with zero relations)
+  if (worldModel.entities.length > 0) {
+    const entitiesInRelations = new Set<string>();
+    for (const rel of worldModel.relations) {
+      entitiesInRelations.add(rel.source);
+      entitiesInRelations.add(rel.target);
+    }
+    const isolatedCount = worldModel.entities.filter(
+      (e) => !entitiesInRelations.has(e.id),
+    ).length;
+    const pct = Math.round((isolatedCount / worldModel.entities.length) * 100);
+    if (pct > 30) {
+      issues.push({
+        type: "info",
+        code: "SPARSE_GRAPH",
+        message: `${isolatedCount} of ${worldModel.entities.length} entities (${pct}%) have no relations — consider re-extracting with multi-pass`,
+        path: "entities",
+      });
+    }
+  }
+
   // Completeness checks
   if (worldModel.entities.length === 0) {
     issues.push({
