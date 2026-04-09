@@ -1,7 +1,7 @@
 {
   "name": "@swm/core",
   "version": "1.0.0",
-  "description": "Universal extraction engine: any input -> structured, validated, queryable world models",
+  "description": "Universal extraction engine: any input -> structured, validated, queryable world models. 44 CLI commands, 10 export formats, 65+ API exports.",
   "type": "module",
   "main": "./dist/index.js",
   "types": "./dist/index.d.ts",
@@ -14,13 +14,41 @@
   "bin": {
     "swm": "./dist/cli.js"
   },
+  "files": [
+    "dist",
+    "README.md"
+  ],
   "scripts": {
     "build": "tsc",
     "dev": "tsx src/cli.ts",
     "start": "node dist/cli.js",
     "test": "tsx test/run-unit.ts",
     "test:e2e": "tsx test/proof.ts",
-    "typecheck": "tsc --noEmit"
+    "typecheck": "tsc --noEmit",
+    "prepublishOnly": "pnpm build"
+  },
+  "keywords": [
+    "world-model",
+    "knowledge-extraction",
+    "domain-modeling",
+    "mcp",
+    "structured-data",
+    "ai-agents",
+    "agentic",
+    "ontology",
+    "entity-extraction",
+    "claude"
+  ],
+  "author": "Motherlabs",
+  "license": "MIT",
+  "repository": {
+    "type": "git",
+    "url": "https://github.com/alexrozex/structured-world-model.git",
+    "directory": "packages/core"
+  },
+  "homepage": "https://github.com/alexrozex/structured-world-model",
+  "engines": {
+    "node": ">=18"
   },
   "dependencies": {
     "@anthropic-ai/sdk": "^0.85.0",
