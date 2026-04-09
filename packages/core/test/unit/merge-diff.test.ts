@@ -2,7 +2,11 @@
  * Unit tests for merge and diff operations.
  */
 
-import { mergeWorldModels, diffWorldModels, detectMergeConflicts } from "../../src/utils/merge.js";
+import {
+  mergeWorldModels,
+  diffWorldModels,
+  detectMergeConflicts,
+} from "../../src/utils/merge.js";
 import type { WorldModelType } from "../../src/schema/index.js";
 
 function makeModel(
@@ -262,7 +266,10 @@ function run() {
     const a = makeModel("A", [{ id: "ent_1", name: "User" }]);
     const b = makeModel("B", [{ id: "ent_2", name: "Admin" }]);
     const conflicts = detectMergeConflicts(a, b);
-    assert(conflicts.length === 0, "Conflict: no conflicts for distinct entities");
+    assert(
+      conflicts.length === 0,
+      "Conflict: no conflicts for distinct entities",
+    );
   }
 
   // Test 16: No conflicts when same entity has same type and description
@@ -281,9 +288,18 @@ function run() {
     b.entities[0].description = "A different description of User";
     const conflicts = detectMergeConflicts(a, b);
     const descConflict = conflicts.find((c) => c.field === "description");
-    assert(descConflict !== undefined, "Conflict: detects description conflict");
-    assert(descConflict?.entityName === "User", "Conflict: conflict names the entity");
-    assert(descConflict?.valueA === "Entity User", "Conflict: reports model A description");
+    assert(
+      descConflict !== undefined,
+      "Conflict: detects description conflict",
+    );
+    assert(
+      descConflict?.entityName === "User",
+      "Conflict: conflict names the entity",
+    );
+    assert(
+      descConflict?.valueA === "Entity User",
+      "Conflict: reports model A description",
+    );
     assert(
       descConflict?.valueB === "A different description of User",
       "Conflict: reports model B description",
@@ -316,7 +332,10 @@ function run() {
     b.entities[0].description = "Changed User desc";
     b.entities[1].description = "Changed DB desc";
     const conflicts = detectMergeConflicts(a, b);
-    assert(conflicts.length === 2, "Conflict: reports conflicts for multiple entities");
+    assert(
+      conflicts.length === 2,
+      "Conflict: reports conflicts for multiple entities",
+    );
     assert(
       conflicts.some((c) => c.entityName === "User"),
       "Conflict: User conflict reported",
@@ -353,6 +372,75 @@ function run() {
     assert(
       conflicts.some((c) => c.field === "description"),
       "Conflict: detects conflict case-insensitively",
+    );
+  }
+
+  // Diff details include provenance for added entities
+  {
+    const before = makeModel("A", [{ id: "ent_1", name: "User" }]);
+    const after = makeModel("B", [
+      { id: "ent_1", name: "User" },
+      { id: "ent_2", name: "Admin" },
+    ]);
+    // Add source_context to the after model's Admin entity
+    (after.entities[1] as any).source_context = "Admins manage the system";
+    (after.entities[1] as any).description = "System administrator";
+
+    const diff = diffWorldModels(before, after);
+    assert(diff.details.entitiesAdded.length === 1, "details: 1 entity added");
+    assert(
+      diff.details.entitiesAdded[0].name === "Admin",
+      "details: added entity name",
+    );
+    assert(
+      diff.details.entitiesAdded[0].source_context ===
+        "Admins manage the system",
+      "details: provenance on added entity",
+    );
+    assert(
+      diff.details.entitiesAdded[0].description === "System administrator",
+      "details: description on added entity",
+    );
+  }
+
+  // Diff details for modified entities
+  {
+    const before = makeModel("A", [{ id: "ent_1", name: "User" }]);
+    const after = makeModel("B", [{ id: "ent_1", name: "User" }]);
+    (after.entities[0] as any).description = "Updated description";
+    (after.entities[0] as any).source_context = "Users have been redesigned";
+
+    const diff = diffWorldModels(before, after);
+    assert(
+      diff.details.entitiesModified.length === 1,
+      "details: 1 entity modified",
+    );
+    assert(
+      diff.details.entitiesModified[0].source_context ===
+        "Users have been redesigned",
+      "details: provenance on modified entity",
+    );
+  }
+
+  // Diff details empty when no changes
+  {
+    const model = makeModel("A", [{ id: "ent_1", name: "User" }]);
+    const diff = diffWorldModels(model, model);
+    assert(
+      diff.details.entitiesAdded.length === 0,
+      "details: no added entities on identical models",
+    );
+    assert(
+      diff.details.entitiesModified.length === 0,
+      "details: no modified entities on identical models",
+    );
+    assert(
+      diff.details.processesAdded.length === 0,
+      "details: no added processes on identical models",
+    );
+    assert(
+      diff.details.constraintsAdded.length === 0,
+      "details: no added constraints on identical models",
     );
   }
 

@@ -226,6 +226,13 @@ export function mergeWorldModels(
 /**
  * Diff two world models. Returns what was added, removed, and changed.
  */
+export interface DiffDetail {
+  name: string;
+  type?: string;
+  description?: string;
+  source_context?: string;
+}
+
 export interface WorldModelDiff {
   entities: {
     added: string[];
@@ -243,6 +250,13 @@ export interface WorldModelDiff {
   constraints: {
     added: string[];
     removed: string[];
+  };
+  /** Detailed info for added/modified elements (includes provenance) */
+  details: {
+    entitiesAdded: DiffDetail[];
+    entitiesModified: DiffDetail[];
+    processesAdded: DiffDetail[];
+    constraintsAdded: DiffDetail[];
   };
   summary: string;
 }
@@ -308,6 +322,12 @@ export function diffWorldModels(
       added: [...cstrAfter].filter((c) => !cstrBefore.has(c)),
       removed: [...cstrBefore].filter((c) => !cstrAfter.has(c)),
     },
+    details: {
+      entitiesAdded: [],
+      entitiesModified: [],
+      processesAdded: [],
+      constraintsAdded: [],
+    },
     summary: "",
   };
 
@@ -324,6 +344,49 @@ export function diffWorldModels(
     parts.push(`+${diff.processes.added.length} processes`);
   if (diff.constraints.added.length)
     parts.push(`+${diff.constraints.added.length} constraints`);
+
+  // Build details with provenance
+  diff.details = {
+    entitiesAdded: entAdded.map((name) => {
+      const e = after.entities.find((x) => x.name === name);
+      return {
+        name,
+        type: e?.type,
+        description: e?.description,
+        source_context: e?.source_context,
+      };
+    }),
+    entitiesModified: entModified.map((name) => {
+      const e = after.entities.find((x) => x.name === name);
+      return {
+        name,
+        type: e?.type,
+        description: e?.description,
+        source_context: e?.source_context,
+      };
+    }),
+    processesAdded: [...procAfter]
+      .filter((p) => !procBefore.has(p))
+      .map((name) => {
+        const p = after.processes.find((x) => x.name === name);
+        return {
+          name,
+          description: p?.description,
+          source_context: p?.source_context,
+        };
+      }),
+    constraintsAdded: [...cstrAfter]
+      .filter((c) => !cstrBefore.has(c))
+      .map((name) => {
+        const c = after.constraints.find((x) => x.name === name);
+        return {
+          name,
+          type: c?.type,
+          description: c?.description,
+          source_context: c?.source_context,
+        };
+      }),
+  };
 
   diff.summary = parts.length ? parts.join(", ") : "No changes";
   return diff;

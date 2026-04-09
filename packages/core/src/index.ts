@@ -40,7 +40,11 @@ export {
   diffWorldModels,
   detectMergeConflicts,
 } from "./utils/merge.js";
-export type { WorldModelDiff, MergeConflict } from "./utils/merge.js";
+export type {
+  WorldModelDiff,
+  MergeConflict,
+  DiffDetail,
+} from "./utils/merge.js";
 
 // Compare
 export { compare } from "./utils/compare.js";
