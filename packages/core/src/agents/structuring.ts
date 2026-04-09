@@ -207,6 +207,7 @@ export function structuringAgent(stageInput: {
     target: resolveEntityId(r.target),
     label: r.label,
     bidirectional: r.bidirectional,
+    source_context: r.source_context,
   }));
 
   const processes = (extraction.processes ?? []).map((p) => ({

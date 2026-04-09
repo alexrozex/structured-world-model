@@ -86,6 +86,10 @@ export const Relation = z.object({
     .optional()
     .describe("Strength/confidence of the relation"),
   bidirectional: z.boolean().optional(),
+  source_context: z
+    .string()
+    .optional()
+    .describe("Verbatim excerpt from the input that evidences this relation"),
 });
 
 export type Relation = z.infer<typeof Relation>;

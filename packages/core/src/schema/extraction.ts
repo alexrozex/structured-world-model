@@ -28,6 +28,7 @@ const RawRelationSchema = z.object({
   type: z.string().default("uses"),
   label: z.string().default(""),
   bidirectional: z.boolean().optional(),
+  source_context: z.string().optional(),
 });
 
 const RawProcessStepSchema = z.object({

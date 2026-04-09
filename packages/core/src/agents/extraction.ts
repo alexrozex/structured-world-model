@@ -28,6 +28,7 @@ export interface RawExtraction {
     type: string;
     label: string;
     bidirectional?: boolean;
+    source_context?: string;
   }>;
   processes: Array<{
     name: string;

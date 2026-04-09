@@ -285,6 +285,40 @@ function run() {
     );
   }
 
+  // Relation source_context field
+  {
+    const withCtx = Relation.safeParse({
+      id: "rel_1",
+      type: "uses",
+      source: "ent_1",
+      target: "ent_2",
+      label: "queries",
+      source_context: "User queries the database",
+    });
+    assert(withCtx.success, "Relation with source_context parses");
+    assert(
+      withCtx.success &&
+        withCtx.data.source_context === "User queries the database",
+      "Relation source_context value preserved",
+    );
+
+    const withoutCtx = Relation.safeParse({
+      id: "rel_2",
+      type: "has",
+      source: "ent_1",
+      target: "ent_2",
+      label: "owns",
+    });
+    assert(
+      withoutCtx.success,
+      "Relation without source_context parses (optional)",
+    );
+    assert(
+      withoutCtx.success && withoutCtx.data.source_context === undefined,
+      "Relation missing source_context is undefined",
+    );
+  }
+
   console.log(`\n═══ ${passed}/${passed + failed} passed ═══\n`);
   if (failed > 0) process.exit(1);
 }
