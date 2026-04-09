@@ -106,6 +106,10 @@ export { genId } from "./utils/ids.js";
 export { filterModel } from "./utils/filter.js";
 export type { FilterOptions } from "./utils/filter.js";
 
+// Health assessment
+export { assessHealth } from "./utils/health.js";
+export type { HealthReport, HealthGrade } from "./utils/health.js";
+
 // Serialization
 export {
   toCompactJSON,

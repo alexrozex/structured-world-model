@@ -1565,6 +1565,13 @@ program
                 : "";
             console.log(`  [${e.type}] ${chalk.bold(e.name)}${conf}`);
             console.log(chalk.gray(`    ${e.description}`));
+            if (e.source_context) {
+              console.log(
+                chalk.gray(
+                  `    Source: "${e.source_context.slice(0, 80)}${e.source_context.length > 80 ? "..." : ""}"`,
+                ),
+              );
+            }
           }
           console.error(
             chalk.gray(
