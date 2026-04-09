@@ -786,6 +786,155 @@ async function run() {
     );
   }
 
+  // Test 36: Step with no action text raises EMPTY_STEP_ACTION
+  {
+    const model = makeModel({
+      processes: [
+        {
+          id: "proc_1",
+          name: "Login",
+          description: "Login flow",
+          trigger: "User clicks login",
+          steps: [
+            { order: 1, action: "", actor: "ent_1" },
+            { order: 2, action: "Verify password", actor: "ent_2" },
+          ],
+          participants: ["ent_1", "ent_2"],
+          outcomes: ["Session"],
+        },
+      ],
+    });
+    const { validation } = await validationAgent({ input, worldModel: model });
+    assert(
+      hasIssue(validation.issues, "EMPTY_STEP_ACTION"),
+      "EMPTY_STEP_ACTION: detected for step with empty action",
+    );
+  }
+
+  // Test 37: Step with whitespace-only action raises EMPTY_STEP_ACTION
+  {
+    const model = makeModel({
+      processes: [
+        {
+          id: "proc_1",
+          name: "Checkout",
+          description: "Checkout flow",
+          trigger: "User checks out",
+          steps: [{ order: 1, action: "   ", actor: "ent_1" }],
+          participants: ["ent_1"],
+          outcomes: ["Order"],
+        },
+      ],
+    });
+    const { validation } = await validationAgent({ input, worldModel: model });
+    assert(
+      hasIssue(validation.issues, "EMPTY_STEP_ACTION"),
+      "EMPTY_STEP_ACTION: whitespace-only action is treated as empty",
+    );
+  }
+
+  // Test 38: Steps with unique actions — no EMPTY_STEP_ACTION false positive
+  {
+    const model = makeModel({
+      processes: [
+        {
+          id: "proc_1",
+          name: "Signup",
+          description: "Signup flow",
+          trigger: "User signs up",
+          steps: [
+            { order: 1, action: "Enter email", actor: "ent_1" },
+            { order: 2, action: "Confirm email", actor: "ent_1" },
+          ],
+          participants: ["ent_1"],
+          outcomes: ["Account"],
+        },
+      ],
+    });
+    const { validation } = await validationAgent({ input, worldModel: model });
+    assert(
+      !hasIssue(validation.issues, "EMPTY_STEP_ACTION"),
+      "No false positive: unique non-empty actions pass",
+    );
+  }
+
+  // Test 39: Duplicate step actions within same process raises DUPLICATE_STEP_ACTION
+  {
+    const model = makeModel({
+      processes: [
+        {
+          id: "proc_1",
+          name: "Import",
+          description: "Import flow",
+          trigger: "User imports",
+          steps: [
+            { order: 1, action: "Parse file", actor: "ent_1" },
+            { order: 2, action: "Parse file", actor: "ent_2" },
+            { order: 3, action: "Save records", actor: "ent_2" },
+          ],
+          participants: ["ent_1", "ent_2"],
+          outcomes: ["Records"],
+        },
+      ],
+    });
+    const { validation } = await validationAgent({ input, worldModel: model });
+    assert(
+      hasIssue(validation.issues, "DUPLICATE_STEP_ACTION"),
+      "DUPLICATE_STEP_ACTION: detected duplicate 'parse file' action",
+    );
+  }
+
+  // Test 40: Duplicate step actions are case-insensitive
+  {
+    const model = makeModel({
+      processes: [
+        {
+          id: "proc_1",
+          name: "Export",
+          description: "Export flow",
+          trigger: "User exports",
+          steps: [
+            { order: 1, action: "Validate Data", actor: "ent_1" },
+            { order: 2, action: "validate data", actor: "ent_2" },
+          ],
+          participants: ["ent_1", "ent_2"],
+          outcomes: ["File"],
+        },
+      ],
+    });
+    const { validation } = await validationAgent({ input, worldModel: model });
+    assert(
+      hasIssue(validation.issues, "DUPLICATE_STEP_ACTION"),
+      "DUPLICATE_STEP_ACTION: case-insensitive duplicate detection",
+    );
+  }
+
+  // Test 41: Unique step actions across a process — no DUPLICATE_STEP_ACTION
+  {
+    const model = makeModel({
+      processes: [
+        {
+          id: "proc_1",
+          name: "Deploy",
+          description: "Deploy flow",
+          trigger: "CI passes",
+          steps: [
+            { order: 1, action: "Build image", actor: "ent_1" },
+            { order: 2, action: "Push to registry", actor: "ent_1" },
+            { order: 3, action: "Restart service", actor: "ent_2" },
+          ],
+          participants: ["ent_1", "ent_2"],
+          outcomes: ["Live service"],
+        },
+      ],
+    });
+    const { validation } = await validationAgent({ input, worldModel: model });
+    assert(
+      !hasIssue(validation.issues, "DUPLICATE_STEP_ACTION"),
+      "No false positive: all unique step actions pass",
+    );
+  }
+
   console.log(`\n═══ ${passed}/${passed + failed} passed ═══\n`);
   if (failed > 0) process.exit(1);
 }

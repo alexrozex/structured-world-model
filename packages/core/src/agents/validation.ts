@@ -59,6 +59,7 @@ export function validationAgent(stageInput: {
         });
       }
     }
+    const stepActions: string[] = [];
     for (const step of proc.steps) {
       if (step.actor && !entityIds.has(step.actor)) {
         issues.push({
@@ -68,6 +69,31 @@ export function validationAgent(stageInput: {
           path: `processes.${proc.id}.steps.${step.order}.actor`,
         });
       }
+      if (!step.action || step.action.trim().length === 0) {
+        issues.push({
+          type: "warning",
+          code: "EMPTY_STEP_ACTION",
+          message: `Process "${proc.name}" step ${step.order} has no action text`,
+          path: `processes.${proc.id}.steps.${step.order}.action`,
+        });
+      } else {
+        stepActions.push(step.action.trim().toLowerCase());
+      }
+    }
+    // Check for duplicate action text within this process
+    const seen = new Set<string>();
+    const duplicates = new Set<string>();
+    for (const action of stepActions) {
+      if (seen.has(action)) duplicates.add(action);
+      seen.add(action);
+    }
+    if (duplicates.size > 0) {
+      issues.push({
+        type: "warning",
+        code: "DUPLICATE_STEP_ACTION",
+        message: `Process "${proc.name}" has duplicate step actions: [${[...duplicates].join(", ")}]`,
+        path: `processes.${proc.id}.steps`,
+      });
     }
     if (proc.steps.length === 0) {
       issues.push({
