@@ -162,6 +162,51 @@ function run() {
     assert(empty.estimatedCostUSD >= 0, "empty: non-negative cost");
   }
 
+  // 3 passes costs 3x single
+  {
+    const s1 = estimateCost("Test input", { passes: 1 });
+    const s3 = estimateCost("Test input", { passes: 3 });
+    assert(s3.inputTokens > s1.inputTokens * 2, "3 passes: > 2x single tokens");
+  }
+
+  // Document source type uses text rate
+  {
+    const doc = estimateCost("A".repeat(1000), { sourceType: "document" });
+    const text = estimateCost("A".repeat(1000), { sourceType: "text" });
+    assert(doc.inputTokens === text.inputTokens, "document: same rate as text");
+  }
+
+  // Oversized threshold is 100K tokens
+  {
+    const justUnder = estimateCost("A".repeat(399000)); // ~100K tokens at 4 chars/tok
+    const justOver = estimateCost("A".repeat(401000));
+    assert(!justUnder.oversized, "just under 100K: not oversized");
+    assert(justOver.oversized, "just over 100K: oversized");
+  }
+
+  // Cached cost equals uncached for single pass
+  {
+    const r = estimateCost("Single pass test", { passes: 1 });
+    assert(
+      r.cachedCostUSD === r.estimatedCostUSD,
+      "single pass: cached = uncached",
+    );
+  }
+
+  // All models return positive output tokens
+  {
+    for (const m of ["sonnet", "opus", "haiku"] as const) {
+      const r = estimateCost("Test", { model: m });
+      assert(r.outputTokens > 0, `${m}: positive output tokens`);
+    }
+  }
+
+  // Duration is at least 1 second for any non-trivial input
+  {
+    const r = estimateCost("A".repeat(1000));
+    assert(r.estimatedDurationSec >= 1, "1K chars: at least 1s duration");
+  }
+
   console.log(
     `\n\u2550\u2550\u2550 ${passed}/${passed + failed} passed \u2550\u2550\u2550\n`,
   );

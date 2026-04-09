@@ -333,6 +333,180 @@ function run() {
     );
   }
 
+  // Grade boundary tests
+  {
+    assert(
+      assessHealth(makeModel(), { ...goodValidation, score: 90 } as any)
+        .grade === "A",
+      "boundary: 90 = A",
+    );
+    assert(
+      assessHealth(makeModel(), { ...goodValidation, score: 89 } as any)
+        .grade === "B",
+      "boundary: 89 = B",
+    );
+    assert(
+      assessHealth(makeModel(), { ...goodValidation, score: 75 } as any)
+        .grade === "B",
+      "boundary: 75 = B",
+    );
+    assert(
+      assessHealth(makeModel(), { ...goodValidation, score: 74 } as any)
+        .grade === "C",
+      "boundary: 74 = C",
+    );
+    assert(
+      assessHealth(makeModel(), { ...goodValidation, score: 60 } as any)
+        .grade === "C",
+      "boundary: 60 = C",
+    );
+    assert(
+      assessHealth(makeModel(), { ...goodValidation, score: 59 } as any)
+        .grade === "D",
+      "boundary: 59 = D",
+    );
+    assert(
+      assessHealth(makeModel(), { ...goodValidation, score: 40 } as any)
+        .grade === "D",
+      "boundary: 40 = D",
+    );
+    assert(
+      assessHealth(makeModel(), { ...goodValidation, score: 39 } as any)
+        .grade === "F",
+      "boundary: 39 = F",
+    );
+    assert(
+      assessHealth(makeModel(), { ...goodValidation, score: 0 } as any)
+        .grade === "F",
+      "boundary: 0 = F",
+    );
+  }
+
+  // Multiple clusters detection
+  {
+    const multiCluster = makeModel({
+      entities: [
+        { id: "ent_1", name: "A", type: "actor", description: "a" },
+        { id: "ent_2", name: "B", type: "actor", description: "b" },
+        { id: "ent_3", name: "C", type: "system", description: "c" },
+        { id: "ent_4", name: "D", type: "system", description: "d" },
+        { id: "ent_5", name: "E", type: "object", description: "e" },
+        { id: "ent_6", name: "F", type: "object", description: "f" },
+      ],
+      relations: [
+        {
+          id: "rel_1",
+          type: "uses",
+          source: "ent_1",
+          target: "ent_2",
+          label: "x",
+        },
+        {
+          id: "rel_2",
+          type: "uses",
+          source: "ent_3",
+          target: "ent_4",
+          label: "y",
+        },
+      ],
+      processes: [],
+      constraints: [],
+    });
+    const r = assessHealth(multiCluster, {
+      ...goodValidation,
+      score: 50,
+    } as any);
+    assert(
+      r.metrics.clusters >= 3,
+      "multi-cluster: detects 3+ clusters (A-B, C-D, E, F)",
+    );
+    assert(
+      r.issues.some((i) => i.includes("cluster")),
+      "multi-cluster: flagged",
+    );
+  }
+
+  // High provenance rate not flagged
+  {
+    const highProv = makeModel({
+      entities: [
+        {
+          id: "ent_1",
+          name: "A",
+          type: "actor",
+          description: "a",
+          source_context: "from input",
+        },
+        {
+          id: "ent_2",
+          name: "B",
+          type: "system",
+          description: "b",
+          source_context: "from input",
+        },
+        {
+          id: "ent_3",
+          name: "C",
+          type: "object",
+          description: "c",
+          source_context: "from input",
+        },
+      ],
+    });
+    const r = assessHealth(highProv, goodValidation);
+    assert(r.metrics.provenanceRate === 1, "full provenance: rate 1.0");
+    assert(
+      !r.issues.some((i) => i.includes("provenance")),
+      "full provenance: not flagged",
+    );
+  }
+
+  // Relation density exactly at threshold
+  {
+    const atThreshold = makeModel({
+      entities: [
+        { id: "ent_1", name: "A", type: "actor", description: "a" },
+        { id: "ent_2", name: "B", type: "system", description: "b" },
+      ],
+      relations: [
+        {
+          id: "rel_1",
+          type: "uses",
+          source: "ent_1",
+          target: "ent_2",
+          label: "x",
+        },
+      ],
+      processes: [],
+      constraints: [],
+    });
+    const r = assessHealth(atThreshold, goodValidation);
+    assert(r.metrics.relationDensity === 0.5, "density: exactly 0.5");
+    assert(
+      !r.issues.some((i) => i.includes("relation density")),
+      "density: 0.5 not flagged (threshold is <0.5)",
+    );
+  }
+
+  // Single entity model
+  {
+    const single = makeModel({
+      entities: [
+        { id: "ent_1", name: "Solo", type: "actor", description: "alone" },
+      ],
+      relations: [],
+      processes: [],
+      constraints: [],
+    });
+    const r = assessHealth(single);
+    assert(r.metrics.entities === 1, "single: 1 entity");
+    assert(r.metrics.clusters === 1, "single: 1 cluster");
+    assert(
+      !r.issues.some((i) => i.includes("orphan")),
+      "single: no orphan warning for 1 entity",
+    );
+  }
+
   console.log(
     `\n\u2550\u2550\u2550 ${passed}/${passed + failed} passed \u2550\u2550\u2550\n`,
   );
