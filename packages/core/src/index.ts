@@ -79,6 +79,14 @@ export { structuringAgent } from "./agents/structuring.js";
 export { validationAgent } from "./agents/validation.js";
 export { secondPassAgent } from "./agents/second-pass.js";
 
+// Model loading & validation
+export {
+  parseWorldModel,
+  validateWorldModel,
+  loadWorldModelFromFile,
+} from "./utils/loader.js";
+export type { LoadResult } from "./utils/loader.js";
+
 // Schema utilities
 export {
   validateExtraction,
