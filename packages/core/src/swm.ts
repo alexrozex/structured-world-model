@@ -5,6 +5,7 @@ import { structuringAgent } from "./agents/structuring.js";
 import { validationAgent } from "./agents/validation.js";
 import { secondPassAgent } from "./agents/second-pass.js";
 import { mergeWorldModels } from "./utils/merge.js";
+import { fixWorldModel } from "./utils/fix.js";
 import { setDefaultModel } from "./utils/llm.js";
 import type { WorldModelType } from "./schema/index.js";
 
@@ -15,6 +16,8 @@ export interface SWMOptions {
   passes?: number;
   /** Claude model to use. Default: claude-sonnet-4-20250514 */
   model?: string;
+  /** Auto-fix quality issues (noise entities, dangling refs, orphans). Default true. */
+  autoFix?: boolean;
 }
 
 export async function buildWorldModel(
@@ -36,6 +39,47 @@ export async function buildWorldModel(
     .addStage("validation", validationAgent);
 
   const firstPassResult = await pipeline.execute(input);
+
+  // Auto-fix: clean noise entities, dangling refs, orphans if quality is improvable
+  const shouldFix = options?.autoFix !== false; // default true
+  if (
+    shouldFix &&
+    firstPassResult.validation.score !== undefined &&
+    firstPassResult.validation.score < 100
+  ) {
+    callbacks.onStageStart?.("auto-fix");
+    const fixStart = Date.now();
+    const { model: fixedModel, fixes } = fixWorldModel(
+      firstPassResult.worldModel,
+    );
+    const fixMs = Date.now() - fixStart;
+    callbacks.onStageEnd?.("auto-fix", fixMs);
+
+    if (fixes.length > 0) {
+      // Re-validate the fixed model
+      callbacks.onStageStart?.("post-fix-validation");
+      const revalStart = Date.now();
+      const { worldModel: revalidated, validation: newValidation } =
+        await validationAgent({
+          input,
+          worldModel: fixedModel,
+        });
+      const revalMs = Date.now() - revalStart;
+      callbacks.onStageEnd?.("post-fix-validation", revalMs);
+
+      firstPassResult.worldModel = revalidated;
+      firstPassResult.validation = newValidation;
+      firstPassResult.stages.push(
+        { stage: "auto-fix", data: { fixes }, durationMs: fixMs },
+        {
+          stage: "post-fix-validation",
+          data: newValidation,
+          durationMs: revalMs,
+        },
+      );
+      firstPassResult.totalDurationMs += fixMs + revalMs;
+    }
+  }
 
   if (passes === 1) {
     return firstPassResult;

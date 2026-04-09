@@ -123,6 +123,52 @@ async function run() {
     assert(starts.length === 0, "Callbacks wired without execution yet");
   }
 
+  // Test 9: autoFix option defaults
+  {
+    const clampFix = (af: boolean | undefined) => af !== false;
+    assert(clampFix(undefined) === true, "autoFix undefined defaults to true");
+    assert(clampFix(true) === true, "autoFix true stays true");
+    assert(clampFix(false) === false, "autoFix false stays false");
+  }
+
+  // Test 10: SWMOptions accepts autoFix
+  {
+    const opts: import("../../src/swm.js").SWMOptions = { autoFix: false };
+    assert(opts.autoFix === false, "SWMOptions.autoFix can be set to false");
+  }
+
+  // Test 11: fixWorldModel is importable and works
+  {
+    const { fixWorldModel } = await import("../../src/utils/fix.js");
+    assert(typeof fixWorldModel === "function", "fixWorldModel is importable");
+    const model = {
+      id: "wm_t",
+      name: "T",
+      description: "t",
+      version: "0.1.0",
+      created_at: "2026-01-01",
+      entities: [
+        { id: "ent_1", name: "A", type: "actor" as const, description: "a" },
+        {
+          id: "ent_noise",
+          name: "incoming relations array",
+          type: "object" as const,
+          description:
+            "Auto-created entity for unresolved reference: incoming relations array",
+        },
+      ],
+      relations: [],
+      processes: [],
+      constraints: [],
+    };
+    const { model: fixed, fixes } = fixWorldModel(model as any);
+    assert(fixes.length > 0, "fixWorldModel produces fixes for noise entities");
+    assert(
+      !fixed.entities.some((e: any) => e.id === "ent_noise"),
+      "fixWorldModel removes noise entity",
+    );
+  }
+
   console.log(
     `\n\u2550\u2550\u2550 ${passed}/${passed + failed} passed \u2550\u2550\u2550\n`,
   );
