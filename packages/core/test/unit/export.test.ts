@@ -2,6 +2,7 @@ import { toClaudeMd } from "../../src/export/claude-md.js";
 import { toSystemPrompt } from "../../src/export/system-prompt.js";
 import { toMcpSchema } from "../../src/export/mcp-schema.js";
 import { toHtml } from "../../src/export/html.js";
+import { toMarkdownTable } from "../../src/export/markdown-table.js";
 import type { WorldModelType } from "../../src/schema/index.js";
 
 function makeModel(): WorldModelType {
@@ -229,24 +230,17 @@ function run() {
   assert(html.includes("API"), "HTML: all entities included");
   assert(html.includes("ent_1"), "HTML: entity IDs present in graph data");
   assert(html.includes('"type":"uses"'), "HTML: relation types in graph data");
-  assert(
-    html.includes("Request Flow"),
-    "HTML: process names appear in tables",
-  );
+  assert(html.includes("Request Flow"), "HTML: process names appear in tables");
   assert(
     html.includes("Rate Limit"),
     "HTML: constraint names appear in tables",
   );
+  assert(html.includes("badge-hard"), "HTML: hard constraints get badge class");
+  assert(html.includes("badge-soft"), "HTML: soft constraints get badge class");
   assert(
-    html.includes("badge-hard"),
-    "HTML: hard constraints get badge class",
-  );
-  assert(
-    html.includes("badge-soft"),
-    "HTML: soft constraints get badge class",
-  );
-  assert(
-    !html.includes("cdn.") && !html.includes("unpkg.com") && !html.includes("jsdelivr"),
+    !html.includes("cdn.") &&
+      !html.includes("unpkg.com") &&
+      !html.includes("jsdelivr"),
     "HTML: no CDN dependencies (self-contained)",
   );
   assert(
@@ -275,9 +269,114 @@ function run() {
     emptyHtml.includes("<!DOCTYPE html>"),
     "HTML empty: renders without crash",
   );
+  assert(emptyHtml.includes("Empty"), "HTML empty: model name present");
+
+  console.log(`\n═══ ${passed}/${passed + failed} passed ═══\n`);
+  if (failed > 0) process.exit(1);
+  // ─── toMarkdownTable ─────────────────────────────────────────
+
+  const md = toMarkdownTable(model);
+
+  assert(md.includes("# Test System"), "MD table: has title");
+  assert(md.includes("A test system"), "MD table: has description");
+  assert(md.includes("## Entities"), "MD table: has entities section");
   assert(
-    emptyHtml.includes("Empty"),
-    "HTML empty: model name present",
+    md.includes("| Name | Type | Description | Confidence |"),
+    "MD table: entity table header",
+  );
+  assert(md.includes("| User | actor |"), "MD table: User entity row");
+  assert(md.includes("| API | system |"), "MD table: API entity row");
+  assert(md.includes("## Relations"), "MD table: has relations section");
+  assert(
+    md.includes("| Source | Type | Target | Label |"),
+    "MD table: relation table header",
+  );
+  assert(
+    md.includes("| User | uses | API |"),
+    "MD table: relation row with resolved names",
+  );
+  assert(md.includes("## Processes"), "MD table: has processes section");
+  assert(md.includes("### Request Flow"), "MD table: process name as h3");
+  assert(md.includes("**Trigger:**"), "MD table: process trigger");
+  assert(
+    md.includes("| Step | Actor | Action |"),
+    "MD table: step table header",
+  );
+  assert(md.includes("| 1 | API |"), "MD table: step row with actor");
+  assert(md.includes("**Outcomes:**"), "MD table: outcomes line");
+  assert(md.includes("## Constraints"), "MD table: has constraints section");
+  assert(
+    md.includes("| Name | Type | Severity | Description | Scope |"),
+    "MD table: constraint table header",
+  );
+
+  // Pipe characters in descriptions should be escaped
+  const pipeModel = {
+    ...model,
+    entities: [
+      {
+        id: "ent_1",
+        name: "Test",
+        type: "actor" as const,
+        description: "Has | pipe",
+      },
+    ],
+    relations: [],
+    processes: [],
+    constraints: [],
+  };
+  const pipeMd = toMarkdownTable(pipeModel);
+  assert(
+    pipeMd.includes("Has \\| pipe"),
+    "MD table: pipe chars escaped in descriptions",
+  );
+
+  // Confidence rendering
+  const confModel = {
+    ...model,
+    entities: [
+      {
+        id: "ent_1",
+        name: "High",
+        type: "actor" as const,
+        description: "d",
+        confidence: 0.95,
+      },
+      {
+        id: "ent_2",
+        name: "Low",
+        type: "actor" as const,
+        description: "d",
+        confidence: 0.3,
+      },
+      { id: "ent_3", name: "None", type: "actor" as const, description: "d" },
+    ],
+    relations: [],
+    processes: [],
+    constraints: [],
+  };
+  const confMd = toMarkdownTable(confModel);
+  assert(confMd.includes("95%"), "MD table: confidence 0.95 → 95%");
+  assert(confMd.includes("30%"), "MD table: confidence 0.3 → 30%");
+  assert(confMd.includes("—"), "MD table: missing confidence → dash");
+
+  // Empty model
+  const emptyMdTable = toMarkdownTable(empty);
+  assert(
+    emptyMdTable.includes("## Entities"),
+    "MD table empty: entities header present",
+  );
+  assert(
+    !emptyMdTable.includes("## Relations"),
+    "MD table empty: no relations section",
+  );
+  assert(
+    !emptyMdTable.includes("## Processes"),
+    "MD table empty: no processes section",
+  );
+  assert(
+    !emptyMdTable.includes("## Constraints"),
+    "MD table empty: no constraints section",
   );
 
   console.log(`\n═══ ${passed}/${passed + failed} passed ═══\n`);
