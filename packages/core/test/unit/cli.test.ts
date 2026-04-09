@@ -649,6 +649,40 @@ async function run() {
       assert(typeof parsed.score === "number", "check --json has score");
       assert(typeof parsed.grade === "string", "check --json has grade");
     }
+
+    // Test 49: convert json → yaml
+    {
+      const out = cli(`convert ${TMP_MODEL} yaml`);
+      assert(out.includes("name: Test Marketplace"), "convert to yaml works");
+      assert(!out.startsWith("{"), "convert yaml is not JSON");
+    }
+
+    // Test 50: convert json → mermaid
+    {
+      const out = cli(`convert ${TMP_MODEL} mermaid`);
+      assert(
+        out.includes("graph") || out.includes("TD"),
+        "convert to mermaid works",
+      );
+    }
+
+    // Test 51: convert json → dot
+    {
+      const out = cli(`convert ${TMP_MODEL} dot`);
+      assert(out.includes("digraph"), "convert to dot works");
+    }
+
+    // Test 52: convert json → card
+    {
+      const out = cli(`convert ${TMP_MODEL} card`);
+      assert(out.includes("## Test Marketplace"), "convert to card works");
+    }
+
+    // Test 53: convert json → claude-md
+    {
+      const out = cli(`convert ${TMP_MODEL} claude-md`);
+      assert(out.includes("# Test Marketplace"), "convert to claude-md works");
+    }
   } finally {
     if (existsSync(TMP_MODEL)) unlinkSync(TMP_MODEL);
   }
