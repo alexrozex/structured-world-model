@@ -33,8 +33,8 @@ export type { ImpactAnalysis } from "./utils/graph.js";
 export type { Cluster } from "./utils/graph.js";
 
 // Merge & diff
-export { mergeWorldModels, diffWorldModels } from "./utils/merge.js";
-export type { WorldModelDiff } from "./utils/merge.js";
+export { mergeWorldModels, diffWorldModels, detectMergeConflicts } from "./utils/merge.js";
+export type { WorldModelDiff, MergeConflict } from "./utils/merge.js";
 
 // Compare
 export { compare } from "./utils/compare.js";

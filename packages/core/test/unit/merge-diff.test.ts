@@ -2,7 +2,7 @@
  * Unit tests for merge and diff operations.
  */
 
-import { mergeWorldModels, diffWorldModels } from "../../src/utils/merge.js";
+import { mergeWorldModels, diffWorldModels, detectMergeConflicts } from "../../src/utils/merge.js";
 import type { WorldModelType } from "../../src/schema/index.js";
 
 function makeModel(
@@ -253,6 +253,107 @@ function run() {
     const merged = mergeWorldModels(a, b);
     const admin = merged.entities.find((e) => e.name === "Admin");
     assert(admin?.confidence === 0.9, "Confidence unique: Admin keeps 0.9");
+  }
+
+  // ─── Conflict Detection Tests ────────────────────────────────────
+
+  // Test 15: No conflicts for distinct entities
+  {
+    const a = makeModel("A", [{ id: "ent_1", name: "User" }]);
+    const b = makeModel("B", [{ id: "ent_2", name: "Admin" }]);
+    const conflicts = detectMergeConflicts(a, b);
+    assert(conflicts.length === 0, "Conflict: no conflicts for distinct entities");
+  }
+
+  // Test 16: No conflicts when same entity has same type and description
+  {
+    const a = makeModel("A", [{ id: "ent_1", name: "User" }]);
+    const b = makeModel("B", [{ id: "ent_2", name: "User" }]);
+    // makeModel gives same description "Entity User" and same type "object"
+    const conflicts = detectMergeConflicts(a, b);
+    assert(conflicts.length === 0, "Conflict: no conflict when identical");
+  }
+
+  // Test 17: Detects description conflict
+  {
+    const a = makeModel("A", [{ id: "ent_1", name: "User" }]);
+    const b = makeModel("B", [{ id: "ent_2", name: "User" }]);
+    b.entities[0].description = "A different description of User";
+    const conflicts = detectMergeConflicts(a, b);
+    const descConflict = conflicts.find((c) => c.field === "description");
+    assert(descConflict !== undefined, "Conflict: detects description conflict");
+    assert(descConflict?.entityName === "User", "Conflict: conflict names the entity");
+    assert(descConflict?.valueA === "Entity User", "Conflict: reports model A description");
+    assert(
+      descConflict?.valueB === "A different description of User",
+      "Conflict: reports model B description",
+    );
+  }
+
+  // Test 18: Detects type conflict
+  {
+    const a = makeModel("A", [{ id: "ent_1", name: "Service" }]);
+    a.entities[0].type = "system";
+    const b = makeModel("B", [{ id: "ent_2", name: "Service" }]);
+    b.entities[0].type = "actor";
+    const conflicts = detectMergeConflicts(a, b);
+    const typeConflict = conflicts.find((c) => c.field === "type");
+    assert(typeConflict !== undefined, "Conflict: detects type conflict");
+    assert(typeConflict?.valueA === "system", "Conflict: type A is 'system'");
+    assert(typeConflict?.valueB === "actor", "Conflict: type B is 'actor'");
+  }
+
+  // Test 19: Multiple entities can have conflicts
+  {
+    const a = makeModel("A", [
+      { id: "ent_1", name: "User" },
+      { id: "ent_2", name: "DB" },
+    ]);
+    const b = makeModel("B", [
+      { id: "ent_3", name: "User" },
+      { id: "ent_4", name: "DB" },
+    ]);
+    b.entities[0].description = "Changed User desc";
+    b.entities[1].description = "Changed DB desc";
+    const conflicts = detectMergeConflicts(a, b);
+    assert(conflicts.length === 2, "Conflict: reports conflicts for multiple entities");
+    assert(
+      conflicts.some((c) => c.entityName === "User"),
+      "Conflict: User conflict reported",
+    );
+    assert(
+      conflicts.some((c) => c.entityName === "DB"),
+      "Conflict: DB conflict reported",
+    );
+  }
+
+  // Test 20: Conflicts are noted in merged model's extraction_notes
+  {
+    const a = makeModel("A", [{ id: "ent_1", name: "User" }]);
+    const b = makeModel("B", [{ id: "ent_2", name: "User" }]);
+    b.entities[0].description = "Different User description";
+    const merged = mergeWorldModels(a, b);
+    const notes = merged.metadata?.extraction_notes ?? [];
+    assert(
+      notes.some((n) => n.includes("Conflict") && n.includes("User")),
+      "Conflict: merge notes contain conflict report",
+    );
+    assert(
+      notes.some((n) => n.includes("kept A's value")),
+      "Conflict: merge notes indicate which value was kept",
+    );
+  }
+
+  // Test 21: Case-insensitive conflict detection
+  {
+    const a = makeModel("A", [{ id: "ent_1", name: "User" }]);
+    const b = makeModel("B", [{ id: "ent_2", name: "user" }]);
+    b.entities[0].description = "Different description";
+    const conflicts = detectMergeConflicts(a, b);
+    assert(
+      conflicts.some((c) => c.field === "description"),
+      "Conflict: detects conflict case-insensitively",
+    );
   }
 
   console.log(`\n═══ ${passed}/${passed + failed} passed ═══\n`);

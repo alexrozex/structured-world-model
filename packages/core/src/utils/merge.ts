@@ -1,6 +1,66 @@
 import type { WorldModelType } from "../schema/index.js";
 import { genId } from "./ids.js";
 
+// ─── Conflict detection ───────────────────────────────────────────────────────
+
+export interface MergeConflict {
+  entityName: string;
+  field: "description" | "type";
+  valueA: string;
+  valueB: string;
+}
+
+/**
+ * Detect conflicts between same-named entities in two models.
+ * A conflict is when the same entity has different descriptions or types.
+ * Returns an array of conflicts (empty if models are compatible).
+ */
+export function detectMergeConflicts(
+  a: WorldModelType,
+  b: WorldModelType,
+): MergeConflict[] {
+  const conflicts: MergeConflict[] = [];
+
+  function normalizeEntityName(name: string): string {
+    return name
+      .toLowerCase()
+      .replace(/[^a-z0-9]/g, "_")
+      .replace(/_+/g, "_")
+      .replace(/^_|_$/g, "");
+  }
+
+  const aMap = new Map<string, WorldModelType["entities"][number]>();
+  for (const e of a.entities) {
+    aMap.set(normalizeEntityName(e.name), e);
+  }
+
+  for (const eB of b.entities) {
+    const key = normalizeEntityName(eB.name);
+    const eA = aMap.get(key);
+    if (!eA) continue;
+
+    if (eA.type !== eB.type) {
+      conflicts.push({
+        entityName: eA.name,
+        field: "type",
+        valueA: eA.type,
+        valueB: eB.type,
+      });
+    }
+
+    if (eA.description !== eB.description) {
+      conflicts.push({
+        entityName: eA.name,
+        field: "description",
+        valueA: eA.description,
+        valueB: eB.description,
+      });
+    }
+  }
+
+  return conflicts;
+}
+
 /**
  * Merge two world models into one. Deduplicates entities by name,
  * remaps all IDs, and unions relations/processes/constraints.
@@ -126,6 +186,13 @@ export function mergeWorldModels(
     }
   }
 
+  // Detect conflicts before returning
+  const conflicts = detectMergeConflicts(a, b);
+  const conflictNotes = conflicts.map(
+    (c) =>
+      `Conflict on "${c.entityName}" field "${c.field}": "${c.valueA}" vs "${c.valueB}" — kept A's value`,
+  );
+
   // Compute merged confidence
   const confA = a.metadata?.confidence ?? 0.5;
   const confB = b.metadata?.confidence ?? 0.5;
@@ -150,6 +217,7 @@ export function mergeWorldModels(
         ...(a.metadata?.extraction_notes ?? []),
         ...(b.metadata?.extraction_notes ?? []),
         `Merged: ${a.name} (${a.entities.length} entities) + ${b.name} (${b.entities.length} entities)`,
+        ...conflictNotes,
       ],
     },
   };
