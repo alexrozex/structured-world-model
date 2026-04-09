@@ -174,3 +174,171 @@ export function timelineSummary(timeline: Timeline): string {
 
   return lines.join("\n");
 }
+
+/**
+ * Generate a human-readable changelog between two snapshots in a timeline.
+ * Shows entities added/removed/changed, relations added/removed, processes added/removed,
+ * and overall stats.
+ */
+export function snapshotChangelog(
+  timeline: Timeline,
+  fromIndex: number,
+  toIndex: number,
+): string {
+  if (fromIndex < 0 || fromIndex >= timeline.snapshots.length) {
+    throw new Error(
+      `fromIndex ${fromIndex} out of range (0..${timeline.snapshots.length - 1})`,
+    );
+  }
+  if (toIndex < 0 || toIndex >= timeline.snapshots.length) {
+    throw new Error(
+      `toIndex ${toIndex} out of range (0..${timeline.snapshots.length - 1})`,
+    );
+  }
+
+  const fromSnap = timeline.snapshots[fromIndex];
+  const toSnap = timeline.snapshots[toIndex];
+  const fromModel = fromSnap.model;
+  const toModel = toSnap.model;
+
+  // Build entity maps keyed by lowercased name
+  const fromEntities = new Map(
+    fromModel.entities.map((e) => [e.name.toLowerCase().trim(), e]),
+  );
+  const toEntities = new Map(
+    toModel.entities.map((e) => [e.name.toLowerCase().trim(), e]),
+  );
+
+  // Entities
+  const added: string[] = [];
+  const removed: string[] = [];
+  const changed: Array<{ name: string; changes: string[] }> = [];
+
+  for (const [key, ent] of toEntities) {
+    if (!fromEntities.has(key)) {
+      added.push(ent.name);
+    } else {
+      const prev = fromEntities.get(key)!;
+      const changes: string[] = [];
+      if (prev.description !== ent.description) {
+        changes.push(
+          `description: "${prev.description}" -> "${ent.description}"`,
+        );
+      }
+      if (prev.type !== ent.type) {
+        changes.push(`type: ${prev.type} -> ${ent.type}`);
+      }
+      if (changes.length > 0) {
+        changed.push({ name: ent.name, changes });
+      }
+    }
+  }
+
+  for (const [key, ent] of fromEntities) {
+    if (!toEntities.has(key)) {
+      removed.push(ent.name);
+    }
+  }
+
+  // Relations: compare by source+target+type key
+  function relKey(r: WorldModelType["relations"][number]): string {
+    return `${r.source}|${r.target}|${r.type}`;
+  }
+  const fromRelKeys = new Set(fromModel.relations.map(relKey));
+  const toRelKeys = new Set(toModel.relations.map(relKey));
+  const relationsAdded = toModel.relations.filter(
+    (r) => !fromRelKeys.has(relKey(r)),
+  );
+  const relationsRemoved = fromModel.relations.filter(
+    (r) => !toRelKeys.has(relKey(r)),
+  );
+
+  // Processes: compare by lowercased name
+  const fromProcs = new Set(
+    fromModel.processes.map((p) => p.name.toLowerCase().trim()),
+  );
+  const toProcs = new Set(
+    toModel.processes.map((p) => p.name.toLowerCase().trim()),
+  );
+  const procsAdded = toModel.processes.filter(
+    (p) => !fromProcs.has(p.name.toLowerCase().trim()),
+  );
+  const procsRemoved = fromModel.processes.filter(
+    (p) => !toProcs.has(p.name.toLowerCase().trim()),
+  );
+
+  // Build output
+  const lines: string[] = [];
+  const fromLabel = fromSnap.label ? ` (${fromSnap.label})` : "";
+  const toLabel = toSnap.label ? ` (${toSnap.label})` : "";
+  lines.push(
+    `# Changelog: snapshot ${fromIndex}${fromLabel} -> ${toIndex}${toLabel}`,
+  );
+  lines.push("");
+
+  const hasEntityChanges =
+    added.length > 0 || removed.length > 0 || changed.length > 0;
+  const hasRelationChanges =
+    relationsAdded.length > 0 || relationsRemoved.length > 0;
+  const hasProcessChanges = procsAdded.length > 0 || procsRemoved.length > 0;
+
+  if (!hasEntityChanges && !hasRelationChanges && !hasProcessChanges) {
+    lines.push("No changes detected.");
+    return lines.join("\n");
+  }
+
+  if (hasEntityChanges) {
+    lines.push("## Entities");
+    lines.push("");
+    for (const name of added) {
+      lines.push(`- **+ ${name}** (added)`);
+    }
+    for (const name of removed) {
+      lines.push(`- **- ${name}** (removed)`);
+    }
+    for (const { name, changes } of changed) {
+      lines.push(`- **~ ${name}** (changed: ${changes.join(", ")})`);
+    }
+    lines.push("");
+  }
+
+  if (hasRelationChanges) {
+    lines.push("## Relations");
+    lines.push("");
+    for (const r of relationsAdded) {
+      lines.push(
+        `- **+** ${r.source} --[${r.type}]--> ${r.target}: ${r.label}`,
+      );
+    }
+    for (const r of relationsRemoved) {
+      lines.push(
+        `- **-** ${r.source} --[${r.type}]--> ${r.target}: ${r.label}`,
+      );
+    }
+    lines.push("");
+  }
+
+  if (hasProcessChanges) {
+    lines.push("## Processes");
+    lines.push("");
+    for (const p of procsAdded) {
+      lines.push(`- **+ ${p.name}**: ${p.description}`);
+    }
+    for (const p of procsRemoved) {
+      lines.push(`- **- ${p.name}**: ${p.description}`);
+    }
+    lines.push("");
+  }
+
+  lines.push("## Stats");
+  lines.push("");
+  lines.push(
+    `- Entities: +${added.length} / -${removed.length} / ~${changed.length} changed`,
+  );
+  lines.push(
+    `- Relations: +${relationsAdded.length} / -${relationsRemoved.length}`,
+  );
+  lines.push(`- Processes: +${procsAdded.length} / -${procsRemoved.length}`);
+
+  return lines.join("\n");
+}

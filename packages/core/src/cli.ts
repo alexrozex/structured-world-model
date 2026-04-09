@@ -953,6 +953,7 @@ program
   )
   .option("--stats", "Show detailed statistics")
   .option("--format <format>", "Export format: mermaid, dot")
+  .option("--json", "Output as JSON")
   .action(
     async (
       modelPath: string,
@@ -973,6 +974,19 @@ program
             process.exit(1);
           }
 
+          const deps = findDependents(model, entity.id);
+
+          if (opts.json) {
+            console.log(
+              JSON.stringify(
+                { entity, incoming: deps.incoming, outgoing: deps.outgoing },
+                null,
+                2,
+              ),
+            );
+            return;
+          }
+
           console.log(
             chalk.blue(`■ ${entity.name}`) + chalk.gray(` (${entity.type})`),
           );
@@ -983,7 +997,6 @@ program
             );
           }
 
-          const deps = findDependents(model, entity.id);
           if (deps.incoming.length) {
             console.log(chalk.gray("\n  Incoming:"));
             for (const d of deps.incoming) {
@@ -1005,6 +1018,12 @@ program
 
         // Default: show stats
         const stats = getStats(model);
+
+        if (opts.json) {
+          console.log(JSON.stringify(stats, null, 2));
+          return;
+        }
+
         console.log(chalk.blue(`■ ${model.name}`));
         console.log(chalk.gray(`  ${model.description}\n`));
         console.log(`  Entities:    ${stats.entities.total}`);
@@ -2584,7 +2603,9 @@ program
         );
         console.error(chalk.green("  Listening on stdio...\n"));
 
-        const { startUnifiedServer } = await import("@swm/mcp-server" as string);
+        const { startUnifiedServer } = await import(
+          "@swm/mcp-server" as string
+        );
         await startUnifiedServer({
           worldModelPath: modelPath,
           enableAda: hasAda,

@@ -3,6 +3,7 @@ import {
   addSnapshot,
   entityHistory,
   timelineSummary,
+  snapshotChangelog,
 } from "../../src/utils/timeline.js";
 import type { WorldModelType } from "../../src/schema/index.js";
 
@@ -121,6 +122,124 @@ function run() {
   const summary = timelineSummary(tl3);
   assert(summary.includes("3"), "Summary mentions snapshot count");
   assert(summary.includes("Growth"), "Summary includes growth line");
+
+  // ─── snapshotChangelog tests ─────────────────────────────────
+
+  console.log("\n--- snapshotChangelog ---\n");
+
+  // Test 1: Changelog with additions only
+  {
+    const t = createTimeline("changelog-test");
+    const t1 = addSnapshot(t, makeModel("v1", ["User"]), "base");
+    const t2 = addSnapshot(
+      t1,
+      makeModel("v2", ["User", "Cache", "Queue"]),
+      "added services",
+    );
+    const log = snapshotChangelog(t2, 0, 1);
+    assert(log.includes("+ Cache"), "Additions: shows Cache added");
+    assert(log.includes("+ Queue"), "Additions: shows Queue added");
+    assert(!log.includes("- User"), "Additions: User not removed");
+    assert(log.includes("+2 / -0 / ~0"), "Additions: stats show +2/-0/~0");
+  }
+
+  // Test 2: Changelog with removals only
+  {
+    const t = createTimeline("removal-test");
+    const t1 = addSnapshot(
+      t,
+      makeModel("v1", ["User", "Database", "Cache"]),
+      "full",
+    );
+    const t2 = addSnapshot(t1, makeModel("v2", ["User"]), "trimmed");
+    const log = snapshotChangelog(t2, 0, 1);
+    assert(log.includes("- Database"), "Removals: shows Database removed");
+    assert(log.includes("- Cache"), "Removals: shows Cache removed");
+    assert(!log.includes("+ User"), "Removals: User not added");
+    assert(log.includes("+0 / -2 / ~0"), "Removals: stats show +0/-2/~0");
+  }
+
+  // Test 3: Changelog with modifications
+  {
+    const t = createTimeline("modify-test");
+    const modelA: WorldModelType = {
+      id: "wm_a",
+      name: "a",
+      description: "Model a",
+      version: "0.1.0",
+      created_at: new Date().toISOString(),
+      entities: [
+        {
+          id: "ent_0",
+          name: "User",
+          type: "actor" as const,
+          description: "A person",
+        },
+        {
+          id: "ent_1",
+          name: "Database",
+          type: "system" as const,
+          description: "Stores data",
+        },
+      ],
+      relations: [],
+      processes: [],
+      constraints: [],
+    };
+    const modelB: WorldModelType = {
+      id: "wm_b",
+      name: "b",
+      description: "Model b",
+      version: "0.1.0",
+      created_at: new Date().toISOString(),
+      entities: [
+        {
+          id: "ent_0",
+          name: "User",
+          type: "actor" as const,
+          description: "An authenticated person",
+        },
+        {
+          id: "ent_1",
+          name: "Database",
+          type: "resource" as const,
+          description: "Stores data",
+        },
+      ],
+      relations: [],
+      processes: [],
+      constraints: [],
+    };
+    const t1 = addSnapshot(t, modelA, "before");
+    const t2 = addSnapshot(t1, modelB, "after");
+    const log = snapshotChangelog(t2, 0, 1);
+    assert(
+      log.includes("~ User") && log.includes("description"),
+      "Modifications: User description change detected",
+    );
+    assert(
+      log.includes("~ Database") && log.includes("type: system -> resource"),
+      "Modifications: Database type change detected",
+    );
+    assert(
+      log.includes("+0 / -0 / ~2"),
+      "Modifications: stats show ~2 changed",
+    );
+  }
+
+  // Test 4: Empty changelog (identical snapshots)
+  {
+    const t = createTimeline("identical-test");
+    const model = makeModel("v1", ["User", "Database"]);
+    const t1 = addSnapshot(t, model, "first");
+    const t2 = addSnapshot(t1, model, "same");
+    const log = snapshotChangelog(t2, 0, 1);
+    assert(
+      log.includes("No changes detected"),
+      "Identical: reports no changes",
+    );
+    assert(!log.includes("## Entities"), "Identical: no Entities section");
+  }
 
   console.log(`\n═══ ${passed}/${passed + failed} passed ═══\n`);
   if (failed > 0) process.exit(1);
