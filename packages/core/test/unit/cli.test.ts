@@ -634,8 +634,22 @@ async function run() {
         .filter((l) => l.trim());
       assert(lines.length <= 3, "summary is concise (1-3 lines)");
     }
+
+    // Test 47: check command (pass)
+    {
+      const out = cli(`check ${TMP_MODEL}`);
+      assert(out.includes("PASS"), "check shows PASS for valid model");
+    }
+
+    // Test 48: check --json
+    {
+      const out = cli(`check ${TMP_MODEL} --json`);
+      const parsed = JSON.parse(out);
+      assert(parsed.passed === true, "check --json passed is true");
+      assert(typeof parsed.score === "number", "check --json has score");
+      assert(typeof parsed.grade === "string", "check --json has grade");
+    }
   } finally {
-    // Cleanup
     if (existsSync(TMP_MODEL)) unlinkSync(TMP_MODEL);
   }
 
