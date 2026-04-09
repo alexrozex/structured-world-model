@@ -1,7 +1,7 @@
 {
-  "cycle": 9,
+  "cycle": 10,
   "lastScore": 100,
-  "lastTestCount": 763,
+  "lastTestCount": 781,
   "improvements": [
     "e2e-multipass",
     "e2e-code-extraction",
@@ -16,9 +16,10 @@
     "refine-delta-report",
     "constraint-severity-scoring",
     "extraction-retry-logging",
-    "test-src-agents-transform-ts"
+    "test-src-agents-transform-ts",
+    "test-src-agents-second-pass-ts"
   ],
   "staleCount": 0,
   "startedAt": "2026-04-09T07:18:47.000Z",
-  "lastRunAt": "2026-04-09T08:22:55.299Z"
+  "lastRunAt": "2026-04-09T08:27:45.216Z"
 }
