@@ -2991,4 +2991,94 @@ program
     },
   );
 
+// ─── batch ───────────────────────────────────────────────────
+program
+  .command("batch")
+  .description(
+    "Extract from multiple files individually, then merge into one model",
+  )
+  .argument("<files...>", "Paths to input files")
+  .option("-o, --output <path>", "Write merged model to file")
+  .option("--name <name>", "Name for the merged model")
+  .option("--format <format>", "Output format: json, yaml", "json")
+  .option("-q, --quiet", "Suppress progress output")
+  .action(async (files: string[], opts: Record<string, unknown>) => {
+    try {
+      const expanded = expandDirectories(files);
+      if (expanded.length === 0) {
+        console.error(chalk.red("No files found"));
+        process.exit(1);
+      }
+
+      if (!opts.quiet) {
+        console.error(
+          chalk.blue(`■ Batch extraction: ${expanded.length} files\n`),
+        );
+      }
+
+      const { mergeWorldModels: merge } = await import("./utils/merge.js");
+      let merged: WorldModelType | null = null;
+      let totalMs = 0;
+
+      for (let i = 0; i < expanded.length; i++) {
+        const file = expanded[i];
+        const raw = readFileSync(resolve(file), "utf-8");
+        const sourceType = detectSourceType(raw, file);
+        const input: PipelineInput = { raw, sourceType, name: file };
+
+        if (!opts.quiet) {
+          console.error(
+            chalk.gray(`  [${i + 1}/${expanded.length}] ${file}...`),
+          );
+        }
+
+        const result = await buildWorldModel(input, { autoFix: true });
+        totalMs += result.totalDurationMs;
+
+        if (!merged) {
+          merged = result.worldModel;
+        } else {
+          merged = merge(merged, result.worldModel, {
+            name: (opts.name as string) ?? merged.name,
+            description: merged.description,
+          });
+        }
+      }
+
+      if (!merged) {
+        console.error(chalk.red("No models extracted"));
+        process.exit(1);
+      }
+
+      if (opts.name) merged = { ...merged, name: opts.name as string };
+
+      const output = formatOutput(
+        merged,
+        (opts.format as string) ?? "json",
+        true,
+      );
+      if (opts.output) {
+        writeFileSync(resolve(opts.output as string), output, "utf-8");
+        console.error(
+          chalk.green(`\n✓ Merged model written to ${opts.output}`),
+        );
+      } else {
+        console.log(output);
+      }
+
+      if (!opts.quiet) {
+        console.error(
+          chalk.gray(
+            `  ${merged.entities.length} entities, ${merged.relations.length} relations`,
+          ),
+        );
+        console.error(
+          chalk.gray(`  Total: ${totalMs}ms across ${expanded.length} files`),
+        );
+      }
+    } catch (err) {
+      handleError(err);
+    }
+  });
+
 program.parse();
