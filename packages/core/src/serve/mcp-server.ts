@@ -1,7 +1,7 @@
 import { McpServer } from "@modelcontextprotocol/sdk/server/mcp.js";
 import { StdioServerTransport } from "@modelcontextprotocol/sdk/server/stdio.js";
 import { z } from "zod/v4";
-import { readFileSync } from "node:fs";
+import { readFileSync, watch } from "node:fs";
 import { resolve } from "node:path";
 import type { WorldModelType } from "../schema/index.js";
 import {
@@ -14,26 +14,57 @@ import {
 } from "../utils/graph.js";
 import { queryWorldModel } from "../agents/query.js";
 
+function loadModel(resolved: string): WorldModelType {
+  const raw = readFileSync(resolved, "utf-8");
+  return JSON.parse(raw) as WorldModelType;
+}
+
 /**
  * Create and start an MCP server that serves a world model as live, queryable tools.
  * Any AI agent that connects gets instant domain expertise.
+ *
+ * When the model JSON file changes on disk the server hot-reloads the model
+ * without restarting — all subsequent tool calls return data from the new model.
  */
 export async function startMcpServer(modelPath: string): Promise<void> {
   const resolved = resolve(modelPath);
-  const raw = readFileSync(resolved, "utf-8");
-  const model: WorldModelType = JSON.parse(raw);
 
-  const entityNames = model.entities.map((e) => e.name);
+  // Mutable container — tool handlers close over this so they always see the
+  // latest model without needing to re-register.
+  const state: { model: WorldModelType } = { model: loadModel(resolved) };
+
+  // ─── File watcher: hot-reload on change ───────────────────
+  let debounceTimer: ReturnType<typeof setTimeout> | undefined;
+  watch(resolved, () => {
+    // Debounce: editors often write a file in multiple events
+    clearTimeout(debounceTimer);
+    debounceTimer = setTimeout(() => {
+      try {
+        state.model = loadModel(resolved);
+        process.stderr.write(
+          `[swm-mcp] hot-reloaded model from ${resolved}\n`,
+        );
+      } catch {
+        process.stderr.write(
+          `[swm-mcp] failed to reload model from ${resolved} — keeping previous version\n`,
+        );
+      }
+    }, 100);
+  });
+
+  // Snapshot used only for tool descriptions (static strings set at registration)
+  const initialModel = state.model;
+  const entityNames = initialModel.entities.map((e) => e.name);
 
   const server = new McpServer({
-    name: `swm-${model.name.toLowerCase().replace(/[^a-z0-9]/g, "-")}`,
-    version: model.version ?? "0.1.0",
+    name: `swm-${initialModel.name.toLowerCase().replace(/[^a-z0-9]/g, "-")}`,
+    version: initialModel.version ?? "0.1.0",
   });
 
   // ─── Tool: get_entity ───────────────────────────────────
   server.tool(
     "get_entity",
-    `Look up a domain entity. This world model has ${model.entities.length} entities across ${new Set(model.entities.map((e) => e.type)).size} types.`,
+    `Look up a domain entity. This world model has ${initialModel.entities.length} entities across ${new Set(initialModel.entities.map((e) => e.type)).size} types.`,
     {
       name: z
         .string()
@@ -42,13 +73,14 @@ export async function startMcpServer(modelPath: string): Promise<void> {
         ),
     },
     async ({ name }) => {
+      const model = state.model;
       const entity = findEntity(model, name);
       if (!entity) {
         return {
           content: [
             {
               type: "text" as const,
-              text: `Entity "${name}" not found. Available: ${entityNames.join(", ")}`,
+              text: `Entity "${name}" not found. Available: ${model.entities.map((e) => e.name).join(", ")}`,
             },
           ],
         };
@@ -108,6 +140,7 @@ export async function startMcpServer(modelPath: string): Promise<void> {
         .describe("Direction of relations"),
     },
     async ({ entity: name, direction }) => {
+      const model = state.model;
       const entity = findEntity(model, name);
       if (!entity) {
         return {
@@ -151,6 +184,7 @@ export async function startMcpServer(modelPath: string): Promise<void> {
       to: z.string().describe("Target entity name"),
     },
     async ({ from, to }) => {
+      const model = state.model;
       const src = findEntity(model, from);
       const tgt = findEntity(model, to);
       if (!src)
@@ -196,9 +230,10 @@ export async function startMcpServer(modelPath: string): Promise<void> {
   // ─── Tool: get_process ──────────────────────────────────
   server.tool(
     "get_process",
-    `Get details of a domain process. Available: ${model.processes.map((p) => p.name).join(", ")}`,
+    `Get details of a domain process. Available: ${initialModel.processes.map((p) => p.name).join(", ")}`,
     { name: z.string().describe("Process name") },
     async ({ name }) => {
+      const model = state.model;
       const proc = model.processes.find((p) =>
         p.name.toLowerCase().includes(name.toLowerCase()),
       );
@@ -241,11 +276,12 @@ export async function startMcpServer(modelPath: string): Promise<void> {
   // ─── Tool: check_constraint ─────────────────────────────
   server.tool(
     "check_constraint",
-    `Check if an action violates a domain constraint. Constraints: ${model.constraints.map((c) => `[${c.severity}] ${c.name}`).join(", ")}`,
+    `Check if an action violates a domain constraint. Constraints: ${initialModel.constraints.map((c) => `[${c.severity}] ${c.name}`).join(", ")}`,
     {
       action: z.string().describe("Description of the action to validate"),
     },
     async ({ action }) => {
+      const model = state.model;
       const lines = ["Checking action against all constraints:\n"];
 
       for (const c of model.constraints) {
@@ -272,7 +308,7 @@ export async function startMcpServer(modelPath: string): Promise<void> {
     "Ask any natural language question about this domain. Uses graph analysis for structural questions, LLM inference for open-ended ones.",
     { question: z.string().describe("Your question about the domain") },
     async ({ question }) => {
-      const result = await queryWorldModel(model, question);
+      const result = await queryWorldModel(state.model, question);
       return {
         content: [
           {
@@ -290,6 +326,7 @@ export async function startMcpServer(modelPath: string): Promise<void> {
     "Get statistical overview of the domain model",
     {},
     async () => {
+      const model = state.model;
       const stats = getStats(model);
       const lines = [
         `**${model.name}**`,
@@ -324,7 +361,7 @@ export async function startMcpServer(modelPath: string): Promise<void> {
     "Get a Mermaid diagram of the world model for visualization",
     {},
     async () => {
-      return { content: [{ type: "text" as const, text: toMermaid(model) }] };
+      return { content: [{ type: "text" as const, text: toMermaid(state.model) }] };
     },
   );
 
@@ -336,6 +373,7 @@ export async function startMcpServer(modelPath: string): Promise<void> {
       entity: z.string().describe("Entity name to analyze"),
     },
     async ({ entity: name }) => {
+      const model = state.model;
       const entity = findEntity(model, name);
       if (!entity) {
         return {
@@ -376,15 +414,18 @@ export async function startMcpServer(modelPath: string): Promise<void> {
   );
 
   // ─── Resource: full model ───────────────────────────────
-  server.resource("world-model", `swm://model/${model.id}`, async () => ({
-    contents: [
-      {
-        uri: `swm://model/${model.id}`,
-        text: JSON.stringify(model, null, 2),
-        mimeType: "application/json",
-      },
-    ],
-  }));
+  server.resource("world-model", `swm://model/${initialModel.id}`, async () => {
+    const model = state.model;
+    return {
+      contents: [
+        {
+          uri: `swm://model/${model.id}`,
+          text: JSON.stringify(model, null, 2),
+          mimeType: "application/json",
+        },
+      ],
+    };
+  });
 
   // Connect via stdio
   const transport = new StdioServerTransport();
