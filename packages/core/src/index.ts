@@ -101,3 +101,11 @@ export { setDefaultModel, getDefaultModel } from "./utils/llm.js";
 
 // ID generation
 export { genId } from "./utils/ids.js";
+
+// Versioning
+export {
+  bumpVersion,
+  versionModel,
+  compareVersions,
+} from "./utils/versioning.js";
+export type { VersionBump } from "./utils/versioning.js";
