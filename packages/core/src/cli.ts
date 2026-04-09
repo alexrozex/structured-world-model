@@ -2962,4 +2962,33 @@ program
     }
   });
 
+// ─── compare-html ────────────────────────────────────────────
+program
+  .command("compare-html")
+  .description("Generate visual HTML comparison of two models")
+  .argument("<modelA>", "Path to first model")
+  .argument("<modelB>", "Path to second model")
+  .option("-o, --output <path>", "Write to file")
+  .action(
+    async (pathA: string, pathB: string, opts: Record<string, unknown>) => {
+      try {
+        const a = await readModel(pathA);
+        const b = await readModel(pathB);
+        const { toComparisonHtml } =
+          await import("./export/comparison-html.js");
+        const html = toComparisonHtml(a, b);
+        if (opts.output) {
+          writeFileSync(resolve(opts.output as string), html, "utf-8");
+          console.error(
+            chalk.green(`✓ Comparison HTML written to ${opts.output}`),
+          );
+        } else {
+          console.log(html);
+        }
+      } catch (err) {
+        handleError(err);
+      }
+    },
+  );
+
 program.parse();
