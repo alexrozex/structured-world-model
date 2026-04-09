@@ -3150,4 +3150,142 @@ program
     }
   });
 
+// ─── explain ─────────────────────────────────────────────────
+program
+  .command("explain")
+  .description(
+    "Complete dossier on a single entity — everything the model knows",
+  )
+  .argument("<model>", "Path to world model JSON")
+  .argument("<entity>", "Entity name to explain")
+  .option("--json", "Output as JSON")
+  .action(
+    async (
+      modelPath: string,
+      entityName: string,
+      opts: Record<string, unknown>,
+    ) => {
+      try {
+        const model = await readModel(modelPath);
+        const entity = findEntity(model, entityName);
+        if (!entity) {
+          console.error(chalk.red(`Entity "${entityName}" not found`));
+          console.error(
+            chalk.gray(
+              `  Available: ${model.entities.map((e) => e.name).join(", ")}`,
+            ),
+          );
+          process.exit(1);
+        }
+
+        const deps = findDependents(model, entity.id);
+        const processes = model.processes.filter((p) =>
+          p.participants.includes(entity.id),
+        );
+        const constraints = model.constraints.filter((c) =>
+          c.scope.includes(entity.id),
+        );
+
+        // Connectivity rank
+        const connCounts = new Map<string, number>();
+        for (const e of model.entities) connCounts.set(e.id, 0);
+        for (const r of model.relations) {
+          connCounts.set(r.source, (connCounts.get(r.source) ?? 0) + 1);
+          connCounts.set(r.target, (connCounts.get(r.target) ?? 0) + 1);
+        }
+        const sorted = [...connCounts.entries()].sort((a, b) => b[1] - a[1]);
+        const rank = sorted.findIndex(([id]) => id === entity.id) + 1;
+        const connections = connCounts.get(entity.id) ?? 0;
+
+        if (opts.json) {
+          console.log(
+            JSON.stringify(
+              {
+                entity,
+                rank,
+                connections,
+                incoming: deps.incoming.map((d) => ({
+                  entity: d.entity.name,
+                  relation: d.relation.type,
+                  label: d.relation.label,
+                })),
+                outgoing: deps.outgoing.map((d) => ({
+                  entity: d.entity.name,
+                  relation: d.relation.type,
+                  label: d.relation.label,
+                })),
+                processes: processes.map((p) => ({
+                  name: p.name,
+                  role: p.steps.some((s) => s.actor === entity.id)
+                    ? "actor"
+                    : "participant",
+                })),
+                constraints: constraints.map((c) => ({
+                  name: c.name,
+                  severity: c.severity,
+                  description: c.description,
+                })),
+              },
+              null,
+              2,
+            ),
+          );
+          return;
+        }
+
+        console.log(
+          chalk.blue(`\n  ${entity.name}`) + chalk.gray(` (${entity.type})`),
+        );
+        console.log(chalk.white(`  ${entity.description}`));
+        if (entity.confidence !== undefined)
+          console.log(
+            chalk.gray(`  Confidence: ${Math.round(entity.confidence * 100)}%`),
+          );
+        if (entity.source_context)
+          console.log(chalk.gray(`  Source: "${entity.source_context}"`));
+        if (entity.properties && Object.keys(entity.properties).length > 0)
+          console.log(
+            chalk.gray(`  Properties: ${JSON.stringify(entity.properties)}`),
+          );
+        console.log(
+          chalk.gray(
+            `  Connectivity: #${rank} of ${model.entities.length} (${connections} connections)`,
+          ),
+        );
+
+        if (deps.incoming.length > 0) {
+          console.log(chalk.yellow("\n  Incoming relations:"));
+          for (const d of deps.incoming)
+            console.log(
+              `    ${d.entity.name} \u2014[${d.relation.type}]\u2192 ${entity.name}: ${d.relation.label}`,
+            );
+        }
+        if (deps.outgoing.length > 0) {
+          console.log(chalk.yellow("\n  Outgoing relations:"));
+          for (const d of deps.outgoing)
+            console.log(
+              `    ${entity.name} \u2014[${d.relation.type}]\u2192 ${d.entity.name}: ${d.relation.label}`,
+            );
+        }
+        if (processes.length > 0) {
+          console.log(chalk.yellow("\n  Processes:"));
+          for (const p of processes) {
+            const role = p.steps.some((s) => s.actor === entity.id)
+              ? "actor"
+              : "participant";
+            console.log(`    ${p.name} (${role})`);
+          }
+        }
+        if (constraints.length > 0) {
+          console.log(chalk.yellow("\n  Constraints:"));
+          for (const c of constraints)
+            console.log(`    [${c.severity}] ${c.name}: ${c.description}`);
+        }
+        console.log();
+      } catch (err) {
+        handleError(err);
+      }
+    },
+  );
+
 program.parse();
