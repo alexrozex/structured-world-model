@@ -1,7 +1,7 @@
 {
-  "cycle": 5,
+  "cycle": 6,
   "lastScore": 100,
-  "lastTestCount": 682,
+  "lastTestCount": 703,
   "improvements": [
     "e2e-multipass",
     "e2e-code-extraction",
@@ -9,9 +9,11 @@
     "export-dot-improved",
     "query-explain",
     "mcp-search-tool",
-    "compare-deep"
+    "compare-deep",
+    "test-src-pipeline-pipeline-ts",
+    "test-src-swm-ts"
   ],
   "staleCount": 0,
   "startedAt": "2026-04-09T07:18:47.000Z",
-  "lastRunAt": "2026-04-09T08:08:25.740Z"
+  "lastRunAt": "2026-04-09T08:12:31.551Z"
 }
