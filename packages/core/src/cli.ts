@@ -2671,4 +2671,114 @@ program
     },
   );
 
+// ─── health ──────────────────────────────────────────────────
+program
+  .command("health")
+  .description(
+    "Comprehensive health assessment with grade (A-F), metrics, and recommendations",
+  )
+  .argument("<model>", "Path to world model JSON")
+  .option("--json", "Output as JSON")
+  .option("--min-grade <grade>", "Exit 1 if grade is below this (A/B/C/D)", "")
+  .action(async (modelPath: string, opts: Record<string, unknown>) => {
+    try {
+      const model = await readModel(modelPath);
+      const { validationAgent: va } = await import("./agents/validation.js");
+      const { validation } = await va({
+        input: { raw: "", sourceType: "text" as const },
+        worldModel: model,
+      });
+      const { assessHealth } = await import("./utils/health.js");
+      const report = assessHealth(model, validation);
+
+      if (opts.json) {
+        console.log(JSON.stringify(report, null, 2));
+      } else {
+        const gradeColor =
+          report.grade === "A"
+            ? chalk.green
+            : report.grade === "B"
+              ? chalk.blue
+              : report.grade === "C"
+                ? chalk.yellow
+                : chalk.red;
+
+        console.log(
+          gradeColor(`\n  Grade: ${report.grade} (${report.score}/100)\n`),
+        );
+        console.log(chalk.white(`  ${report.summary}\n`));
+
+        console.log(chalk.gray("  Metrics:"));
+        console.log(
+          chalk.gray(`    Entities:        ${report.metrics.entities}`),
+        );
+        console.log(
+          chalk.gray(
+            `    Relations:       ${report.metrics.relations} (density: ${report.metrics.relationDensity})`,
+          ),
+        );
+        console.log(
+          chalk.gray(`    Processes:       ${report.metrics.processes}`),
+        );
+        console.log(
+          chalk.gray(`    Constraints:     ${report.metrics.constraints}`),
+        );
+        console.log(
+          chalk.gray(`    Clusters:        ${report.metrics.clusters}`),
+        );
+        console.log(
+          chalk.gray(
+            `    Confidence:      ${Math.round(report.metrics.highConfidenceRate * 100)}% high`,
+          ),
+        );
+        console.log(
+          chalk.gray(
+            `    Provenance:      ${Math.round(report.metrics.provenanceRate * 100)}% sourced`,
+          ),
+        );
+        console.log(
+          chalk.gray(
+            `    Orphan rate:     ${Math.round(report.metrics.orphanRate * 100)}%`,
+          ),
+        );
+        console.log(
+          chalk.gray(
+            `    Size:            ${(report.metrics.jsonBytes / 1024).toFixed(1)} KB`,
+          ),
+        );
+
+        if (report.issues.length > 0) {
+          console.log(chalk.yellow("\n  Issues:"));
+          for (const issue of report.issues) {
+            console.log(chalk.yellow(`    ! ${issue}`));
+          }
+        }
+
+        if (report.recommendations.length > 0) {
+          console.log(chalk.blue("\n  Recommendations:"));
+          for (const rec of report.recommendations) {
+            console.log(chalk.blue(`    → ${rec}`));
+          }
+        }
+      }
+
+      // CI gate: exit 1 if grade below minimum
+      if (opts.minGrade) {
+        const grades = ["A", "B", "C", "D", "F"];
+        const minIdx = grades.indexOf(opts.minGrade as string);
+        const actualIdx = grades.indexOf(report.grade);
+        if (minIdx >= 0 && actualIdx > minIdx) {
+          console.error(
+            chalk.red(
+              `\n  FAIL: Grade ${report.grade} is below minimum ${opts.minGrade}`,
+            ),
+          );
+          process.exit(1);
+        }
+      }
+    } catch (err) {
+      handleError(err);
+    }
+  });
+
 program.parse();
