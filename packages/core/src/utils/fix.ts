@@ -79,14 +79,36 @@ export function fixWorldModel(model: WorldModelType): FixResult {
   }
 
   // Fix 0b: Remove low-confidence placeholder entities (auto-created by structuring)
+  // Also removes entities whose descriptions indicate they're unresolved references
   {
     const before = entities.length;
     const removedIds = new Set<string>();
     entities = entities.filter((e) => {
+      // Tag-based: low confidence + auto-created tag
       if (
         e.confidence !== undefined &&
         e.confidence <= 0.2 &&
         e.tags?.includes("auto-created")
+      ) {
+        removedIds.add(e.id);
+        return false;
+      }
+      // Description-based: auto-created for unresolved reference
+      if (
+        e.description
+          .toLowerCase()
+          .includes("auto-created entity for unresolved reference")
+      ) {
+        removedIds.add(e.id);
+        return false;
+      }
+      // Name-based: entities that look like variable names or return types (code extraction noise)
+      // e.g. "incoming relations array", "broken relations list", "result object"
+      const noisyPatterns =
+        /^(incoming|outgoing|broken|result|return|input|output|temp|local|internal)\s+(relations?|objects?|arrays?|lists?|values?|items?|data|types?|variables?)\b/i;
+      if (
+        noisyPatterns.test(e.name) &&
+        (e.confidence === undefined || e.confidence < 0.5)
       ) {
         removedIds.add(e.id);
         return false;

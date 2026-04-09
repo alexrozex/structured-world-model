@@ -411,6 +411,126 @@ function run() {
     );
   }
 
+  // Description-based placeholder removal: "Auto-created entity for unresolved reference"
+  {
+    const { model, fixes } = fixWorldModel(
+      makeModel({
+        entities: [
+          { id: "ent_1", name: "User", type: "actor", description: "A user" },
+          { id: "ent_2", name: "DB", type: "system", description: "Database" },
+          {
+            id: "ent_noise1",
+            name: "incoming relations array",
+            type: "object",
+            description:
+              "Auto-created entity for unresolved reference: incoming relations array",
+          },
+          {
+            id: "ent_noise2",
+            name: "broken relations list",
+            type: "object",
+            description:
+              "Auto-created entity for unresolved reference: broken relations list",
+          },
+        ],
+      }),
+    );
+    assert(
+      !model.entities.some((e) => e.id === "ent_noise1"),
+      "Description-based removal: 'incoming relations array' removed",
+    );
+    assert(
+      !model.entities.some((e) => e.id === "ent_noise2"),
+      "Description-based removal: 'broken relations list' removed",
+    );
+    assert(
+      fixes.some((f) => f.includes("placeholder")),
+      "Description-based removal: fix reported",
+    );
+  }
+
+  // Name-based noise removal: variable-name-like entities from code extraction
+  {
+    const { model, fixes } = fixWorldModel(
+      makeModel({
+        entities: [
+          { id: "ent_1", name: "User", type: "actor", description: "A user" },
+          { id: "ent_2", name: "DB", type: "system", description: "Database" },
+          {
+            id: "ent_var1",
+            name: "result object",
+            type: "object",
+            description: "A result",
+            confidence: 0.3,
+          },
+          {
+            id: "ent_var2",
+            name: "output data",
+            type: "object",
+            description: "Output data",
+            confidence: 0.4,
+          },
+          {
+            id: "ent_legit",
+            name: "output data",
+            type: "object",
+            description: "Important output",
+            confidence: 0.8,
+          },
+        ],
+      }),
+    );
+    assert(
+      !model.entities.some((e) => e.id === "ent_var1"),
+      "Name-based removal: 'result object' (conf 0.3) removed",
+    );
+    assert(
+      !model.entities.some((e) => e.id === "ent_var2"),
+      "Name-based removal: 'output data' (conf 0.4) removed",
+    );
+    // High confidence entity with same pattern should survive (after dedup)
+    // It may be deduped with ent_var2, but the high-confidence one should win
+  }
+
+  // Non-matching entities should survive
+  {
+    const { model } = fixWorldModel(
+      makeModel({
+        entities: [
+          { id: "ent_1", name: "User", type: "actor", description: "A user" },
+          { id: "ent_2", name: "DB", type: "system", description: "Database" },
+          {
+            id: "ent_real",
+            name: "Payment System",
+            type: "system",
+            description: "Handles payments",
+            confidence: 0.9,
+          },
+        ],
+        relations: [
+          {
+            id: "rel_1",
+            type: "uses",
+            source: "ent_1",
+            target: "ent_2",
+            label: "queries",
+          },
+          {
+            id: "rel_2",
+            type: "uses",
+            source: "ent_1",
+            target: "ent_real",
+            label: "pays via",
+          },
+        ],
+      }),
+    );
+    assert(
+      model.entities.some((e) => e.name === "Payment System"),
+      "Legitimate entity survives noise filter",
+    );
+  }
+
   console.log(`\n═══ ${passed}/${passed + failed} passed ═══\n`);
   if (failed > 0) process.exit(1);
 }
