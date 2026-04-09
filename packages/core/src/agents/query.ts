@@ -35,7 +35,7 @@ type RawQueryResult = Omit<
 function annotateConfidence(
   result: RawQueryResult,
   model: WorldModelType,
-): QueryResult {
+): Omit<QueryResult, "pattern" | "reasoning"> {
   const low = result.entities_referenced
     .map((name) =>
       model.entities.find((e) => e.name.toLowerCase() === name.toLowerCase()),
@@ -497,17 +497,19 @@ async function inferenceQuery(
     .filter((e) => answer.toLowerCase().includes(e.name.toLowerCase()))
     .map((e) => e.name);
 
-  return annotateConfidence(
-    {
-      answer,
-      method: "inference",
-      entities_referenced: referenced,
-      confidence: 0.8,
-      pattern: "",
-      reasoning: "No deterministic pattern matched; fell back to LLM inference",
-    },
-    model,
-  );
+  return {
+    ...annotateConfidence(
+      {
+        answer,
+        method: "inference",
+        entities_referenced: referenced,
+        confidence: 0.8,
+      },
+      model,
+    ),
+    pattern: "",
+    reasoning: "No deterministic pattern matched; fell back to LLM inference",
+  };
 }
 
 // ─── Public API ───────────────────────────────────────────────
@@ -545,10 +547,11 @@ export async function queryWorldModel(
     if (match) {
       const result = handler(model, match);
       if (result) {
-        const annotated = annotateConfidence(result, model);
-        annotated.pattern = name;
-        annotated.reasoning = reasoning;
-        return annotated;
+        return {
+          ...annotateConfidence(result, model),
+          pattern: name,
+          reasoning,
+        };
       }
       // Pattern matched but handler returned null (entity not found) — fall through to inference
     }
