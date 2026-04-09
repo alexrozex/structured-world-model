@@ -307,6 +307,22 @@ async function run() {
       assert(parsed.entities.length === 4, "export json has entities");
     }
 
+    // Test 15d: export --as dot
+    {
+      const out = cli(`export ${TMP_MODEL} --as dot`);
+      assert(out.includes("digraph"), "export dot has digraph");
+      assert(out.includes("fillcolor"), "export dot has entity colors");
+    }
+
+    // Test 15e: export --as mermaid
+    {
+      const out = cli(`export ${TMP_MODEL} --as mermaid`);
+      assert(
+        out.includes("graph") || out.includes("TD"),
+        "export mermaid has graph header",
+      );
+    }
+
     // Test 16: clusters command
     {
       const out = cli(`clusters ${TMP_MODEL}`);
