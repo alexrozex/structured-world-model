@@ -2254,6 +2254,21 @@ program
     console.log(
       `    ${c("schema")}                 Output WorldModel JSON Schema`,
     );
+    console.log(
+      `    ${c("health")} <model>         Grade A-F health assessment with metrics`,
+    );
+    console.log(
+      `    ${c("explain")} <model> <entity>  Complete entity dossier`,
+    );
+    console.log(
+      `    ${c("top")} <model>            Most connected entities ranked`,
+    );
+    console.log(
+      `    ${c("check")} <model>          CI gate: validate + health with exit codes`,
+    );
+    console.log(
+      `    ${c("info")}                   Version, model, API key status`,
+    );
     console.log("");
     console.log(b("  Compose"));
     console.log(
@@ -2277,6 +2292,15 @@ program
     console.log(
       `    ${c("coverage")} <ref> <target>  How much of ref is covered by target`,
     );
+    console.log(
+      `    ${c("filter")} <model>         Extract subset by type, tag, confidence, search`,
+    );
+    console.log(
+      `    ${c("compare-html")} <a> <b>   Visual side-by-side HTML comparison`,
+    );
+    console.log(
+      `    ${c("batch")} <files...>       Extract from multiple files, merge into one`,
+    );
     console.log("");
     console.log(b("  Track"));
     console.log(
@@ -2288,15 +2312,22 @@ program
     console.log("");
     console.log(b("  Export"));
     console.log(
-      `    ${c("export")} <model> --as <fmt>  Export as claude-md, system-prompt, or mcp`,
+      `    ${c("export")} <model> --as <fmt>  Export (9 formats: claude-md, system-prompt, mcp, html, yaml, json, dot, mermaid, card)`,
+    );
+    console.log(`    ${c("convert")} <model> <fmt>  Quick format conversion`);
+    console.log(
+      `    ${c("publish")} <model>        Generate deployable MCP server package`,
     );
     console.log(
       `    ${c("mcp-config")} <model>     Generate MCP client config snippet`,
     );
+    console.log(
+      `    ${c("estimate")} [input]       Preview extraction cost before running`,
+    );
     console.log("");
     console.log(b("  Serve"));
     console.log(
-      `    ${c("serve")} <model>          Start MCP server with 9 live queryable tools`,
+      `    ${c("serve")} <model>          Start MCP server with 10 live queryable tools`,
     );
     console.log("");
     console.log(b("  Query"));
