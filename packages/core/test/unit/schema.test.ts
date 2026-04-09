@@ -253,6 +253,38 @@ function run() {
     assert(zero.success, "Entity confidence: 0 accepted");
   }
 
+  // source_context field
+  {
+    const withCtx = Entity.safeParse({
+      id: "ent_1",
+      name: "User",
+      type: "actor",
+      description: "A user",
+      source_context: "Users can register on the platform",
+    });
+    assert(withCtx.success, "Entity with source_context parses");
+    assert(
+      withCtx.success &&
+        withCtx.data.source_context === "Users can register on the platform",
+      "source_context value preserved",
+    );
+
+    const withoutCtx = Entity.safeParse({
+      id: "ent_2",
+      name: "Admin",
+      type: "actor",
+      description: "An admin",
+    });
+    assert(
+      withoutCtx.success,
+      "Entity without source_context parses (optional)",
+    );
+    assert(
+      withoutCtx.success && withoutCtx.data.source_context === undefined,
+      "Missing source_context is undefined",
+    );
+  }
+
   console.log(`\n═══ ${passed}/${passed + failed} passed ═══\n`);
   if (failed > 0) process.exit(1);
 }

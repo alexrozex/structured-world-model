@@ -1021,10 +1021,20 @@ program
             chalk.blue(`■ ${entity.name}`) + chalk.gray(` (${entity.type})`),
           );
           console.log(chalk.white(`  ${entity.description}`));
-          if (entity.properties) {
+          if (entity.properties && Object.keys(entity.properties).length > 0) {
             console.log(
               chalk.gray(`  Properties: ${JSON.stringify(entity.properties)}`),
             );
+          }
+          if (entity.confidence !== undefined) {
+            console.log(
+              chalk.gray(
+                `  Confidence: ${Math.round(entity.confidence * 100)}%`,
+              ),
+            );
+          }
+          if (entity.source_context) {
+            console.log(chalk.gray(`  Source: "${entity.source_context}"`));
           }
 
           if (deps.incoming.length) {
