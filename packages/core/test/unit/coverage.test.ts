@@ -166,6 +166,85 @@ function run() {
     assert(r.missingConstraints.length === 1, "Constraints: 1 missing");
   }
 
+  // ─── Fuzzy matching tests ──────────────────────────────────
+
+  // Fuzzy: similar entity names should match
+  {
+    const spec = makeModel("spec", [
+      "User Authentication System",
+      "Password Reset Token",
+    ]);
+    const impl = makeModel("impl", [
+      "Authentication System",
+      "Password Reset Feature",
+    ]);
+    const r = coverage(spec, impl);
+    assert(
+      r.entityCoverage > 0.5,
+      `Fuzzy entities: coverage ${r.entityCoverage} > 0.5 (similar names match)`,
+    );
+    assert(
+      r.missingEntities.length < 2,
+      "Fuzzy entities: fewer missing than exact match would give",
+    );
+  }
+
+  // Fuzzy: completely different names should NOT match
+  {
+    const spec = makeModel("spec", ["Payment Gateway", "Invoice Generator"]);
+    const impl = makeModel("impl", ["User Profile", "Dashboard Widget"]);
+    const r = coverage(spec, impl);
+    assert(
+      r.entityCoverage === 0,
+      "No fuzzy match for completely different names",
+    );
+    assert(r.missingEntities.length === 2, "Both entities missing");
+  }
+
+  // Fuzzy: process names
+  {
+    const spec = makeModel("spec", ["User"], [], ["User Registration Flow"]);
+    const impl = makeModel("impl", ["User"], [], ["User Registration Process"]);
+    const r = coverage(spec, impl);
+    assert(
+      r.processCoverage > 0,
+      "Fuzzy process: 'User Registration Flow' ≈ 'User Registration Process'",
+    );
+  }
+
+  // Fuzzy: constraint names
+  {
+    const spec = makeModel(
+      "spec",
+      ["User"],
+      [],
+      [],
+      ["Password Complexity Rule"],
+    );
+    const impl = makeModel(
+      "impl",
+      ["User"],
+      [],
+      [],
+      ["Password Complexity Requirement"],
+    );
+    const r = coverage(spec, impl);
+    assert(
+      r.constraintCoverage > 0,
+      "Fuzzy constraint: 'Rule' ≈ 'Requirement' with shared words",
+    );
+  }
+
+  // Fuzzy: exact match still takes priority
+  {
+    const spec = makeModel("spec", ["User", "Admin"]);
+    const impl = makeModel("impl", ["User", "Admin"]);
+    const r = coverage(spec, impl);
+    assert(r.entityCoverage === 1, "Exact match: 100% coverage");
+    assert(r.missingEntities.length === 0, "Exact match: zero missing");
+    assert(r.extraEntities.length === 0, "Exact match: zero extra");
+  }
+
   console.log(`\n═══ ${passed}/${passed + failed} passed ═══\n`);
   if (failed > 0) process.exit(1);
 }

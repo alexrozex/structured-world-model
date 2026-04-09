@@ -27,6 +27,60 @@ function normalize(name: string): string {
   return name.toLowerCase().trim();
 }
 
+/** Compute word overlap between two names (0-1). Ignores stopwords. */
+function wordOverlap(a: string, b: string): number {
+  const stopwords = new Set([
+    "the",
+    "a",
+    "an",
+    "and",
+    "or",
+    "of",
+    "for",
+    "in",
+    "on",
+    "to",
+    "with",
+    "by",
+    "is",
+  ]);
+  const words = (s: string) =>
+    new Set(
+      s
+        .toLowerCase()
+        .replace(/[^a-z0-9\s]/g, " ")
+        .split(/\s+/)
+        .filter((w) => w.length > 1 && !stopwords.has(w)),
+    );
+  const wa = words(a);
+  const wb = words(b);
+  if (wa.size === 0 || wb.size === 0) return 0;
+  let shared = 0;
+  for (const w of wa) if (wb.has(w)) shared++;
+  return shared / Math.max(wa.size, wb.size);
+}
+
+/**
+ * Find the best fuzzy match for a name in a set.
+ * Returns the matched name if overlap >= threshold, or null.
+ */
+function fuzzyMatch(
+  name: string,
+  candidates: Map<string, string>,
+  threshold = 0.5,
+): string | null {
+  let bestMatch: string | null = null;
+  let bestScore = 0;
+  for (const [normalized, original] of candidates) {
+    const score = wordOverlap(name, normalized);
+    if (score > bestScore && score >= threshold) {
+      bestScore = score;
+      bestMatch = original;
+    }
+  }
+  return bestMatch;
+}
+
 function pct(covered: number, total: number): number {
   if (total === 0) return 1; // empty set is fully covered
   return Math.round((covered / total) * 100) / 100;
@@ -37,17 +91,43 @@ function pct(covered: number, total: number): number {
  * "Does B contain everything A specifies?"
  */
 export function coverage(a: WorldModelType, b: WorldModelType): CoverageResult {
-  // Entity coverage by normalized name
+  // Entity coverage: exact match first, then fuzzy word-overlap fallback
   const aEntityNames = new Set(a.entities.map((e) => normalize(e.name)));
   const bEntityNames = new Set(b.entities.map((e) => normalize(e.name)));
+  const bEntityMap = new Map(
+    b.entities.map((e) => [normalize(e.name), e.name]),
+  );
 
-  const coveredEntities = [...aEntityNames].filter((n) => bEntityNames.has(n));
-  const missingEntities = [...aEntityNames]
-    .filter((n) => !bEntityNames.has(n))
-    .map((n) => a.entities.find((e) => normalize(e.name) === n)?.name ?? n);
-  const extraEntities = [...bEntityNames]
-    .filter((n) => !aEntityNames.has(n))
-    .map((n) => b.entities.find((e) => normalize(e.name) === n)?.name ?? n);
+  const exactCovered = [...aEntityNames].filter((n) => bEntityNames.has(n));
+  const exactMissing = [...aEntityNames].filter((n) => !bEntityNames.has(n));
+
+  // Fuzzy match remaining missing entities against B's unmatched entities
+  const bUnmatched = new Map(
+    [...bEntityMap].filter(([n]) => !aEntityNames.has(n)),
+  );
+  const fuzzyCovered: string[] = [];
+  const trulyMissing: string[] = [];
+  for (const aN of exactMissing) {
+    const match = fuzzyMatch(aN, bUnmatched);
+    if (match) {
+      fuzzyCovered.push(aN);
+      // Remove matched B entity so it can't match twice
+      for (const [k, v] of bUnmatched) {
+        if (v === match) {
+          bUnmatched.delete(k);
+          break;
+        }
+      }
+    } else {
+      const original =
+        a.entities.find((e) => normalize(e.name) === aN)?.name ?? aN;
+      trulyMissing.push(original);
+    }
+  }
+
+  const coveredEntities = [...exactCovered, ...fuzzyCovered];
+  const missingEntities = trulyMissing;
+  const extraEntities = [...bUnmatched.values()];
 
   // Relation coverage by (source name, type, target name)
   const relKey = (
@@ -68,21 +148,63 @@ export function coverage(a: WorldModelType, b: WorldModelType): CoverageResult {
   const coveredRels = aRelKeys.filter((k) => bRelSet.has(k));
   const missingRelations = aRelKeys.filter((k) => !bRelSet.has(k));
 
-  // Process coverage by normalized name
+  // Process coverage: exact + fuzzy
   const aProcNames = new Set(a.processes.map((p) => normalize(p.name)));
   const bProcNames = new Set(b.processes.map((p) => normalize(p.name)));
-  const coveredProcs = [...aProcNames].filter((n) => bProcNames.has(n));
-  const missingProcesses = [...aProcNames]
-    .filter((n) => !bProcNames.has(n))
-    .map((n) => a.processes.find((p) => normalize(p.name) === n)?.name ?? n);
+  const bProcMap = new Map(b.processes.map((p) => [normalize(p.name), p.name]));
+  const exactProcs = [...aProcNames].filter((n) => bProcNames.has(n));
+  const bProcUnmatched = new Map(
+    [...bProcMap].filter(([n]) => !aProcNames.has(n)),
+  );
+  const fuzzyProcs: string[] = [];
+  const missingProcesses: string[] = [];
+  for (const aN of [...aProcNames].filter((n) => !bProcNames.has(n))) {
+    const match = fuzzyMatch(aN, bProcUnmatched);
+    if (match) {
+      fuzzyProcs.push(aN);
+      for (const [k, v] of bProcUnmatched) {
+        if (v === match) {
+          bProcUnmatched.delete(k);
+          break;
+        }
+      }
+    } else {
+      missingProcesses.push(
+        a.processes.find((p) => normalize(p.name) === aN)?.name ?? aN,
+      );
+    }
+  }
+  const coveredProcs = [...exactProcs, ...fuzzyProcs];
 
-  // Constraint coverage by normalized name
+  // Constraint coverage: exact + fuzzy
   const aCstrNames = new Set(a.constraints.map((c) => normalize(c.name)));
   const bCstrNames = new Set(b.constraints.map((c) => normalize(c.name)));
-  const coveredCstrs = [...aCstrNames].filter((n) => bCstrNames.has(n));
-  const missingConstraints = [...aCstrNames]
-    .filter((n) => !bCstrNames.has(n))
-    .map((n) => a.constraints.find((c) => normalize(c.name) === n)?.name ?? n);
+  const bCstrMap = new Map(
+    b.constraints.map((c) => [normalize(c.name), c.name]),
+  );
+  const exactCstrs = [...aCstrNames].filter((n) => bCstrNames.has(n));
+  const bCstrUnmatched = new Map(
+    [...bCstrMap].filter(([n]) => !aCstrNames.has(n)),
+  );
+  const fuzzyCstrs: string[] = [];
+  const missingConstraints: string[] = [];
+  for (const aN of [...aCstrNames].filter((n) => !bCstrNames.has(n))) {
+    const match = fuzzyMatch(aN, bCstrUnmatched);
+    if (match) {
+      fuzzyCstrs.push(aN);
+      for (const [k, v] of bCstrUnmatched) {
+        if (v === match) {
+          bCstrUnmatched.delete(k);
+          break;
+        }
+      }
+    } else {
+      missingConstraints.push(
+        a.constraints.find((c) => normalize(c.name) === aN)?.name ?? aN,
+      );
+    }
+  }
+  const coveredCstrs = [...exactCstrs, ...fuzzyCstrs];
 
   const entityCoverage = pct(coveredEntities.length, aEntityNames.size);
   const relationCoverage = pct(coveredRels.length, aRelKeys.length);
