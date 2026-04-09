@@ -426,6 +426,108 @@ async function run() {
         "estimate shows cost info",
       );
     }
+
+    // Test 27: estimate --json
+    {
+      const out = cli("estimate --json 'A simple marketplace'");
+      const parsed = JSON.parse(out);
+      assert(
+        typeof parsed.inputTokens === "number",
+        "estimate --json has inputTokens",
+      );
+      assert(
+        typeof parsed.estimatedCostUSD === "number",
+        "estimate --json has estimatedCostUSD",
+      );
+    }
+
+    // Test 28: top command
+    {
+      const out = cli(`top ${TMP_MODEL} -n 3`);
+      assert(
+        out.includes("1.") || out.includes("connections"),
+        "top shows ranked entities",
+      );
+    }
+
+    // Test 29: top --json
+    {
+      const out = cli(`top ${TMP_MODEL} --json -n 2`);
+      const parsed = JSON.parse(out);
+      assert(Array.isArray(parsed), "top --json returns array");
+      assert(parsed.length === 2, "top --json respects -n 2");
+      assert(
+        typeof parsed[0].connections === "number",
+        "top --json has connections",
+      );
+    }
+
+    // Test 30: compare-html command
+    {
+      const out = cli(`compare-html ${TMP_MODEL} ${TMP_MODEL}`);
+      assert(out.includes("<!DOCTYPE html>"), "compare-html produces HTML");
+      assert(out.includes("Model Comparison"), "compare-html has title");
+    }
+
+    // Test 31: health --json
+    {
+      const out = cli(`health ${TMP_MODEL} --json`);
+      const parsed = JSON.parse(out);
+      assert(
+        parsed.grade === "A" || parsed.grade === "B",
+        "health --json has grade",
+      );
+      assert(typeof parsed.score === "number", "health --json has score");
+      assert(Array.isArray(parsed.issues), "health --json has issues array");
+    }
+
+    // Test 32: filter --json (via output check)
+    {
+      const out = cli(`filter ${TMP_MODEL} -t system`);
+      assert(
+        out.includes("Payment System"),
+        "filter system type includes Payment System",
+      );
+    }
+
+    // Test 33: export --as card
+    {
+      const out = cli(`export ${TMP_MODEL} --as card`);
+      assert(out.includes("## Test Marketplace"), "export card has heading");
+      assert(out.includes("SWM"), "export card has attribution");
+    }
+
+    // Test 34: diff --json
+    {
+      const out = cli(`diff ${TMP_MODEL} ${TMP_MODEL} --json`);
+      const parsed = JSON.parse(out);
+      assert(
+        parsed.summary === "No changes",
+        "diff --json identical models = no changes",
+      );
+      assert(
+        parsed.entities.added.length === 0,
+        "diff --json no entities added",
+      );
+    }
+
+    // Test 35: subgraph command
+    {
+      const out = cli(`subgraph ${TMP_MODEL} User`);
+      assert(
+        out.includes("User") || out.includes("entities"),
+        "subgraph extracts neighborhood",
+      );
+    }
+
+    // Test 36: fix --dry-run
+    {
+      const out = cli(`fix ${TMP_MODEL} --dry-run`);
+      assert(
+        out.includes("fix") || out.includes("Fixed") || out.includes("No"),
+        "fix dry-run shows result",
+      );
+    }
   } finally {
     // Cleanup
     if (existsSync(TMP_MODEL)) unlinkSync(TMP_MODEL);
