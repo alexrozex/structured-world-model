@@ -75,6 +75,16 @@ function run() {
     );
   }
 
+  // callAgentStructured — verify it's exported and is a function
+  assert(
+    typeof callAgentStructured === "function",
+    "callAgentStructured: is exported as a function",
+  );
+  assert(
+    callAgentStructured.length === 4 || callAgentStructured.length === 3,
+    "callAgentStructured: accepts 3-4 parameters (last is optional)",
+  );
+
   console.log(`\n═══ ${passed}/${passed + failed} passed ═══\n`);
   if (failed > 0) process.exit(1);
 }

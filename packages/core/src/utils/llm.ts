@@ -246,7 +246,6 @@ export async function callAgentStructured<T>(
         max_tokens: maxTokens,
         system: buildSystemParam(systemPrompt, useCache),
         messages: [{ role: "user", content: userMessage }],
-        // @ts-expect-error — output_config is newer than SDK types may expose
         output_config: {
           format: {
             type: "json_schema",
@@ -260,6 +259,8 @@ export async function callAgentStructured<T>(
         timeoutMs,
         "LLM structured call",
       );
+
+      logCacheUsage(response.usage as unknown as Record<string, unknown>);
 
       const textBlock = response.content.find((b) => b.type === "text");
       if (!textBlock || textBlock.type !== "text") {
