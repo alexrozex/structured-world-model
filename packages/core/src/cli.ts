@@ -145,11 +145,16 @@ async function readStdin(): Promise<string> {
       "No input provided. Pass text, a file path, a URL, or pipe via stdin.",
     );
   }
-  const chunks: Buffer[] = [];
-  for await (const chunk of process.stdin) {
-    chunks.push(chunk as Buffer);
+  try {
+    return readFileSync("/dev/stdin", "utf-8");
+  } catch {
+    // Fallback to async iteration if /dev/stdin is unavailable
+    const chunks: Buffer[] = [];
+    for await (const chunk of process.stdin) {
+      chunks.push(chunk as Buffer);
+    }
+    return Buffer.concat(chunks).toString("utf-8");
   }
-  return Buffer.concat(chunks).toString("utf-8");
 }
 
 const CODE_EXTS = new Set([

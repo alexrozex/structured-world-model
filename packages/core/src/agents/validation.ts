@@ -181,6 +181,18 @@ export function validationAgent(stageInput: {
     }
   }
 
+  // Check for empty properties
+  for (const entity of worldModel.entities) {
+    if (!entity.properties || Object.keys(entity.properties).length === 0) {
+      issues.push({
+        type: "warning",
+        code: "EMPTY_PROPERTIES",
+        message: `Entity "${entity.name}" has no properties — consider adding key attributes`,
+        path: `entities.${entity.id}.properties`,
+      });
+    }
+  }
+
   // Check for weak entity descriptions
   for (const entity of worldModel.entities) {
     if (!entity.description || entity.description.trim().length < 5) {

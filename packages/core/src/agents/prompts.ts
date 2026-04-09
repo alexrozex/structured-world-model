@@ -25,6 +25,7 @@ RULES:
 - Entity names in relations/processes MUST exactly match entity names
 - Extract EVERYTHING — be thorough, not selective
 - Infer implicit entities and relations
+- For each entity, extract at least 2 properties that describe its key attributes. Properties should be name-type pairs like {name: 'string', price: 'number', status: 'enum'}. Never leave properties empty.
 - Output ONLY valid JSON — no commentary, no markdown, no explanation outside the JSON`;
 
 export const PROMPTS: Record<string, string> = {
@@ -80,32 +81,60 @@ Focus on:
 - CLI commands / entry points as actor entities — trace which systems each command invokes by following the imports in its action handler
 - Utility modules that are imported by multiple files — these are shared systems, create "uses" relations from each consumer
 
+RELATION EXTRACTION RULES — these are the highest-priority patterns to detect:
+1. IMPORTS → depends_on: Every import statement creates a "depends_on" relation from the importing module to the imported module. \`import { X } from "./foo"\` means the current module depends_on the Foo Module.
+2. FUNCTION/METHOD CALLS → uses: When module A calls a function or method defined in module B, create a "uses" relation from A to B with the function name in the label. This includes chained calls, callback passing, and indirect invocation.
+3. EXPORTS → produces: When a module exports functions, classes, or values that other modules consume, create a "produces" relation from the exporting module to the concept/type it exposes. Public API surfaces are produces relations.
+4. CLASS INHERITANCE → inherits: \`class Dog extends Animal\` or \`class UserService implements Service\` creates an "inherits" relation from Dog to Animal or UserService to Service. Also applies to mixin patterns and interface implementations.
+5. DATA FLOW → flows_to: When the output of one module feeds into another (e.g., return values passed as arguments), create "flows_to" relations tracing data through the system.
+
 CRITICAL RULES:
 - Follow import chains to establish relations. If file A imports function X from file B, and function X operates on type T from file C, then A uses B and B depends_on C
 - Do NOT create entities for local variables, function parameters, intermediate values, or internal state. Only extract architectural components (modules, services, agents, data types, external systems)
-- Do NOT create orphan entities — every entity should have at least one relation
+- Every entity MUST have at least one relation. If an entity appears isolated, look harder for imports, calls, or data flows connecting it. If you truly cannot find a connection, omit the entity rather than leave it disconnected.
 - Name entities after the COMPONENT they represent, not the variable name (e.g., "Extraction Agent" not "extractionAgent", "Pipeline" not "pipeline instance")
 - Prefer fewer, well-connected entities over many disconnected ones
+- When in doubt, OVER-extract relations rather than under-extract. Disconnected clusters in the output graph indicate missed relations.
 
 Infer the ARCHITECTURE, not just list files. Model how data flows through the system.
 
-EXAMPLE A — TypeScript codebase:
+EXAMPLE A — TypeScript with imports, inheritance, and cross-module calls:
 \`\`\`typescript
-// src/auth/jwt.ts
-import { sign, verify } from "jsonwebtoken";
-export function createToken(userId: string): string { ... }
-export function verifyToken(token: string): Payload { ... }
+// src/models/base-entity.ts
+export abstract class BaseEntity {
+  id: string;
+  createdAt: Date;
+  abstract validate(): boolean;
+}
 
-// src/middleware/auth.ts
-import { verifyToken } from "../auth/jwt.js";
-export function authMiddleware(req, res, next) { ... }
+// src/models/user.ts
+import { BaseEntity } from "./base-entity.js";
+export class User extends BaseEntity {
+  email: string;
+  validate(): boolean { return this.email.includes("@"); }
+}
+
+// src/services/user-service.ts
+import { User } from "../models/user.js";
+import { DatabaseClient } from "../db/client.js";
+import { EventBus } from "../events/bus.js";
+export class UserService {
+  constructor(private db: DatabaseClient, private events: EventBus) {}
+  async createUser(email: string): Promise<User> {
+    const user = new User();
+    user.email = email;
+    await this.db.insert("users", user);
+    this.events.emit("user.created", user);
+    return user;
+  }
+}
 
 // src/routes/users.ts
+import { UserService } from "../services/user-service.js";
 import { authMiddleware } from "../middleware/auth.js";
-import { UserRepository } from "../db/user-repo.js";
 export const router = Router();
-router.get("/me", authMiddleware, async (req, res) => {
-  const user = await UserRepository.findById(req.userId);
+router.post("/users", authMiddleware, async (req, res) => {
+  const user = await userService.createUser(req.body.email);
   res.json(user);
 });
 \`\`\`
@@ -113,22 +142,30 @@ router.get("/me", authMiddleware, async (req, res) => {
 Expected extraction (abbreviated):
 {
   "entities": [
-    {"name": "JWT Module", "type": "system", "description": "Handles JWT token creation and verification", "tags": ["auth"]},
-    {"name": "Auth Middleware", "type": "system", "description": "Express middleware that validates JWT tokens on incoming requests"},
+    {"name": "Base Entity", "type": "concept", "description": "Abstract base class providing id, createdAt, and validate interface for all domain models", "properties": {"id": "string", "createdAt": "Date"}, "tags": ["model"]},
+    {"name": "User", "type": "concept", "description": "Domain model representing a user, extends BaseEntity with email and validation", "properties": {"email": "string"}, "tags": ["model"]},
+    {"name": "User Service", "type": "system", "description": "Business logic layer for user creation and lifecycle management"},
+    {"name": "Database Client", "type": "resource", "description": "Database access layer for persistent storage"},
+    {"name": "Event Bus", "type": "system", "description": "Pub/sub event system for broadcasting domain events"},
     {"name": "Users Router", "type": "system", "description": "Express router exposing user-related HTTP endpoints"},
-    {"name": "User Repository", "type": "resource", "description": "Database access layer for user records"},
-    {"name": "Payload", "type": "concept", "description": "Decoded JWT payload type containing userId and claims"}
+    {"name": "Auth Middleware", "type": "system", "description": "Express middleware that validates authentication on incoming requests"}
   ],
   "relations": [
-    {"source": "Auth Middleware", "target": "JWT Module", "type": "uses", "label": "calls verifyToken"},
-    {"source": "Users Router", "target": "Auth Middleware", "type": "depends_on", "label": "applies auth guard"},
-    {"source": "Users Router", "target": "User Repository", "type": "uses", "label": "queries user by id"}
+    {"source": "User", "target": "Base Entity", "type": "inherits", "label": "extends BaseEntity"},
+    {"source": "User Service", "target": "User", "type": "depends_on", "label": "imports User model"},
+    {"source": "User Service", "target": "Database Client", "type": "uses", "label": "calls db.insert to persist users"},
+    {"source": "User Service", "target": "Event Bus", "type": "uses", "label": "calls events.emit on user creation"},
+    {"source": "User Service", "target": "User", "type": "produces", "label": "creates and returns User instances"},
+    {"source": "Users Router", "target": "User Service", "type": "depends_on", "label": "imports UserService"},
+    {"source": "Users Router", "target": "User Service", "type": "uses", "label": "calls createUser"},
+    {"source": "Users Router", "target": "Auth Middleware", "type": "depends_on", "label": "imports and applies auth guard"}
   ],
   "processes": [
-    {"name": "Authenticated User Lookup", "description": "Validate token then fetch user from database", "trigger": "GET /me request", "steps": [{"order": 1, "action": "Auth Middleware verifies JWT token", "actor": "Auth Middleware", "inputs": ["JWT Module"], "outputs": ["Payload"]}, {"order": 2, "action": "Users Router fetches user record", "actor": "Users Router", "inputs": ["User Repository"], "outputs": ["User"]}], "participants": ["Auth Middleware", "Users Router", "JWT Module", "User Repository"], "outcomes": ["User JSON returned to client"]}
+    {"name": "User Registration", "description": "Create a new user via API, persist to database, and broadcast event", "trigger": "POST /users request", "steps": [{"order": 1, "action": "Auth Middleware validates request authentication", "actor": "Auth Middleware"}, {"order": 2, "action": "Users Router delegates to UserService.createUser", "actor": "Users Router", "inputs": ["User Service"]}, {"order": 3, "action": "UserService creates User instance and validates", "actor": "User Service", "inputs": ["User"], "outputs": ["User"]}, {"order": 4, "action": "UserService persists user to database", "actor": "User Service", "inputs": ["Database Client"]}, {"order": 5, "action": "UserService emits user.created event", "actor": "User Service", "inputs": ["Event Bus"]}], "participants": ["Auth Middleware", "Users Router", "User Service", "User", "Database Client", "Event Bus"], "outcomes": ["User persisted and event broadcast"]}
   ],
   "constraints": [
-    {"name": "JWT Required", "type": "authorization", "description": "All /me endpoints require a valid JWT token", "scope": ["Users Router", "Auth Middleware"], "severity": "hard"}
+    {"name": "Auth Required", "type": "authorization", "description": "POST /users requires authentication via middleware", "scope": ["Users Router", "Auth Middleware"], "severity": "hard"},
+    {"name": "Email Validation", "type": "invariant", "description": "User.validate() requires email to contain @", "scope": ["User"], "severity": "hard"}
   ]
 }
 
@@ -179,7 +216,14 @@ Expected extraction (abbreviated):
   ]
 }
 
-Note: module boundaries become system/actor entities; imports become uses/depends_on relations; exported functions become process steps; external packages (httpx, psycopg2, jsonwebtoken) become resource or system entities.
+RELATION CHEAT SHEET — apply these patterns to every codebase:
+- import X from Y → depends_on (importing module depends_on the imported module)
+- A calls B.method() → uses (caller uses the callee)
+- class X extends Y / implements Z → inherits
+- module exports public API consumed elsewhere → produces
+- output of A feeds into B as input → flows_to
+- external packages (httpx, psycopg2, jsonwebtoken) → resource or system entities with uses/depends_on from consumers
+Never leave modules as disconnected islands. If two modules appear in the same codebase, there is almost certainly an import chain or data flow connecting them — find it.
 
 ${BASE_SCHEMA}`,
 

@@ -935,6 +935,79 @@ async function run() {
     );
   }
 
+  // Test 42: Empty properties warning
+  {
+    const model = makeModel({
+      entities: [
+        {
+          id: "ent_1",
+          name: "User",
+          type: "actor",
+          description: "A user",
+          properties: {},
+        },
+        { id: "ent_2", name: "DB", type: "system", description: "Database" },
+      ],
+      relations: [
+        {
+          id: "rel_1",
+          type: "uses",
+          source: "ent_1",
+          target: "ent_2",
+          label: "queries",
+        },
+      ],
+    });
+    const { validation } = await validationAgent({ input, worldModel: model });
+    assert(
+      hasIssue(validation.issues, "EMPTY_PROPERTIES"),
+      "EMPTY_PROPERTIES: detected for entity with empty properties object",
+    );
+    const count = validation.issues.filter(
+      (i) => i.code === "EMPTY_PROPERTIES",
+    ).length;
+    assert(
+      count === 2,
+      "EMPTY_PROPERTIES: flagged for both empty and undefined properties",
+    );
+  }
+
+  // Test 43: Entity with properties — no EMPTY_PROPERTIES false positive
+  {
+    const model = makeModel({
+      entities: [
+        {
+          id: "ent_1",
+          name: "User",
+          type: "actor",
+          description: "A user",
+          properties: { name: "string", email: "string" },
+        },
+        {
+          id: "ent_2",
+          name: "DB",
+          type: "system",
+          description: "Database",
+          properties: { engine: "postgres" },
+        },
+      ],
+      relations: [
+        {
+          id: "rel_1",
+          type: "uses",
+          source: "ent_1",
+          target: "ent_2",
+          label: "queries",
+        },
+      ],
+    });
+    const { validation } = await validationAgent({ input, worldModel: model });
+    assert(
+      !hasIssue(validation.issues, "EMPTY_PROPERTIES"),
+      "No false positive: entities with properties pass",
+    );
+  }
+
   console.log(`\n═══ ${passed}/${passed + failed} passed ═══\n`);
   if (failed > 0) process.exit(1);
 }

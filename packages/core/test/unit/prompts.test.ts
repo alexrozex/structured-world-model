@@ -49,11 +49,11 @@ function run() {
 
   // Code prompt has TypeScript few-shot example
   assert(
-    PROMPTS.code.includes("TypeScript codebase"),
+    PROMPTS.code.includes("TypeScript with imports"),
     "code prompt: has TypeScript few-shot example",
   );
   assert(
-    PROMPTS.code.includes("JWT Module"),
+    PROMPTS.code.includes("User Service"),
     "code prompt: TypeScript example extracts module boundary as entity",
   );
   assert(
@@ -61,7 +61,7 @@ function run() {
     "code prompt: TypeScript example extracts middleware as system entity",
   );
   assert(
-    PROMPTS.code.includes("calls verifyToken"),
+    PROMPTS.code.includes("calls db.insert"),
     "code prompt: TypeScript example shows imports as relations",
   );
 
