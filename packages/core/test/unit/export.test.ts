@@ -1,6 +1,7 @@
 import { toClaudeMd } from "../../src/export/claude-md.js";
 import { toSystemPrompt } from "../../src/export/system-prompt.js";
 import { toMcpSchema } from "../../src/export/mcp-schema.js";
+import { toHtml } from "../../src/export/html.js";
 import type { WorldModelType } from "../../src/schema/index.js";
 
 function makeModel(): WorldModelType {
@@ -214,6 +215,70 @@ function run() {
   );
   const emptyMcp = toMcpSchema(empty);
   assert(emptyMcp.tools.length >= 2, "MCP empty: still generates base tools");
+
+  // ─── HTML Export ─────────────────────────────────────────────
+
+  const html = toHtml(model);
+  assert(html.startsWith("<!DOCTYPE html>"), "HTML: starts with DOCTYPE");
+  assert(html.includes("<title>Test System"), "HTML: model name in title");
+  assert(
+    html.includes("</html>"),
+    "HTML: is a complete document (ends with </html>)",
+  );
+  assert(html.includes("User"), "HTML: entity names are present");
+  assert(html.includes("API"), "HTML: all entities included");
+  assert(html.includes("ent_1"), "HTML: entity IDs present in graph data");
+  assert(html.includes('"type":"uses"'), "HTML: relation types in graph data");
+  assert(
+    html.includes("Request Flow"),
+    "HTML: process names appear in tables",
+  );
+  assert(
+    html.includes("Rate Limit"),
+    "HTML: constraint names appear in tables",
+  );
+  assert(
+    html.includes("badge-hard"),
+    "HTML: hard constraints get badge class",
+  );
+  assert(
+    html.includes("badge-soft"),
+    "HTML: soft constraints get badge class",
+  );
+  assert(
+    !html.includes("cdn.") && !html.includes("unpkg.com") && !html.includes("jsdelivr"),
+    "HTML: no CDN dependencies (self-contained)",
+  );
+  assert(
+    html.includes("<script>"),
+    "HTML: includes inline script for interactivity",
+  );
+  assert(html.includes("svg"), "HTML: includes SVG element");
+  assert(
+    html.includes("force") || html.includes("REPEL"),
+    "HTML: force simulation embedded",
+  );
+
+  // Empty model should not crash
+  const emptyHtml = toHtml({
+    id: "wm_e",
+    name: "Empty",
+    description: "empty",
+    version: "0.1.0",
+    created_at: new Date().toISOString(),
+    entities: [],
+    relations: [],
+    processes: [],
+    constraints: [],
+  });
+  assert(
+    emptyHtml.includes("<!DOCTYPE html>"),
+    "HTML empty: renders without crash",
+  );
+  assert(
+    emptyHtml.includes("Empty"),
+    "HTML empty: model name present",
+  );
 
   console.log(`\n═══ ${passed}/${passed + failed} passed ═══\n`);
   if (failed > 0) process.exit(1);
