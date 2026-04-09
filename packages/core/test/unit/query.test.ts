@@ -37,6 +37,7 @@ function makeModel(): WorldModelType {
         name: "Cache",
         type: "resource",
         description: "Redis cache layer",
+        confidence: 0.3,
       },
     ],
     relations: [
@@ -276,6 +277,70 @@ async function run() {
     const r = await queryWorldModel(model, "impact of removing Database?");
     assert(r.method === "graph", "impact of: uses graph method");
     assert(r.answer.includes("Database"), "impact of: mentions entity");
+  }
+
+  // ── Confidence annotation ────────────────────────────────────
+
+  // Results always include low_confidence_entities field
+  {
+    const r = await queryWorldModel(model, "what is the API Server?");
+    assert(
+      Array.isArray(r.low_confidence_entities),
+      "confidence: low_confidence_entities is always an array",
+    );
+  }
+
+  // High-confidence entity → not flagged
+  {
+    const r = await queryWorldModel(model, "what is the API Server?");
+    assert(
+      !r.low_confidence_entities.includes("API Server"),
+      "confidence: high-confidence entity not flagged",
+    );
+  }
+
+  // Low-confidence entity (Cache, confidence=0.3) → flagged when referenced
+  {
+    const r = await queryWorldModel(model, "what does API Server depend on?");
+    assert(
+      r.entities_referenced.includes("Cache"),
+      "confidence: Cache is referenced in result",
+    );
+    assert(
+      r.low_confidence_entities.includes("Cache"),
+      "confidence: Cache (confidence=0.3) is flagged as low-confidence",
+    );
+  }
+
+  // Query that only references high-confidence entities → empty list
+  {
+    const r = await queryWorldModel(model, "what depends on the Database?");
+    assert(
+      r.low_confidence_entities.length === 0,
+      "confidence: all-confident result has empty low_confidence_entities",
+    );
+  }
+
+  // Empty question → low_confidence_entities present and empty
+  {
+    const r = await queryWorldModel(model, "");
+    assert(
+      Array.isArray(r.low_confidence_entities),
+      "confidence: empty question has low_confidence_entities array",
+    );
+    assert(
+      r.low_confidence_entities.length === 0,
+      "confidence: empty question has no low-confidence entities",
+    );
+  }
+
+  // list all resources → Cache is low-confidence and flagged
+  {
+    const r = await queryWorldModel(model, "list all resources");
+    assert(
+      r.low_confidence_entities.includes("Cache"),
+      "confidence: list resources flags Cache as low-confidence",
+    );
   }
 
   console.log(`\n═══ ${passed}/${passed + failed} passed ═══\n`);

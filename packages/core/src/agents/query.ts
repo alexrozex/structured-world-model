@@ -13,6 +13,32 @@ export interface QueryResult {
   method: "graph" | "inference";
   entities_referenced: string[];
   confidence: number;
+  /** Entity names whose extraction confidence in the model is below 0.5 — treat these answers as uncertain */
+  low_confidence_entities: string[];
+}
+
+// ─── Internal result type (before confidence annotation) ──────
+
+type RawQueryResult = Omit<QueryResult, "low_confidence_entities">;
+
+/**
+ * Annotate a result with low_confidence_entities by looking up each
+ * referenced entity's extraction confidence in the model.
+ */
+function annotateConfidence(
+  result: RawQueryResult,
+  model: WorldModelType,
+): QueryResult {
+  const low = result.entities_referenced
+    .map((name) =>
+      model.entities.find((e) => e.name.toLowerCase() === name.toLowerCase()),
+    )
+    .filter(
+      (e): e is WorldModelType["entities"][number] =>
+        e !== undefined && (e.confidence ?? 1) < 0.5,
+    )
+    .map((e) => e.name);
+  return { ...result, low_confidence_entities: low };
 }
 
 // ─── Deterministic graph queries ──────────────────────────────
@@ -22,7 +48,7 @@ const GRAPH_PATTERNS: Array<{
   handler: (
     model: WorldModelType,
     match: RegExpMatchArray,
-  ) => QueryResult | null;
+  ) => RawQueryResult | null;
 }> = [
   {
     // "what depends on X" / "what uses X" / "what needs X"
@@ -439,12 +465,10 @@ async function inferenceQuery(
     .filter((e) => answer.toLowerCase().includes(e.name.toLowerCase()))
     .map((e) => e.name);
 
-  return {
-    answer,
-    method: "inference",
-    entities_referenced: referenced,
-    confidence: 0.8,
-  };
+  return annotateConfidence(
+    { answer, method: "inference", entities_referenced: referenced, confidence: 0.8 },
+    model,
+  );
 }
 
 // ─── Public API ───────────────────────────────────────────────
@@ -470,6 +494,7 @@ export async function queryWorldModel(
       method: "graph",
       entities_referenced: [],
       confidence: 1,
+      low_confidence_entities: [],
     };
   }
 
@@ -478,7 +503,7 @@ export async function queryWorldModel(
     const match = question.match(pattern);
     if (match) {
       const result = handler(model, match);
-      if (result) return result;
+      if (result) return annotateConfidence(result, model);
       // Pattern matched but handler returned null (entity not found) — fall through to inference
     }
   }
