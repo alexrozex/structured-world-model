@@ -1,7 +1,7 @@
 {
-  "cycle": 6,
+  "cycle": 8,
   "lastScore": 100,
-  "lastTestCount": 703,
+  "lastTestCount": 734,
   "improvements": [
     "e2e-multipass",
     "e2e-code-extraction",
@@ -11,9 +11,13 @@
     "mcp-search-tool",
     "compare-deep",
     "test-src-pipeline-pipeline-ts",
-    "test-src-swm-ts"
+    "test-src-swm-ts",
+    "test-src-cli-ts",
+    "refine-delta-report",
+    "constraint-severity-scoring",
+    "extraction-retry-logging"
   ],
   "staleCount": 0,
   "startedAt": "2026-04-09T07:18:47.000Z",
-  "lastRunAt": "2026-04-09T08:12:31.551Z"
+  "lastRunAt": "2026-04-09T08:17:50.114Z"
 }
