@@ -76,6 +76,15 @@ importers:
       '@modelcontextprotocol/sdk':
         specifier: ^1.29.0
         version: 1.29.0(zod@4.3.6)
+      '@swm/bridge':
+        specifier: workspace:*
+        version: link:../bridge
+      '@swm/compiler':
+        specifier: workspace:*
+        version: link:../compiler
+      '@swm/mcp-server':
+        specifier: workspace:*
+        version: link:../mcp-server
       chalk:
         specifier: ^5.6.2
         version: 5.6.2
